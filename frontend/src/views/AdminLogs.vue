@@ -81,8 +81,6 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Delete, Search } from '@element-plus/icons-vue'
 import { useUserStore } from '../stores/user'
-import api from '../api'
-import logger from '../utils/logger'
 
 interface LogEntry {
   timestamp: number
@@ -101,7 +99,6 @@ const searchKeyword = ref('')
 const currentPage = ref(1)
 const pageSize = ref(100)
 const refreshInterval = ref<number | null>(null)
-const unsubscribeLogger = ref<(() => void) | null>(null)
 
 // 检查是否为管理员
 onMounted(() => {
@@ -113,18 +110,15 @@ onMounted(() => {
   
   fetchLogs()
   
-  // 订阅实时日志
-  unsubscribeLogger.value = logger.onLog((log) => {
-    addRealtimeLog(log)
-  })
+  // 每5秒刷新一次日志（不使用实时订阅避免递归更新）
+  refreshInterval.value = window.setInterval(() => {
+    loadLocalLogs()
+  }, 5000)
 })
 
 onUnmounted(() => {
   if (refreshInterval.value) {
     clearInterval(refreshInterval.value)
-  }
-  if (unsubscribeLogger.value) {
-    unsubscribeLogger.value()
   }
 })
 
@@ -138,17 +132,6 @@ async function fetchLogs() {
   } finally {
     loading.value = false
   }
-}
-
-// 实时添加新日志
-function addRealtimeLog(log: any) {
-  // 使用新数组避免触发响应式更新循环
-  const newLogs = [...logs.value, log]
-  // 限制日志数量
-  if (newLogs.length > 1000) {
-    newLogs.splice(0, newLogs.length - 1000)
-  }
-  logs.value = newLogs
 }
 
 function loadLocalLogs() {
@@ -207,7 +190,6 @@ async function clearLogs() {
       }
     )
     
-    await api.delete('/admin/logs')
     logs.value = []
     localStorage.removeItem('app_logs')
     ElMessage.success('日志已清空')

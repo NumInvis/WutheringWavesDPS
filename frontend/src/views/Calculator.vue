@@ -545,20 +545,36 @@ async function parseAndShowExcel(file: File, readOnly: boolean = false): Promise
 
   console.log('[Excel Load] Creating luckysheet with data')
 
-  // 确保数据格式正确
-  const sheetsData = exportJson.sheets.map((sheet: any, index: number) => ({
-    name: sheet.name || `Sheet${index + 1}`,
-    color: sheet.color || '',
-    status: index === 0 ? 1 : 0,
-    order: index,
-    celldata: sheet.celldata || [],
-    row: sheet.row || 84,
-    column: sheet.column || 60,
-    config: sheet.config || {},
-    pivotTable: sheet.pivotTable || null,
-    isPivotTable: sheet.isPivotTable || false,
-    ...sheet
-  }))
+  // 确保数据格式正确，只加载前100行和前100列
+  const MAX_ROWS = 100
+  const MAX_COLS = 100
+  
+  const sheetsData = exportJson.sheets.map((sheet: any, index: number) => {
+    // 过滤celldata，只保留前100行和前100列的数据
+    let filteredCelldata = sheet.celldata || []
+    if (filteredCelldata.length > 0) {
+      filteredCelldata = filteredCelldata.filter((cell: any) => {
+        const row = cell?.r || 0
+        const col = cell?.c || 0
+        return row < MAX_ROWS && col < MAX_COLS
+      })
+    }
+    
+    console.log(`[Excel Load] Sheet ${index}: original cells=${sheet.celldata?.length || 0}, filtered cells=${filteredCelldata.length}`)
+    
+    return {
+      name: sheet.name || `Sheet${index + 1}`,
+      color: sheet.color || '',
+      status: index === 0 ? 1 : 0,
+      order: index,
+      celldata: filteredCelldata,
+      row: Math.min(sheet.row || 84, MAX_ROWS),
+      column: Math.min(sheet.column || 60, MAX_COLS),
+      config: sheet.config || {},
+      pivotTable: sheet.pivotTable || null,
+      isPivotTable: sheet.isPivotTable || false
+    }
+  })
 
   try {
     luckysheet.create({

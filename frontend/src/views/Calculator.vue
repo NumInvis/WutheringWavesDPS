@@ -357,44 +357,52 @@ function destroySheet() {
 }
 
 function initEmptySheet() {
-  destroySheet()
+  console.log('[initEmptySheet] Starting...')
   
   const luckysheet = (window as any).luckysheet
   if (!luckysheet || typeof luckysheet.create !== 'function') {
-    console.error('luckysheet not loaded or create is not a function')
+    console.error('[initEmptySheet] luckysheet not loaded or create is not a function')
     return
   }
   
-  try {
-    luckysheet.create({
-      container: 'luckysheet',
-      title: '工作区',
-      lang: 'zh',
-      showinfobar: false,
-      showsheetbar: true,
-      showstatisticBar: true,
-      enableAddRow: true,
-      enableAddCol: true,
-      allowEdit: true,
-      showtoolbarConfig: {
-        check: false,
-        print: false
-      },
-      data: [{
-        name: 'Sheet1',
-        color: '#409eff',
-        status: 1,
-        order: 0,
-        celldata: [],
-        row: 84,
-        column: 60,
-        defaultRowHeight: 19,
-        defaultColWidth: 73
-      }]
-    })
-  } catch (e) {
-    console.error('init sheet error', e)
-  }
+  // 先销毁旧实例
+  destroySheet()
+  
+  // 等待DOM更新
+  setTimeout(() => {
+    try {
+      console.log('[initEmptySheet] Creating new sheet...')
+      luckysheet.create({
+        container: 'luckysheet',
+        title: '工作区',
+        lang: 'zh',
+        showinfobar: false,
+        showsheetbar: true,
+        showstatisticBar: true,
+        enableAddRow: true,
+        enableAddCol: true,
+        allowEdit: true,
+        showtoolbarConfig: {
+          check: false,
+          print: false
+        },
+        data: [{
+          name: 'Sheet1',
+          color: '#409eff',
+          status: 1,
+          order: 0,
+          celldata: [],
+          row: 84,
+          column: 60,
+          defaultRowHeight: 19,
+          defaultColWidth: 73
+        }]
+      })
+      console.log('[initEmptySheet] Success!')
+    } catch (e) {
+      console.error('[initEmptySheet] Error:', e)
+    }
+  }, 100)
 }
 
 function importExcel() {

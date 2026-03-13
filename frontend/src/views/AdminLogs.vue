@@ -213,13 +213,23 @@ function formatTime(timestamp: number): string {
 }
 
 function getLogType(level: string): string {
+  // 确保level是字符串
+  const safeLevel = String(level || '').toLowerCase()
+  
   const typeMap: Record<string, string> = {
     'info': 'info',
     'warn': 'warning',
     'error': 'danger',
-    'debug': 'info'  // debug也使用info样式，不能返回空字符串
+    'debug': 'info'
   }
-  return typeMap[level] || 'info'  // 默认返回info，不能返回空字符串
+  
+  // 如果level不在map中，返回'info'作为默认值
+  const result = typeMap[safeLevel]
+  if (!result) {
+    console.warn('[AdminLogs] Unknown log level:', level, 'using default')
+    return 'info'
+  }
+  return result
 }
 </script>
 

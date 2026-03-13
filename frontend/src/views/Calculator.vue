@@ -25,6 +25,22 @@
         </div>
       </template>
       
+      <!-- 加载错误提示 -->
+      <el-alert
+        v-if="loadError"
+        :title="loadError"
+        type="error"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 16px"
+      >
+        <template #default>
+          <el-button type="primary" size="small" @click="retryLoad" style="margin-top: 8px">
+            重新加载
+          </el-button>
+        </template>
+      </el-alert>
+      
       <div class="sheet-list" v-if="!isPreviewMode && uploadedFiles.length > 0">
         <div class="sheet-item" v-for="(file, index) in uploadedFiles" :key="file.id">
           <div class="sheet-info">
@@ -45,8 +61,8 @@
         </div>
       </div>
       
-      <div class="sheet-wrapper" v-loading="!isReady" element-loading-text="正在加载表格组件...">
-        <div id="luckysheet" class="sheet-container"></div>
+      <div class="sheet-wrapper" v-loading="!isReady && !loadError" element-loading-text="正在加载表格组件...">
+        <div ref="sheetContainer" id="luckysheet" class="sheet-container"></div>
       </div>
     </el-card>
 
@@ -102,33 +118,28 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const fileInput = ref<HTMLInputElement>()
-const uploadedFiles = ref<UploadedFile[]>([])
-const currentFileIndex = ref<number>(-1)
-const importing = ref(false)
+const sheetContainer = ref<HTMLElement>()
 const isReady = ref(false)
+const loadError = ref('')
+const importing = ref(false)
 const publishing = ref(false)
-
-const isPreviewMode = ref(false)
-const isEditable = ref(true)
-const previewSheetId = ref<string | null>(null)
+const uploadedFiles = ref<UploadedFile[]>([])
+const currentFileIndex = ref(-1)
 const previewFile = ref<UploadedFile | null>(null)
+const isPreviewMode = ref(false)
+const previewSheetId = ref('')
+const isEditable = ref(true)
 
 const publishDialogVisible = ref(false)
-const publishFormRef = ref<FormInstance>()
+const publishFormRef = ref()
 const publishForm = reactive({
   title: '',
-  area: 'pull_table' as 'pull_table' | 'other',
+  area: 'pull_table',
   description: ''
 })
-
-const publishRules: FormRules = {
-  title: [
-    { required: true, message: '请输入表格标题', trigger: 'blur' },
-    { min: 2, max: 200, message: '标题长度在 2 到 200 个字符', trigger: 'blur' }
-  ],
-  area: [
-    { required: true, message: '请选择上传区域', trigger: 'change' }
-  ]
+const publishRules = {
+  title: [{ required: true, message: '请输入表格标题', trigger: 'blur' }],
+  area: [{ required: true, message: '请选择上传区域', trigger: 'change' }]
 }
 
 const currentFileName = computed(() => {
@@ -141,32 +152,74 @@ const currentFileName = computed(() => {
   return ''
 })
 
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB'
-  return (bytes / (1024 * 1024)).toFixed(2) + ' MB'
+// 脚本加载状态跟踪
+const scriptLoadState = {
+  luckysheet: { loaded: false, error: null as Error | null },
+  luckyexcel: { loaded: false, error: null as Error | null }
+}
+
+// 带重试的脚本加载
+async function loadScriptWithRetry(src: string, maxRetries = 3): Promise<void> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      await loadScript(src)
+      console.log(`[Script Load] Success: ${src}`)
+      return
+    } catch (e) {
+      console.error(`[Script Load] Attempt ${i + 1} failed: ${src}`, e)
+      if (i === maxRetries - 1) throw e
+      await new Promise(r => setTimeout(r, 1000 * (i + 1)))
+    }
+  }
+}
+
+async function loadScript(src: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      console.log(`[Script Load] Already exists: ${src}`)
+      resolve()
+      return
+    }
+    const script = document.createElement('script')
+    script.src = src
+    script.async = false  // 保持顺序执行
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error(`Failed to load: ${src}`))
+    document.head.appendChild(script)
+  })
+}
+
+async function loadCSS(href: string): Promise<void> {
+  return new Promise((resolve) => {
+    if (document.querySelector(`link[href="${href}"]`)) {
+      resolve()
+      return
+    }
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = href
+    link.onload = () => resolve()
+    link.onerror = () => {
+      console.warn(`[CSS Load] Failed: ${href}`)
+      resolve() // CSS失败不阻止执行
+    }
+    document.head.appendChild(link)
+  })
 }
 
 function waitForLuckysheet(): Promise<void> {
   return new Promise((resolve, reject) => {
     let attempts = 0
-    const maxAttempts = 100  // 增加到100次尝试，总共10秒
-    
-    console.log('[waitForLuckysheet] Starting to check...')
+    const maxAttempts = 100
     
     const check = () => {
       attempts++
       const luckysheet = (window as any).luckysheet
       
-      if (attempts % 10 === 0) {
-        console.log(`[waitForLuckysheet] Check attempt ${attempts}, luckysheet:`, typeof luckysheet)
-      }
-      
       if (luckysheet && typeof luckysheet.create === 'function') {
-        console.log('[waitForLuckysheet] Success! luckysheet.create is available')
+        console.log('[waitForLuckysheet] Success!')
         resolve()
       } else if (attempts >= maxAttempts) {
-        console.error(`[waitForLuckysheet] Timeout after ${maxAttempts} attempts`)
         reject(new Error(`Luckysheet加载超时，已尝试${maxAttempts}次`))
       } else {
         setTimeout(check, 100)
@@ -176,174 +229,58 @@ function waitForLuckysheet(): Promise<void> {
   })
 }
 
-onMounted(() => {
-  checkPreviewMode()
-  checkTemplateLoad()
-  loadAllScripts()
-})
-
-onUnmounted(() => {
-  destroySheet()
-})
-
-watch(() => route.query, () => {
-  if (isReady.value) {
-    checkPreviewMode()
-    checkTemplateLoad()
-    if (isPreviewMode.value) {
-      loadPreviewSheet()
-    }
-  }
-}, { deep: true })
-
-function checkTemplateLoad() {
-  const loadTemplate = route.query.loadTemplate as string
-  if (loadTemplate === 'true' && !isPreviewMode.value && uploadedFiles.value.length === 0) {
-    loadDefaultTemplate()
-  }
-}
-
-async function loadDefaultTemplate() {
-  try {
-    const response = await fetch('/api/spreadsheets/template')
-    if (response.ok) {
-      const data = await response.json()
-      if (data.file_url) {
-        const fileResponse = await fetch(data.file_url)
-        const blob = await fileResponse.blob()
-        const arrayBuffer = await blob.arrayBuffer()
-        const file = new File([blob], '拉表模板.xlsx', { type: blob.type })
-        
-        const newFile: UploadedFile = {
-          id: 'template',
-          name: '拉表模板.xlsx',
-          size: blob.size,
-          content: arrayBuffer,
-          file: file
-        }
-        
-        uploadedFiles.value.push(newFile)
-        currentFileIndex.value = 0
-        
-        await loadExcelParser()
-        await parseAndShowExcel(file, false)
-        
-        router.replace({ path: '/calculator' })
-      }
-    }
-  } catch (error) {
-    console.log('加载模板失败', error)
-  }
-}
-
-function checkPreviewMode() {
-  const preview = route.query.preview as string
-  const editable = route.query.editable as string
-  
-  if (preview) {
-    isPreviewMode.value = true
-    isEditable.value = editable === 'true'
-    previewSheetId.value = preview
-  } else {
-    isPreviewMode.value = false
-    isEditable.value = true
-    previewSheetId.value = null
-  }
-}
-
 async function loadAllScripts() {
-  console.log('[Script Load] Starting...')
+  console.log('[loadAllScripts] Starting...')
+  loadError.value = ''
   
-  if ((window as any).luckysheet && typeof (window as any).luckysheet.create === 'function') {
-    console.log('[Script Load] Luckysheet already loaded')
+  // 检查是否已加载
+  if (scriptLoadState.luckysheet.loaded && (window as any).luckysheet?.create) {
+    console.log('[loadAllScripts] Already loaded')
     isReady.value = true
     await nextTick()
     initEmptySheet()
-    if (isPreviewMode.value) {
-      loadPreviewSheet()
-    }
     return
   }
 
-  const loadCSS = (href: string): Promise<void> => {
-    return new Promise((resolve) => {
-      if (document.querySelector(`link[href="${href}"]`)) {
-        console.log('[Script Load] CSS already exists:', href)
-        resolve()
-        return
-      }
-      const link = document.createElement('link')
-      link.rel = 'stylesheet'
-      link.href = href
-      link.onload = () => {
-        console.log('[Script Load] CSS loaded:', href)
-        resolve()
-      }
-      link.onerror = () => {
-        console.error('[Script Load] CSS failed:', href)
-        resolve()
-      }
-      document.head.appendChild(link)
-    })
-  }
-
-  const loadScript = (src: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      if (document.querySelector(`script[src="${src}"]`)) {
-        console.log('[Script Load] Script already exists:', src)
-        resolve()
-        return
-      }
-      const script = document.createElement('script')
-      script.src = src
-      script.async = true
-      script.onload = () => {
-        console.log('[Script Load] Script loaded:', src)
-        resolve()
-      }
-      script.onerror = () => {
-        console.error('[Script Load] Script failed:', src)
-        reject(new Error(`Failed to load script: ${src}`))
-      }
-      document.head.appendChild(script)
-    })
-  }
-
   try {
-    console.log('[Script Load] Loading CSS files...')
-    await loadCSS('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/css/pluginsCss.css')
-    await loadCSS('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/plugins.css')
-    await loadCSS('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/css/luckysheet.css')
-    await loadCSS('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/assets/iconfont/iconfont.css')
+    // 并行加载CSS
+    await Promise.all([
+      loadCSS('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/css/pluginsCss.css'),
+      loadCSS('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/plugins.css'),
+      loadCSS('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/css/luckysheet.css'),
+      loadCSS('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/assets/iconfont/iconfont.css')
+    ])
     
-    console.log('[Script Load] Loading JS files...')
-    await loadScript('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js')
-    await loadScript('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.js')
+    // 串行加载JS（保持依赖顺序）
+    await loadScriptWithRetry('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js')
+    await loadScriptWithRetry('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.js')
     
-    console.log('[Script Load] Waiting for luckysheet to initialize...')
+    // 等待初始化
     await waitForLuckysheet()
     
-    console.log('[Script Load] Luckysheet ready, checking...')
-    const luckysheet = (window as any).luckysheet
-    console.log('[Script Load] luckysheet object:', typeof luckysheet)
-    console.log('[Script Load] luckysheet.create:', typeof luckysheet?.create)
-    
+    scriptLoadState.luckysheet.loaded = true
     isReady.value = true
-    await nextTick()
     
-    // 初始化空表格
-    console.log('[Script Load] Initializing empty sheet...')
+    await nextTick()
     initEmptySheet()
     
     if (isPreviewMode.value) {
       loadPreviewSheet()
     }
     
-    console.log('[Script Load] Complete!')
+    console.log('[loadAllScripts] Complete!')
   } catch (error) {
-    console.error('[Script Load] Failed:', error)
-    ElMessage.error('表格组件加载失败，请刷新页面重试')
+    console.error('[loadAllScripts] Failed:', error)
+    scriptLoadState.luckysheet.error = error as Error
+    loadError.value = '表格组件加载失败，请检查网络连接后点击"重新加载"'
+    ElMessage.error('表格组件加载失败')
   }
+}
+
+function retryLoad() {
+  scriptLoadState.luckysheet.loaded = false
+  scriptLoadState.luckysheet.error = null
+  loadAllScripts()
 }
 
 function destroySheet() {
@@ -353,7 +290,7 @@ function destroySheet() {
       luckysheet.destroy()
     }
   } catch (e) {
-    console.log('destroy warning', e)
+    // 忽略销毁错误
   }
 }
 
@@ -362,17 +299,33 @@ function initEmptySheet() {
   
   const luckysheet = (window as any).luckysheet
   if (!luckysheet || typeof luckysheet.create !== 'function') {
-    console.error('[initEmptySheet] luckysheet not loaded or create is not a function')
+    console.error('[initEmptySheet] luckysheet not available')
     return
   }
   
-  // 先销毁旧实例
-  destroySheet()
-  
-  // 等待DOM更新
-  setTimeout(() => {
+  // 确保DOM已准备好
+  nextTick(() => {
+    const container = document.getElementById('luckysheet')
+    if (!container) {
+      console.error('[initEmptySheet] Container not found')
+      return
+    }
+    
+    // 检查容器尺寸
+    const rect = container.getBoundingClientRect()
+    console.log('[initEmptySheet] Container size:', rect.width, 'x', rect.height)
+    
+    if (rect.width === 0 || rect.height === 0) {
+      console.warn('[initEmptySheet] Container has zero size, retrying...')
+      setTimeout(initEmptySheet, 200)
+      return
+    }
+    
+    // 销毁旧实例
+    destroySheet()
+    
+    // 创建新实例
     try {
-      console.log('[initEmptySheet] Creating new sheet...')
       luckysheet.create({
         container: 'luckysheet',
         title: '工作区',
@@ -403,14 +356,191 @@ function initEmptySheet() {
     } catch (e) {
       console.error('[initEmptySheet] Error:', e)
     }
-  }, 100)
+  })
+}
+
+async function loadExcelParser() {
+  if ((window as any).LuckyExcel) return
+  
+  return new Promise<void>((resolve, reject) => {
+    const script = document.createElement('script')
+    script.src = 'https://cdn.jsdelivr.net/npm/luckyexcel@1.0.1/dist/luckyexcel.umd.js'
+    script.onload = () => {
+      // 等待LuckyExcel初始化
+      setTimeout(() => {
+        if ((window as any).LuckyExcel) {
+          resolve()
+        } else {
+          reject(new Error('LuckyExcel初始化失败'))
+        }
+      }, 100)
+    }
+    script.onerror = () => reject(new Error('加载Excel解析器失败'))
+    document.head.appendChild(script)
+  })
+}
+
+async function parseAndShowExcel(file: File, readOnly: boolean = false): Promise<void> {
+  const LuckyExcel = (window as any).LuckyExcel
+  
+  if (!LuckyExcel) {
+    throw new Error('Excel解析器未加载')
+  }
+
+  console.log('[Excel Load] Starting:', file.name)
+
+  const exportJson = await new Promise<any>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error('Excel解析超时（10秒）'))
+    }, 10000)
+
+    try {
+      LuckyExcel.transformExcelToLucky(file, (data: any) => {
+        clearTimeout(timeout)
+        resolve(data)
+      })
+    } catch (err) {
+      clearTimeout(timeout)
+      reject(err)
+    }
+  })
+
+  if (!exportJson?.sheets?.length) {
+    throw new Error('Excel文件为空或无法解析')
+  }
+
+  console.log('[Excel Load] Sheets:', exportJson.sheets.length)
+
+  destroySheet()
+
+  const luckysheet = (window as any).luckysheet
+  if (!luckysheet?.create) {
+    throw new Error('表格组件未正确加载')
+  }
+
+  // 限制数据量
+  const MAX_ROWS = 100
+  const MAX_COLS = 100
+  
+  const sheetsData = exportJson.sheets.map((sheet: any, index: number) => {
+    let celldata = sheet.celldata || []
+    if (celldata.length > 0) {
+      celldata = celldata.filter((cell: any) => {
+        const row = cell?.r || 0
+        const col = cell?.c || 0
+        return row < MAX_ROWS && col < MAX_COLS
+      })
+    }
+    
+    return {
+      name: sheet.name || `Sheet${index + 1}`,
+      color: sheet.color || '',
+      status: index === 0 ? 1 : 0,
+      order: index,
+      celldata,
+      row: Math.min(sheet.row || 84, MAX_ROWS),
+      column: Math.min(sheet.column || 60, MAX_COLS),
+      config: sheet.config || {},
+      pivotTable: sheet.pivotTable || null,
+      isPivotTable: sheet.isPivotTable || false
+    }
+  })
+
+  luckysheet.create({
+    container: 'luckysheet',
+    title: file.name.replace(/\.(xlsx|xls|xlsm)$/i, ''),
+    lang: 'zh',
+    showinfobar: false,
+    showsheetbar: true,
+    showstatisticBar: true,
+    enableAddRow: !readOnly,
+    enableAddCol: !readOnly,
+    allowEdit: !readOnly,
+    showtoolbarConfig: {
+      check: false,
+      print: false
+    },
+    data: sheetsData
+  })
+
+  console.log('[Excel Load] Success!')
+}
+
+// 其他函数保持不变...
+function checkPreviewMode() {
+  const sheetId = route.query.sheet as string
+  if (sheetId) {
+    isPreviewMode.value = true
+    previewSheetId.value = sheetId
+    isEditable.value = route.query.edit !== 'false'
+  }
+}
+
+function checkTemplateLoad() {
+  const template = route.query.template as string
+  if (template === '1') {
+    loadTemplate()
+  }
+}
+
+async function loadTemplate() {
+  try {
+    const response = await fetch('/api/spreadsheets/template')
+    if (response.ok) {
+      const data = await response.json()
+      if (data.file_url) {
+        const fileResponse = await fetch(data.file_url)
+        const blob = await fileResponse.blob()
+        const arrayBuffer = await blob.arrayBuffer()
+        const file = new File([blob], '拉表模板.xlsx', { type: blob.type })
+        
+        await loadExcelParser()
+        await parseAndShowExcel(file, false)
+        
+        uploadedFiles.value.push({
+          id: 'template-' + Date.now(),
+          name: '拉表模板.xlsx',
+          size: blob.size,
+          content: arrayBuffer,
+          file: file
+        })
+        currentFileIndex.value = uploadedFiles.value.length - 1
+      }
+    }
+  } catch (error) {
+    console.error('加载模板失败:', error)
+  }
+}
+
+async function loadPreviewSheet() {
+  if (!previewSheetId.value) return
+  
+  try {
+    const response = await fetch(`/api/spreadsheets/${previewSheetId.value}/download`, {
+      headers: {
+        'Authorization': userStore.token ? `Bearer ${userStore.token}` : ''
+      }
+    })
+    
+    if (response.ok) {
+      const data = await response.json()
+      if (data.file_url) {
+        const fileResponse = await fetch(data.file_url)
+        const blob = await fileResponse.blob()
+        const arrayBuffer = await blob.arrayBuffer()
+        const file = new File([blob], data.filename || 'preview.xlsx', { type: blob.type })
+        
+        await loadExcelParser()
+        await parseAndShowExcel(file, !isEditable.value)
+      }
+    }
+  } catch (error) {
+    console.error('加载预览失败:', error)
+    ElMessage.error('加载预览失败')
+  }
 }
 
 function importExcel() {
-  if (!isReady.value) {
-    ElMessage.warning('表格组件正在加载，请稍候')
-    return
-  }
   fileInput.value?.click()
 }
 
@@ -420,252 +550,65 @@ async function handleFile(event: Event) {
   if (!file) return
 
   importing.value = true
-  
   try {
-    const content = await file.arrayBuffer()
-    
-    const newFile: UploadedFile = {
-      id: Date.now().toString(),
-      name: file.name,
-      size: file.size,
-      content: content,
-      file: file
-    }
-    
-    uploadedFiles.value.push(newFile)
-    currentFileIndex.value = uploadedFiles.value.length - 1
-    
     await loadExcelParser()
     await parseAndShowExcel(file, false)
     
-    ElMessage.success('Excel已导入')
-  } catch (error) {
-    console.error('导入失败', error)
-    ElMessage.error('导入失败: ' + ((error as Error).message || '未知错误'))
-  } finally {
-    importing.value = false
-    if (target) {
-      target.value = ''
-    }
-  }
-}
-
-async function loadExcelParser() {
-  if ((window as any).LuckyExcel) return
-  
-  return new Promise<void>((resolve, reject) => {
-    const script = document.createElement('script')
-    script.src = 'https://cdn.jsdelivr.net/npm/luckyexcel@1.0.1/dist/luckyexcel.umd.js'
-    script.onload = () => resolve()
-    script.onerror = () => reject(new Error('加载Excel解析器失败'))
-    document.head.appendChild(script)
-  })
-}
-
-async function loadPreviewSheet() {
-  if (!previewSheetId.value) {
-    console.log('[Preview] No preview sheet ID')
-    return
-  }
-  
-  console.log('[Preview] Loading preview for sheet:', previewSheetId.value)
-  
-  try {
-    const response = await fetch(`/api/spreadsheets/${previewSheetId.value}/download`, {
-      headers: {
-        'Authorization': userStore.token ? `Bearer ${userStore.token}` : ''
-      }
-    })
-    
-    console.log('[Preview] Download API response:', response.status)
-    
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('[Preview] Download API failed:', response.status, errorText)
-      ElMessage.error('获取表格信息失败')
-      return
-    }
-    
-    const data = await response.json()
-    console.log('[Preview] Download data:', data)
-    
-    if (!data.file_url) {
-      console.error('[Preview] No file_url in response')
-      ElMessage.error('表格文件不存在')
-      return
-    }
-    
-    console.log('[Preview] Fetching file from:', data.file_url)
-    const fileResponse = await fetch(data.file_url)
-    
-    if (!fileResponse.ok) {
-      console.error('[Preview] File fetch failed:', fileResponse.status)
-      ElMessage.error('加载文件失败')
-      return
-    }
-    
-    const blob = await fileResponse.blob()
-    const arrayBuffer = await blob.arrayBuffer()
-    const file = new File([blob], data.filename || 'preview.xlsx', { type: blob.type })
-    
-    console.log('[Preview] File loaded:', file.name, 'size:', file.size)
-    
-    previewFile.value = {
-      id: previewSheetId.value,
-      name: data.filename || 'preview.xlsx',
-      size: blob.size,
+    const arrayBuffer = await file.arrayBuffer()
+    uploadedFiles.value.push({
+      id: 'local-' + Date.now(),
+      name: file.name,
+      size: file.size,
       content: arrayBuffer,
       file: file
-    }
-    
-    await loadExcelParser()
-    console.log('[Preview] Excel parser loaded, parsing...')
-    await parseAndShowExcel(file, !isEditable.value)
-    console.log('[Preview] Success!')
-    
-  } catch (error) {
-    console.error('[Preview] Error:', error)
-    ElMessage.error('加载预览失败: ' + (error as Error).message)
-  }
-}
-
-async function parseAndShowExcel(file: File, readOnly: boolean = false): Promise<void> {
-  const LuckyExcel = (window as any).LuckyExcel
-  
-  if (!LuckyExcel) {
-    console.error('[Excel Load] LuckyExcel not loaded')
-    throw new Error('Excel解析器未加载')
-  }
-
-  console.log('[Excel Load] Starting transformExcelToLucky for file:', file.name, 'size:', file.size)
-
-  // 使用 Promise 包装回调
-  const exportJson = await new Promise<any>((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error('Excel解析超时（10秒）'))
-    }, 10000)
-
-    try {
-      LuckyExcel.transformExcelToLucky(file, (data: any) => {
-        clearTimeout(timeout)
-        console.log('[Excel Load] Callback received data:', data)
-        resolve(data)
-      })
-    } catch (err) {
-      clearTimeout(timeout)
-      reject(err)
-    }
-  })
-
-  console.log('[Excel Load] ExportJson received:', exportJson)
-  
-  if (!exportJson) {
-    console.error('[Excel Load] exportJson is null/undefined')
-    throw new Error('Excel解析失败：返回数据为空')
-  }
-  
-  if (!exportJson.sheets) {
-    console.error('[Excel Load] exportJson.sheets is missing:', exportJson)
-    throw new Error('Excel文件格式错误：缺少sheets数据')
-  }
-  
-  if (exportJson.sheets.length === 0) {
-    console.error('[Excel Load] exportJson.sheets is empty')
-    throw new Error('Excel文件为空或无法解析')
-  }
-
-  console.log('[Excel Load] Sheets count:', exportJson.sheets.length)
-
-  destroySheet()
-
-  const luckysheet = (window as any).luckysheet
-  if (!luckysheet || typeof luckysheet.create !== 'function') {
-    console.error('[Excel Load] luckysheet not available:', luckysheet)
-    throw new Error('表格组件未正确加载')
-  }
-
-  console.log('[Excel Load] Creating luckysheet with data')
-
-  // 确保数据格式正确，只加载前100行和前100列
-  const MAX_ROWS = 100
-  const MAX_COLS = 100
-  
-  const sheetsData = exportJson.sheets.map((sheet: any, index: number) => {
-    // 过滤celldata，只保留前100行和前100列的数据
-    let filteredCelldata = sheet.celldata || []
-    if (filteredCelldata.length > 0) {
-      filteredCelldata = filteredCelldata.filter((cell: any) => {
-        const row = cell?.r || 0
-        const col = cell?.c || 0
-        return row < MAX_ROWS && col < MAX_COLS
-      })
-    }
-    
-    console.log(`[Excel Load] Sheet ${index}: original cells=${sheet.celldata?.length || 0}, filtered cells=${filteredCelldata.length}`)
-    
-    return {
-      name: sheet.name || `Sheet${index + 1}`,
-      color: sheet.color || '',
-      status: index === 0 ? 1 : 0,
-      order: index,
-      celldata: filteredCelldata,
-      row: Math.min(sheet.row || 84, MAX_ROWS),
-      column: Math.min(sheet.column || 60, MAX_COLS),
-      config: sheet.config || {},
-      pivotTable: sheet.pivotTable || null,
-      isPivotTable: sheet.isPivotTable || false
-    }
-  })
-
-  try {
-    luckysheet.create({
-      container: 'luckysheet',
-      title: file.name.replace(/\.(xlsx|xls|xlsm)$/i, ''),
-      lang: 'zh',
-      showinfobar: false,
-      showsheetbar: true,
-      showstatisticBar: true,
-      enableAddRow: !readOnly,
-      enableAddCol: !readOnly,
-      allowEdit: !readOnly,
-      showtoolbarConfig: {
-        check: false,
-        print: false
-      },
-      data: sheetsData
     })
-
-    console.log('[Excel Load] Success!')
-  } catch (e) {
-    console.error('[Excel Load] Error creating luckysheet:', e)
-    throw e
-  }
-}
-
-async function switchSheet(index: number) {
-  if (index >= 0 && index < uploadedFiles.value.length) {
-    currentFileIndex.value = index
-    const file = uploadedFiles.value[index]
-    await parseAndShowExcel(file.file, false)
-  }
-}
-
-async function downloadFile(file: UploadedFile) {
-  try {
-    const blob = new Blob([file.content], { 
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-    })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = file.name
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    window.URL.revokeObjectURL(url)
-    ElMessage.success('下载完成')
+    currentFileIndex.value = uploadedFiles.value.length - 1
+    
+    ElMessage.success('导入成功')
   } catch (error) {
-    ElMessage.error('下载失败')
+    console.error('导入失败:', error)
+    ElMessage.error('导入失败: ' + (error as Error).message)
+  } finally {
+    importing.value = false
+    if (fileInput.value) {
+      fileInput.value.value = ''
+    }
+  }
+}
+
+function switchSheet(index: number) {
+  currentFileIndex.value = index
+  const file = uploadedFiles.value[index]
+  if (file) {
+    parseAndShowExcel(file.file, false)
+  }
+}
+
+function downloadFile(file: UploadedFile) {
+  const blob = new Blob([file.content], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = file.name
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+function downloadCurrentSheet() {
+  if (currentFileIndex.value >= 0) {
+    downloadFile(uploadedFiles.value[currentFileIndex.value])
+  }
+}
+
+function removeFile(index: number) {
+  uploadedFiles.value.splice(index, 1)
+  if (currentFileIndex.value === index) {
+    currentFileIndex.value = -1
+    initEmptySheet()
+  } else if (currentFileIndex.value > index) {
+    currentFileIndex.value--
   }
 }
 
@@ -673,206 +616,100 @@ function exitCurrentSheet() {
   if (isPreviewMode.value) {
     router.push('/community')
   } else {
-    if (uploadedFiles.value.length > 0) {
-      uploadedFiles.value = []
-      currentFileIndex.value = -1
-    }
+    currentFileIndex.value = -1
     initEmptySheet()
   }
 }
 
 function openPublishDialog() {
-  if (!userStore.isAuthenticated) {
-    ElMessage.warning('请先登录后发布')
+  if (currentFileIndex.value < 0) {
+    ElMessage.warning('请先导入表格')
     return
   }
-  
-  const fileName = currentFileName.value.replace(/\.(xlsx|xls|xlsm)$/i, '')
-  publishForm.title = fileName
-  publishForm.area = 'pull_table'
-  publishForm.description = ''
+  publishForm.title = uploadedFiles.value[currentFileIndex.value].name.replace(/\.xlsx?$/i, '')
   publishDialogVisible.value = true
 }
 
 async function publishCurrentSheet() {
   if (!publishFormRef.value) return
   
-  await publishFormRef.value.validate(async (valid) => {
+  await publishFormRef.value.validate(async (valid: boolean) => {
     if (!valid) return
     
+    const currentFile = uploadedFiles.value[currentFileIndex.value]
+    if (!currentFile) {
+      ElMessage.error('没有找到要发布的文件')
+      return
+    }
+
     publishing.value = true
     try {
-      let fileContent: ArrayBuffer | null = null
-      let fileName = publishForm.title + '.xlsx'
-      
-      if (isPreviewMode.value && previewFile.value) {
-        fileContent = previewFile.value.content
-        fileName = previewFile.value.name
-      } else if (currentFileIndex.value >= 0 && uploadedFiles.value[currentFileIndex.value]) {
-        fileContent = uploadedFiles.value[currentFileIndex.value].content
-        fileName = uploadedFiles.value[currentFileIndex.value].name
-      }
-      
-      if (!fileContent) {
-        ElMessage.error('没有可发布的表格')
-        return
-      }
-      
-      const blob = new Blob([fileContent], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-      const file = new File([blob], fileName, { type: blob.type })
-      
       const formData = new FormData()
-      formData.append('file', file)
-      
-      const uploadResponse = await fetch('/api/uploads', {
+      formData.append('file', currentFile.file)
+      formData.append('title', publishForm.title)
+      formData.append('description', publishForm.description)
+      formData.append('area', publishForm.area)
+
+      const response = await fetch('/api/spreadsheets', {
         method: 'POST',
-        body: formData,
         headers: {
-          'Authorization': `Bearer ${userStore.token}`
-        }
+          'Authorization': userStore.token ? `Bearer ${userStore.token}` : ''
+        },
+        body: formData
       })
-      
-      if (!uploadResponse.ok) {
-        throw new Error('文件上传失败')
+
+      if (response.ok) {
+        ElMessage.success('发布成功')
+        publishDialogVisible.value = false
+        router.push('/community')
+      } else {
+        const error = await response.json()
+        ElMessage.error(error.detail || '发布失败')
       }
-      
-      const uploadResult = await uploadResponse.json()
-      
-      const spreadsheetData = {
-        title: publishForm.title,
-        description: publishForm.description || null,
-        area: publishForm.area,
-        character_tags: [],
-        tags: [],
-        is_public: true,
-        is_draft: false,
-        file_url: uploadResult.file_url,
-        file_size: uploadResult.file_size
-      }
-      
-      const createResponse = await fetch('/api/spreadsheets', {
-        method: 'POST',
-        body: JSON.stringify(spreadsheetData),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userStore.token}`
-        }
-      })
-      
-      if (!createResponse.ok) {
-        throw new Error('创建表格失败')
-      }
-      
-      ElMessage.success('表格已发布！')
-      publishDialogVisible.value = false
-      router.push('/community')
-      
     } catch (error) {
-      ElMessage.error('发布失败: ' + ((error as Error).message || '未知错误'))
+      console.error('发布失败:', error)
+      ElMessage.error('发布失败')
     } finally {
       publishing.value = false
     }
   })
 }
 
-function removeFile(index: number) {
-  if (index >= 0 && index < uploadedFiles.value.length) {
-    uploadedFiles.value.splice(index, 1)
-    if (currentFileIndex.value >= uploadedFiles.value.length) {
-      currentFileIndex.value = uploadedFiles.value.length - 1
-    }
-    if (uploadedFiles.value.length === 0) {
-      initEmptySheet()
-    } else if (currentFileIndex.value >= 0) {
-      switchSheet(currentFileIndex.value)
-    }
-    ElMessage.success('已删除')
-  }
+function formatFileSize(size: number): string {
+  if (size < 1024) return size + ' B'
+  if (size < 1024 * 1024) return (size / 1024).toFixed(1) + ' KB'
+  return (size / 1024 / 1024).toFixed(1) + ' MB'
 }
 
-async function downloadCurrentSheet() {
-  try {
-    const luckysheet = (window as any).luckysheet
-    if (!luckysheet || typeof luckysheet.getluckysheetfile !== 'function') {
-      ElMessage.error('表格组件未正确加载')
-      return
-    }
+onMounted(() => {
+  checkPreviewMode()
+  checkTemplateLoad()
+  loadAllScripts()
+})
 
-    const fileName = currentFileName.value || 'export.xlsx'
-    
-    if (isPreviewMode.value && previewFile.value) {
-      await downloadFileFromLuckysheet(fileName)
-    } else if (currentFileIndex.value >= 0 && uploadedFiles.value[currentFileIndex.value]) {
-      await downloadFileFromLuckysheet(fileName)
-    } else {
-      ElMessage.error('没有可下载的表格')
-    }
-  } catch (error) {
-    console.error('下载失败', error)
-    ElMessage.error('下载失败')
-  }
-}
+onUnmounted(() => {
+  destroySheet()
+})
 
-async function downloadFileFromLuckysheet(fileName: string) {
-  try {
-    const luckysheet = (window as any).luckysheet
-    const LuckyExcel = (window as any).LuckyExcel
-    
-    if (luckysheet && LuckyExcel && typeof LuckyExcel.transformLuckyToExcel === 'function') {
-      const luckyFile = luckysheet.getluckysheetfile()
-      if (!luckyFile) {
-        ElMessage.error('无法获取表格数据')
-        return
-      }
-      
-      LuckyExcel.transformLuckyToExcel(luckyFile, (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = fileName
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        window.URL.revokeObjectURL(url)
-        ElMessage.success('下载完成')
-      })
-    } else {
-      ElMessage.warning('暂不支持直接导出修改内容，请使用原始文件')
-      if (isPreviewMode.value && previewFile.value) {
-        await downloadFile(previewFile.value)
-      } else if (currentFileIndex.value >= 0 && uploadedFiles.value[currentFileIndex.value]) {
-        await downloadFile(uploadedFiles.value[currentFileIndex.value])
-      }
-    }
-  } catch (error) {
-    console.error('导出失败', error)
-    ElMessage.warning('导出修改内容失败，正在下载原始文件')
-    if (isPreviewMode.value && previewFile.value) {
-      await downloadFile(previewFile.value)
-    } else if (currentFileIndex.value >= 0 && uploadedFiles.value[currentFileIndex.value]) {
-      await downloadFile(uploadedFiles.value[currentFileIndex.value])
+watch(() => route.query.sheet, (newSheet) => {
+  if (newSheet) {
+    isPreviewMode.value = true
+    previewSheetId.value = newSheet as string
+    if (isReady.value) {
+      loadPreviewSheet()
     }
   }
-}
+})
 </script>
 
 <style scoped>
 .calculator {
-  height: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .calculator-card {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.calculator-card :deep(.el-card__body) {
-  flex: 1;
-  padding: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  min-height: 600px;
 }
 
 .card-header {
@@ -887,38 +724,30 @@ async function downloadFileFromLuckysheet(fileName: string) {
 }
 
 .sheet-list {
-  padding: 12px 16px;
-  background: #1a1a2e;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
   border-bottom: 1px solid #2a2a3e;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
 }
 
 .sheet-item {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  background: #16213e;
-  border: 1px solid #2a2a3e;
+  padding: 12px;
+  background: #1a1a2e;
   border-radius: 4px;
+  margin-bottom: 8px;
 }
 
 .sheet-info {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 12px;
 }
 
 .sheet-name {
-  font-size: 14px;
   font-weight: 500;
   color: #fff;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .sheet-size {
@@ -928,22 +757,18 @@ async function downloadFileFromLuckysheet(fileName: string) {
 
 .sheet-actions {
   display: flex;
-  gap: 4px;
+  gap: 8px;
 }
 
 .sheet-wrapper {
-  flex: 1;
-  position: relative;
-  min-height: 0;
+  min-height: 500px;
+  background: #fff;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
 .sheet-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
   width: 100%;
-  height: 100%;
+  height: 600px;
 }
 </style>

@@ -48,9 +48,10 @@ export const useUserStore = defineStore('user', () => {
     try {
       await api.login(username, password)
       await fetchCurrentUser()
+      console.log('[User Store] Login success, user:', user.value)
       return true
     } catch (error) {
-      console.error('Login failed:', error)
+      console.error('[User Store] Login failed:', error)
       return false
     } finally {
       loading.value = false

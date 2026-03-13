@@ -65,7 +65,7 @@
               <el-button size="small" type="primary" @click="downloadSheet(sheet)">
                 下载
               </el-button>
-              <template v-if="userStore.user?.is_admin">
+              <template v-if="isAdmin">
                 <el-button size="small" :type="sheet.is_featured ? 'warning' : 'default'" @click="toggleFeature(sheet)">
                   {{ sheet.is_featured ? '取消置顶' : '置顶' }}
                 </el-button>
@@ -96,7 +96,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search, Star, View, User, Upload } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -106,6 +106,12 @@ import api from '../api'
 
 const router = useRouter()
 const userStore = useUserStore()
+
+// 计算属性：是否为管理员
+const isAdmin = computed(() => {
+  console.log('[Community] Checking admin, user:', userStore.user)
+  return userStore.user?.is_admin === true
+})
 
 const searchKeyword = ref('')
 const selectedArea = ref('')
@@ -212,7 +218,7 @@ async function toggleStar(sheet: any) {
 }
 
 async function toggleFeature(sheet: any) {
-  if (!userStore.user?.is_admin) {
+  if (!isAdmin.value) {
     ElMessage.warning('需要管理员权限')
     return
   }
@@ -229,7 +235,7 @@ async function toggleFeature(sheet: any) {
 }
 
 async function confirmDelete(sheet: any) {
-  if (!userStore.user?.is_admin) {
+  if (!isAdmin.value) {
     ElMessage.warning('需要管理员权限')
     return
   }

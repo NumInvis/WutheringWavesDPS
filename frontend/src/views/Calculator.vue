@@ -464,24 +464,47 @@ async function parseAndShowExcel(file: File, readOnly: boolean = false): Promise
     const LuckyExcel = (window as any).LuckyExcel
     
     if (!LuckyExcel) {
+      console.error('[Excel Load] LuckyExcel not loaded')
       reject(new Error('Excel解析器未加载'))
       return
     }
 
+    console.log('[Excel Load] Starting transformExcelToLucky for file:', file.name)
+
     LuckyExcel.transformExcelToLucky(file, (exportJson: any) => {
+      console.log('[Excel Load] transformExcelToLucky callback received:', exportJson)
+      
       try {
-        if (!exportJson.sheets || exportJson.sheets.length === 0) {
+        if (!exportJson) {
+          console.error('[Excel Load] exportJson is null/undefined')
+          reject(new Error('Excel解析失败：返回数据为空'))
+          return
+        }
+        
+        if (!exportJson.sheets) {
+          console.error('[Excel Load] exportJson.sheets is missing:', exportJson)
+          reject(new Error('Excel文件格式错误：缺少sheets数据'))
+          return
+        }
+        
+        if (exportJson.sheets.length === 0) {
+          console.error('[Excel Load] exportJson.sheets is empty')
           reject(new Error('Excel文件为空或无法解析'))
           return
         }
+
+        console.log('[Excel Load] Sheets count:', exportJson.sheets.length)
 
         destroySheet()
 
         const luckysheet = (window as any).luckysheet
         if (!luckysheet || typeof luckysheet.create !== 'function') {
+          console.error('[Excel Load] luckysheet not available:', luckysheet)
           reject(new Error('表格组件未正确加载'))
           return
         }
+
+        console.log('[Excel Load] Creating luckysheet with data')
 
         luckysheet.create({
           container: 'luckysheet',
@@ -500,8 +523,10 @@ async function parseAndShowExcel(file: File, readOnly: boolean = false): Promise
           data: exportJson.sheets
         })
 
+        console.log('[Excel Load] Success!')
         resolve()
       } catch (error) {
+        console.error('[Excel Load] Error in callback:', error)
         reject(error)
       }
     })

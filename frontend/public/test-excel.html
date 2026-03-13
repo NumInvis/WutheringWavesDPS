@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Excel Test</title>
+    <!-- Luckysheet CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/css/pluginsCss.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/plugins.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/css/luckysheet.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/assets/iconfont/iconfont.css">
+    <style>
+        #luckysheet { width: 100%; height: 500px; }
+        #log { margin-top: 20px; padding: 10px; background: #f0f0f0; font-family: monospace; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>Excel加载测试</h1>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm">
+    <div id="luckysheet"></div>
+    <div id="log"></div>
+
+    <!-- Luckysheet JS -->
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luckyexcel@1.0.1/dist/luckyexcel.umd.js"></script>
+
+    <script>
+        const logEl = document.getElementById('log');
+        function log(msg) {
+            console.log(msg);
+            logEl.textContent += msg + '\n';
+        }
+
+        log('页面加载完成');
+        log('luckysheet 对象: ' + (typeof luckysheet !== 'undefined' ? '存在' : '不存在'));
+        log('LuckyExcel 对象: ' + (typeof LuckyExcel !== 'undefined' ? '存在' : '不存在'));
+
+        // 初始化空表格
+        if (typeof luckysheet !== 'undefined') {
+            luckysheet.create({
+                container: 'luckysheet',
+                title: '测试',
+                lang: 'zh',
+                data: [{
+                    name: 'Sheet1',
+                    status: 1,
+                    order: 0,
+                    celldata: []
+                }]
+            });
+            log('空表格初始化完成');
+        }
+
+        // 文件选择处理
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            log('选择文件: ' + file.name + ', 大小: ' + file.size);
+
+            if (typeof LuckyExcel === 'undefined') {
+                log('错误: LuckyExcel 未加载');
+                return;
+            }
+
+            log('开始解析Excel...');
+
+            LuckyExcel.transformExcelToLucky(file, function(exportJson) {
+                log('解析完成!');
+                log('返回数据: ' + JSON.stringify(exportJson, null, 2).substring(0, 500));
+
+                if (!exportJson) {
+                    log('错误: 返回数据为空');
+                    return;
+                }
+
+                if (!exportJson.sheets) {
+                    log('错误: 缺少sheets数据');
+                    return;
+                }
+
+                log('Sheets数量: ' + exportJson.sheets.length);
+
+                // 销毁旧表格
+                luckysheet.destroy();
+
+                // 创建新表格
+                luckysheet.create({
+                    container: 'luckysheet',
+                    title: file.name.replace(/\.(xlsx|xls|xlsm)$/i, ''),
+                    lang: 'zh',
+                    data: exportJson.sheets
+                });
+
+                log('表格加载完成!');
+            });
+        });
+    </script>
+</body>
+</html>

@@ -350,6 +350,8 @@ def delete_spreadsheet(
     current_user: User = Depends(get_current_active_user)
 ):
     """Delete spreadsheet (owner or admin)."""
+    from app.models.star import Star
+    
     spreadsheet = db.query(Spreadsheet).filter(Spreadsheet.id == spreadsheet_id).first()
     if not spreadsheet:
         raise HTTPException(
@@ -363,6 +365,9 @@ def delete_spreadsheet(
             detail="无权删除此表格"
         )
 
+    # 先删除关联的stars
+    db.query(Star).filter(Star.spreadsheet_id == spreadsheet_id).delete(synchronize_session=False)
+    
     db.delete(spreadsheet)
     db.commit()
 

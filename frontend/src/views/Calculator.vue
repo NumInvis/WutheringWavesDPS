@@ -252,9 +252,13 @@ function checkPreviewMode() {
 }
 
 async function loadAllScripts() {
+  console.log('[Script Load] Starting...')
+  
   if ((window as any).luckysheet && typeof (window as any).luckysheet.create === 'function') {
+    console.log('[Script Load] Luckysheet already loaded')
     isReady.value = true
     await nextTick()
+    initEmptySheet()
     if (isPreviewMode.value) {
       loadPreviewSheet()
     }
@@ -264,14 +268,21 @@ async function loadAllScripts() {
   const loadCSS = (href: string): Promise<void> => {
     return new Promise((resolve) => {
       if (document.querySelector(`link[href="${href}"]`)) {
+        console.log('[Script Load] CSS already exists:', href)
         resolve()
         return
       }
       const link = document.createElement('link')
       link.rel = 'stylesheet'
       link.href = href
-      link.onload = () => resolve()
-      link.onerror = () => resolve()
+      link.onload = () => {
+        console.log('[Script Load] CSS loaded:', href)
+        resolve()
+      }
+      link.onerror = () => {
+        console.error('[Script Load] CSS failed:', href)
+        resolve()
+      }
       document.head.appendChild(link)
     })
   }
@@ -279,39 +290,57 @@ async function loadAllScripts() {
   const loadScript = (src: string): Promise<void> => {
     return new Promise((resolve) => {
       if (document.querySelector(`script[src="${src}"]`)) {
+        console.log('[Script Load] Script already exists:', src)
         resolve()
         return
       }
       const script = document.createElement('script')
       script.src = src
-      script.onload = () => resolve()
-      script.onerror = () => resolve()
+      script.onload = () => {
+        console.log('[Script Load] Script loaded:', src)
+        resolve()
+      }
+      script.onerror = () => {
+        console.error('[Script Load] Script failed:', src)
+        resolve()
+      }
       document.head.appendChild(script)
     })
   }
 
   try {
+    console.log('[Script Load] Loading CSS files...')
     await loadCSS('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/css/pluginsCss.css')
     await loadCSS('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/plugins.css')
     await loadCSS('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/css/luckysheet.css')
     await loadCSS('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/assets/iconfont/iconfont.css')
     
+    console.log('[Script Load] Loading JS files...')
     await loadScript('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js')
     await loadScript('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.js')
     
+    console.log('[Script Load] Waiting for luckysheet to initialize...')
     await waitForLuckysheet()
+    
+    console.log('[Script Load] Luckysheet ready, checking...')
+    const luckysheet = (window as any).luckysheet
+    console.log('[Script Load] luckysheet object:', typeof luckysheet)
+    console.log('[Script Load] luckysheet.create:', typeof luckysheet?.create)
     
     isReady.value = true
     await nextTick()
     
     // 初始化空表格
+    console.log('[Script Load] Initializing empty sheet...')
     initEmptySheet()
     
     if (isPreviewMode.value) {
       loadPreviewSheet()
     }
+    
+    console.log('[Script Load] Complete!')
   } catch (error) {
-    console.error('加载失败', error)
+    console.error('[Script Load] Failed:', error)
     ElMessage.error('表格组件加载失败，请刷新页面重试')
   }
 }

@@ -109,21 +109,29 @@ class ApiClient {
   }
 
   async login(username: string, password: string) {
-    const formData = new FormData()
-    formData.append('username', username)
-    formData.append('password', password)
+    try {
+      const formData = new FormData()
+      formData.append('username', username)
+      formData.append('password', password)
 
-    const response = await this.client.post('/auth/login', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
+      console.log('[API] Attempting login for:', username)
 
-    const { access_token } = response.data
-    this.setAuthToken(access_token)
-    localStorage.setItem('token', access_token)
+      const response = await this.client.post('/auth/login', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
 
-    return response.data
+      const { access_token } = response.data
+      this.setAuthToken(access_token)
+      localStorage.setItem('token', access_token)
+
+      console.log('[API] Login successful')
+      return response.data
+    } catch (error: any) {
+      console.error('[API] Login error:', error.response?.data || error.message)
+      throw error
+    }
   }
 
   async register(data: {

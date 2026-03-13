@@ -123,12 +123,20 @@ onUnmounted(() => {
 async function fetchLogs() {
   loading.value = true
   try {
-    const data = await api.get('/admin/logs')
-    logs.value = data.logs || []
+    // 优先从本地存储加载日志
+    loadLocalLogs()
+    
+    // 尝试从服务器获取（如果有的话）
+    try {
+      const data = await api.get('/admin/logs')
+      if (data.logs && data.logs.length > 0) {
+        logs.value = data.logs
+      }
+    } catch (serverError) {
+      console.log('服务器日志获取失败，使用本地日志')
+    }
   } catch (error) {
     console.error('获取日志失败:', error)
-    // 使用本地存储的日志作为备用
-    loadLocalLogs()
   } finally {
     loading.value = false
   }

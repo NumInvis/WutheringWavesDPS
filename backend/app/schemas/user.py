@@ -10,7 +10,7 @@ class UserBase(BaseModel):
     """用户基础模式"""
     username: str = Field(..., min_length=3, max_length=50)
     # 不做邮箱绑定：允许不传；后端会自动生成占位邮箱
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     display_name: Optional[str] = None
     avatar_url: Optional[str] = None
     bio: Optional[str] = None

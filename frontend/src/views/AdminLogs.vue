@@ -142,11 +142,13 @@ async function fetchLogs() {
 
 // 实时添加新日志
 function addRealtimeLog(log: any) {
-  logs.value.push(log)
+  // 使用新数组避免触发响应式更新循环
+  const newLogs = [...logs.value, log]
   // 限制日志数量
-  if (logs.value.length > 1000) {
-    logs.value = logs.value.slice(-1000)
+  if (newLogs.length > 1000) {
+    newLogs.splice(0, newLogs.length - 1000)
   }
+  logs.value = newLogs
 }
 
 function loadLocalLogs() {
@@ -233,9 +235,9 @@ function getLogType(level: string): string {
     'info': 'info',
     'warn': 'warning',
     'error': 'danger',
-    'debug': ''
+    'debug': 'info'  // debug也使用info样式，不能返回空字符串
   }
-  return typeMap[level] || ''
+  return typeMap[level] || 'info'  // 默认返回info，不能返回空字符串
 }
 </script>
 

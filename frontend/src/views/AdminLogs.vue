@@ -82,6 +82,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Delete, Search } from '@element-plus/icons-vue'
 import { useUserStore } from '../stores/user'
 import api from '../api'
+import logger from '../utils/logger'
 
 interface LogEntry {
   timestamp: number
@@ -100,6 +101,7 @@ const searchKeyword = ref('')
 const currentPage = ref(1)
 const pageSize = ref(100)
 const refreshInterval = ref<number | null>(null)
+const unsubscribeLogger = ref<(() => void) | null>(null)
 
 // 检查是否为管理员
 onMounted(() => {
@@ -110,35 +112,40 @@ onMounted(() => {
   }
   
   fetchLogs()
-  // 每10秒自动刷新
-  refreshInterval.value = window.setInterval(fetchLogs, 10000)
+  
+  // 订阅实时日志
+  unsubscribeLogger.value = logger.onLog((log) => {
+    addRealtimeLog(log)
+  })
 })
 
 onUnmounted(() => {
   if (refreshInterval.value) {
     clearInterval(refreshInterval.value)
   }
+  if (unsubscribeLogger.value) {
+    unsubscribeLogger.value()
+  }
 })
 
 async function fetchLogs() {
   loading.value = true
   try {
-    // 优先从本地存储加载日志
+    // 从本地存储加载日志
     loadLocalLogs()
-    
-    // 尝试从服务器获取（如果有的话）
-    try {
-      const data = await api.get('/admin/logs')
-      if (data.logs && data.logs.length > 0) {
-        logs.value = data.logs
-      }
-    } catch (serverError) {
-      console.log('服务器日志获取失败，使用本地日志')
-    }
   } catch (error) {
     console.error('获取日志失败:', error)
   } finally {
     loading.value = false
+  }
+}
+
+// 实时添加新日志
+function addRealtimeLog(log: any) {
+  logs.value.push(log)
+  // 限制日志数量
+  if (logs.value.length > 1000) {
+    logs.value = logs.value.slice(-1000)
   }
 }
 

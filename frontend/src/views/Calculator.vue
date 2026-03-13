@@ -460,77 +460,100 @@ async function loadPreviewSheet() {
 }
 
 async function parseAndShowExcel(file: File, readOnly: boolean = false): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const LuckyExcel = (window as any).LuckyExcel
-    
-    if (!LuckyExcel) {
-      console.error('[Excel Load] LuckyExcel not loaded')
-      reject(new Error('Excel解析器未加载'))
-      return
+  const LuckyExcel = (window as any).LuckyExcel
+  
+  if (!LuckyExcel) {
+    console.error('[Excel Load] LuckyExcel not loaded')
+    throw new Error('Excel解析器未加载')
+  }
+
+  console.log('[Excel Load] Starting transformExcelToLucky for file:', file.name, 'size:', file.size)
+
+  // 使用 Promise 包装回调
+  const exportJson = await new Promise<any>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error('Excel解析超时（10秒）'))
+    }, 10000)
+
+    try {
+      LuckyExcel.transformExcelToLucky(file, (data: any) => {
+        clearTimeout(timeout)
+        console.log('[Excel Load] Callback received data:', data)
+        resolve(data)
+      })
+    } catch (err) {
+      clearTimeout(timeout)
+      reject(err)
     }
-
-    console.log('[Excel Load] Starting transformExcelToLucky for file:', file.name)
-
-    LuckyExcel.transformExcelToLucky(file, (exportJson: any) => {
-      console.log('[Excel Load] transformExcelToLucky callback received:', exportJson)
-      
-      try {
-        if (!exportJson) {
-          console.error('[Excel Load] exportJson is null/undefined')
-          reject(new Error('Excel解析失败：返回数据为空'))
-          return
-        }
-        
-        if (!exportJson.sheets) {
-          console.error('[Excel Load] exportJson.sheets is missing:', exportJson)
-          reject(new Error('Excel文件格式错误：缺少sheets数据'))
-          return
-        }
-        
-        if (exportJson.sheets.length === 0) {
-          console.error('[Excel Load] exportJson.sheets is empty')
-          reject(new Error('Excel文件为空或无法解析'))
-          return
-        }
-
-        console.log('[Excel Load] Sheets count:', exportJson.sheets.length)
-
-        destroySheet()
-
-        const luckysheet = (window as any).luckysheet
-        if (!luckysheet || typeof luckysheet.create !== 'function') {
-          console.error('[Excel Load] luckysheet not available:', luckysheet)
-          reject(new Error('表格组件未正确加载'))
-          return
-        }
-
-        console.log('[Excel Load] Creating luckysheet with data')
-
-        luckysheet.create({
-          container: 'luckysheet',
-          title: file.name.replace(/\.(xlsx|xls|xlsm)$/i, ''),
-          lang: 'zh',
-          showinfobar: false,
-          showsheetbar: true,
-          showstatisticBar: true,
-          enableAddRow: !readOnly,
-          enableAddCol: !readOnly,
-          allowEdit: !readOnly,
-          showtoolbarConfig: {
-            check: false,
-            print: false
-          },
-          data: exportJson.sheets
-        })
-
-        console.log('[Excel Load] Success!')
-        resolve()
-      } catch (error) {
-        console.error('[Excel Load] Error in callback:', error)
-        reject(error)
-      }
-    })
   })
+
+  console.log('[Excel Load] ExportJson received:', exportJson)
+  
+  if (!exportJson) {
+    console.error('[Excel Load] exportJson is null/undefined')
+    throw new Error('Excel解析失败：返回数据为空')
+  }
+  
+  if (!exportJson.sheets) {
+    console.error('[Excel Load] exportJson.sheets is missing:', exportJson)
+    throw new Error('Excel文件格式错误：缺少sheets数据')
+  }
+  
+  if (exportJson.sheets.length === 0) {
+    console.error('[Excel Load] exportJson.sheets is empty')
+    throw new Error('Excel文件为空或无法解析')
+  }
+
+  console.log('[Excel Load] Sheets count:', exportJson.sheets.length)
+
+  destroySheet()
+
+  const luckysheet = (window as any).luckysheet
+  if (!luckysheet || typeof luckysheet.create !== 'function') {
+    console.error('[Excel Load] luckysheet not available:', luckysheet)
+    throw new Error('表格组件未正确加载')
+  }
+
+  console.log('[Excel Load] Creating luckysheet with data')
+
+  // 确保数据格式正确
+  const sheetsData = exportJson.sheets.map((sheet: any, index: number) => ({
+    name: sheet.name || `Sheet${index + 1}`,
+    color: sheet.color || '',
+    status: index === 0 ? 1 : 0,
+    order: index,
+    celldata: sheet.celldata || [],
+    row: sheet.row || 84,
+    column: sheet.column || 60,
+    config: sheet.config || {},
+    pivotTable: sheet.pivotTable || null,
+    isPivotTable: sheet.isPivotTable || false,
+    ...sheet
+  }))
+
+  try {
+    luckysheet.create({
+      container: 'luckysheet',
+      title: file.name.replace(/\.(xlsx|xls|xlsm)$/i, ''),
+      lang: 'zh',
+      showinfobar: false,
+      showsheetbar: true,
+      showstatisticBar: true,
+      enableAddRow: !readOnly,
+      enableAddCol: !readOnly,
+      allowEdit: !readOnly,
+      showtoolbarConfig: {
+        check: false,
+        print: false
+      },
+      data: sheetsData
+    })
+
+    console.log('[Excel Load] Success!')
+  } catch (e) {
+    console.error('[Excel Load] Error creating luckysheet:', e)
+    throw e
+  }
 }
 
 async function switchSheet(index: number) {

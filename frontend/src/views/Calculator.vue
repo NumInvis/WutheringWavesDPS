@@ -462,7 +462,12 @@ async function loadExcelParser() {
 }
 
 async function loadPreviewSheet() {
-  if (!previewSheetId.value) return
+  if (!previewSheetId.value) {
+    console.log('[Preview] No preview sheet ID')
+    return
+  }
+  
+  console.log('[Preview] Loading preview for sheet:', previewSheetId.value)
   
   try {
     const response = await fetch(`/api/spreadsheets/${previewSheetId.value}/download`, {
@@ -471,28 +476,55 @@ async function loadPreviewSheet() {
       }
     })
     
-    if (response.ok) {
-      const data = await response.json()
-      if (data.file_url) {
-        const fileResponse = await fetch(data.file_url)
-        const blob = await fileResponse.blob()
-        const arrayBuffer = await blob.arrayBuffer()
-        const file = new File([blob], data.filename || 'preview.xlsx', { type: blob.type })
-        
-        previewFile.value = {
-          id: previewSheetId.value,
-          name: data.filename || 'preview.xlsx',
-          size: blob.size,
-          content: arrayBuffer,
-          file: file
-        }
-        
-        await loadExcelParser()
-        await parseAndShowExcel(file, !isEditable.value)
-      }
+    console.log('[Preview] Download API response:', response.status)
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('[Preview] Download API failed:', response.status, errorText)
+      ElMessage.error('获取表格信息失败')
+      return
     }
+    
+    const data = await response.json()
+    console.log('[Preview] Download data:', data)
+    
+    if (!data.file_url) {
+      console.error('[Preview] No file_url in response')
+      ElMessage.error('表格文件不存在')
+      return
+    }
+    
+    console.log('[Preview] Fetching file from:', data.file_url)
+    const fileResponse = await fetch(data.file_url)
+    
+    if (!fileResponse.ok) {
+      console.error('[Preview] File fetch failed:', fileResponse.status)
+      ElMessage.error('加载文件失败')
+      return
+    }
+    
+    const blob = await fileResponse.blob()
+    const arrayBuffer = await blob.arrayBuffer()
+    const file = new File([blob], data.filename || 'preview.xlsx', { type: blob.type })
+    
+    console.log('[Preview] File loaded:', file.name, 'size:', file.size)
+    
+    previewFile.value = {
+      id: previewSheetId.value,
+      name: data.filename || 'preview.xlsx',
+      size: blob.size,
+      content: arrayBuffer,
+      file: file
+    }
+    
+    await loadExcelParser()
+    console.log('[Preview] Excel parser loaded, parsing...')
+    await parseAndShowExcel(file, !isEditable.value)
+    console.log('[Preview] Success!')
+    
   } catch (error) {
-    ElMessage.error('加载预览失败')
+    console.error('[Preview] Error:', error)
+    ElMessage.error('加载预览失败: ' + (error as Error).message)
   }
 }
 

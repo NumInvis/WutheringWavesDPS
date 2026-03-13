@@ -6,6 +6,7 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import router from './router'
 import App from './App.vue'
 import './styles/theme.css'
+import './utils/logger'  // 引入日志拦截器
 
 const app = createApp(App)
 const pinia = createPinia()

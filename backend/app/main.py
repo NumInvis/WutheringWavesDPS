@@ -44,13 +44,14 @@ from app.models import user, spreadsheet, star, category  # noqa: F401
 Base.metadata.create_all(bind=engine)
 
 # Routers
-from app.api import auth, spreadsheets, stars, categories, uploads  # noqa: E402
+from app.api import auth, spreadsheets, stars, categories, uploads, admin  # noqa: E402
 
 app.include_router(auth.router)
 app.include_router(spreadsheets.router)
 app.include_router(stars.router)
 app.include_router(categories.router)
 app.include_router(uploads.router)
+app.include_router(admin.router)
 
 
 @app.on_event("startup")

@@ -28,6 +28,12 @@ const routes: RouteRecordRaw[] = [
     path: '/community',
     name: 'Community',
     component: () => import('@/views/Community.vue')
+  },
+  {
+    path: '/admin/logs',
+    name: 'AdminLogs',
+    component: () => import('@/views/AdminLogs.vue'),
+    meta: { requiresAdmin: true }
   }
 ]
 
@@ -42,6 +48,8 @@ router.beforeEach((to, _from, next) => {
   if (to.meta.requiresAuth && !userStore.isAuthenticated) {
     next({ path: '/login', query: { redirect: to.fullPath } })
   } else if (to.meta.guest && userStore.isAuthenticated) {
+    next('/')
+  } else if (to.meta.requiresAdmin && !userStore.user?.is_admin) {
     next('/')
   } else {
     next()

@@ -11,6 +11,7 @@
               <router-link to="/" class="nav-link">首页</router-link>
               <router-link to="/calculator" class="nav-link">工作区</router-link>
               <router-link to="/community" class="nav-link">社区</router-link>
+              <router-link v-if="isAdmin" to="/admin/logs" class="nav-link">日志</router-link>
             </nav>
             <div class="user-area">
               <template v-if="userStore.isAuthenticated">
@@ -69,7 +70,7 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { onMounted, ref, reactive } from 'vue'
+import { onMounted, ref, reactive, computed } from 'vue'
 import { ElConfigProvider, ElMessage } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { SwitchButton, ArrowDown, Edit } from '@element-plus/icons-vue'
@@ -78,6 +79,11 @@ import api from './api'
 
 const router = useRouter()
 const userStore = useUserStore()
+
+// 计算属性：是否为管理员
+const isAdmin = computed(() => {
+  return userStore.user?.is_admin === true
+})
 
 const editDialogVisible = ref(false)
 const editLoading = ref(false)

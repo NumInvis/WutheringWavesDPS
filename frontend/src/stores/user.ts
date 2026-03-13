@@ -5,12 +5,13 @@ import api from '../api'
 interface User {
   id: string
   username: string
-  email: string
+  email?: string
   display_name: string
   avatar_url?: string
   bio?: string
   is_active: boolean
   is_verified: boolean
+  is_admin?: boolean
   role: string
   created_at: string
   updated_at: string
@@ -21,9 +22,10 @@ export const useUserStore = defineStore('user', () => {
   const user = ref<User | null>(null)
   const loading = ref(false)
 
-  const isAuthenticated = computed(() => !!user.value)
+  const isAuthenticated = computed(() => !!user.value || !!token.value)
   const username = computed(() => user.value?.username || '')
   const displayName = computed(() => user.value?.display_name || '')
+  const token = computed(() => localStorage.getItem('token') || '')
 
   async function fetchCurrentUser() {
     if (!api.isAuthenticated()) return
@@ -57,7 +59,6 @@ export const useUserStore = defineStore('user', () => {
 
   async function register(data: {
     username: string
-    email: string
     password: string
     display_name?: string
     avatar_url?: string
@@ -78,6 +79,7 @@ export const useUserStore = defineStore('user', () => {
 
   function logout() {
     user.value = null
+    localStorage.removeItem('token')
     api.logout()
   }
 
@@ -91,6 +93,7 @@ export const useUserStore = defineStore('user', () => {
     isAuthenticated,
     username,
     displayName,
+    token,
     fetchCurrentUser,
     login,
     register,

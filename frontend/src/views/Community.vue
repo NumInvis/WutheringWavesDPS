@@ -3,9 +3,9 @@
     <el-card class="search-card">
       <el-row :gutter="20">
         <el-col :span="12">
-          <el-input 
-            v-model="searchKeyword" 
-            placeholder="搜索表格模板..." 
+          <el-input
+            v-model="searchKeyword"
+            placeholder="搜索表格..."
             clearable
             @keyup.enter="fetchSpreadsheets"
           >
@@ -22,274 +22,237 @@
           </el-select>
         </el-col>
         <el-col :span="6">
-          <el-select v-model="selectedCharacter" placeholder="选择角色" style="width: 100%" @change="fetchSpreadsheets" clearable filterable>
-            <el-option label="全部角色" value="" />
-            <el-option 
-              v-for="char in characters" 
-              :key="char.id" 
-              :label="char.name" 
-              :value="char.id" 
-            />
-          </el-select>
+          <el-button type="primary" @click="openUploadDialog">
+            <el-icon><Upload /></el-icon>
+            上传表格
+          </el-button>
         </el-col>
       </el-row>
     </el-card>
 
-    <el-row :gutter="20" class="content-row">
-      <el-col :span="6">
-        <el-card class="sidebar-card">
-          <template #header>
-            <span>🏷️ 区域</span>
-          </template>
-          <el-menu 
-            :default-active="selectedArea" 
-            @select="handleAreaSelect"
-          >
-            <el-menu-item index="">全部</el-menu-item>
-            <el-menu-item index="pull_table">📊 拉表区</el-menu-item>
-            <el-menu-item index="other">📁 其他区</el-menu-item>
-          </el-menu>
-        </el-card>
-        
-        <el-card class="sidebar-card" style="margin-top: 20px;">
-          <template #header>
-            <span>🎮 角色标签</span>
-          </template>
-          <div class="tags-cloud">
-            <el-tag 
-              v-for="char in characters" 
-              :key="char.id" 
-              class="hot-tag" 
-              :type="getElementTagType(char.element)"
-              @click="handleCharacterClick(char.id)"
-            >
-              {{ char.name }}
-            </el-tag>
-          </div>
-        </el-card>
-        
-        <el-card class="sidebar-card" style="margin-top: 20px;">
-          <template #header>
-            <span>⭐ 筛选</span>
-          </template>
-          <div class="filter-options">
-            <el-checkbox v-model="showFeaturedOnly" @change="fetchSpreadsheets">只看精华</el-checkbox>
-            <el-checkbox v-model="showMySpreadsheets" @change="fetchSpreadsheets">只看我的</el-checkbox>
-          </div>
-        </el-card>
-      </el-col>
-      
-      <el-col :span="18">
-        <el-card class="list-card">
-          <template #header>
-            <div class="list-header">
-              <span>📋 表格列表</span>
-              <el-radio-group v-model="sortBy" size="small" @change="fetchSpreadsheets">
-                <el-radio-button value="created_at">最新</el-radio-button>
-                <el-radio-button value="view_count">浏览</el-radio-button>
-                <el-radio-button value="star_count">评分</el-radio-button>
-              </el-radio-group>
+    <div v-loading="loading" class="spreadsheet-list">
+      <el-empty v-if="!loading && spreadsheets.length === 0" description="暂无表格" />
+
+      <el-row :gutter="20">
+        <el-col :span="8" v-for="sheet in spreadsheets" :key="sheet.id">
+          <el-card class="spreadsheet-card" shadow="hover">
+            <div class="card-header">
+              <span class="title">
+                <span v-if="sheet.sheet_number !== undefined && sheet.sheet_number !== null" class="sheet-number">#{{ String(sheet.sheet_number).padStart(8, '0') }}</span>
+                {{ sheet.title }}
+                <el-tag v-if="sheet.is_featured" size="small" type="warning">置顶</el-tag>
+              </span>
+              <el-tag v-if="sheet.area" size="small" :type="sheet.area === 'pull_table' ? 'primary' : 'success'">
+                {{ sheet.area === 'pull_table' ? '拉表区' : '其他区' }}
+              </el-tag>
             </div>
-          </template>
-          
-          <div v-loading="loading" class="spreadsheet-list">
-            <el-empty v-if="!loading && spreadsheets.length === 0" description="暂无表格" />
             
-            <el-row :gutter="20">
-              <el-col :span="12" v-for="sheet in spreadsheets" :key="sheet.id">
-                <el-card 
-                  class="spreadsheet-card" 
-                  :class="{ 'is-banned': sheet.is_banned, 'is-featured': sheet.is_featured, 'is-draft': sheet.is_draft }"
-                  shadow="hover" 
-                  @click="viewSpreadsheet(sheet)"
-                >
-                  <div class="card-content">
-                    <div class="card-title">
-                      <el-tag v-if="sheet.is_featured" size="small" type="warning" effect="dark">
-                        <el-icon><StarFilled /></el-icon>
-                        精华
-                      </el-tag>
-                      <el-tag v-if="sheet.is_banned" size="small" type="danger" effect="dark">
-                        <el-icon><Close /></el-icon>
-                        已下架
-                      </el-tag>
-                      <el-tag v-if="sheet.is_draft" size="small" type="info" effect="dark">
-                        <el-icon><Document /></el-icon>
-                        草稿
-                      </el-tag>
-                      <el-tag v-if="sheet.area" size="small" :type="sheet.area === 'pull_table' ? 'primary' : 'success'">
-                        {{ sheet.area === 'pull_table' ? '拉表区' : '其他区' }}
-                      </el-tag>
-                      <span class="title-text">{{ sheet.title }}</span>
-                    </div>
-                    <p class="card-description">{{ sheet.description || '暂无描述' }}</p>
-                    <div class="character-tags" v-if="sheet.character_tags && sheet.character_tags.length > 0">
-                      <el-tag 
-                        v-for="tag in sheet.character_tags.slice(0, 4)" 
-                        :key="tag" 
-                        size="small" 
-                        class="character-tag"
-                      >
-                        {{ getCharacterName(tag) }}
-                      </el-tag>
-                      <el-tag v-if="sheet.character_tags.length > 4" size="small" type="info">
-                        +{{ sheet.character_tags.length - 4 }}
-                      </el-tag>
-                    </div>
-                    <div class="card-meta">
-                      <span class="meta-item">
-                        <el-icon><User /></el-icon>
-                        {{ sheet.owner_display_name || sheet.owner_username }}
-                      </span>
-                      <span class="meta-item">
-                        <el-icon><Star /></el-icon>
-                        {{ sheet.star_count || 0 }}
-                      </span>
-                      <span class="meta-item">
-                        <el-icon><View /></el-icon>
-                        {{ sheet.view_count || 0 }}
-                      </span>
-                      <span class="meta-item">
-                        <el-icon><Download /></el-icon>
-                        {{ sheet.download_count || 0 }}
-                      </span>
-                    </div>
-                  </div>
-                </el-card>
-              </el-col>
-            </el-row>
-            
-            <div class="pagination-container" v-if="total > pageSize">
-              <el-pagination
-                v-model:current-page="currentPage"
-                v-model:page-size="pageSize"
-                :total="total"
-                :page-sizes="[10, 20, 50, 100]"
-                layout="total, sizes, prev, pager, next, jumper"
-                @size-change="fetchSpreadsheets"
-                @current-change="fetchSpreadsheets"
-              />
+            <div class="card-body">
+              <div class="meta">
+                <span><el-icon><User /></el-icon> {{ sheet.owner_display_name || sheet.owner_username }}</span>
+                <span class="star-count" @click="toggleStar(sheet)">
+                  <el-icon :color="sheet.has_starred ? '#f7ba2a' : '#888'"><Star /></el-icon> 
+                  {{ sheet.star_count || 0 }}
+                </span>
+                <span><el-icon><View /></el-icon> {{ sheet.view_count || 0 }}</span>
+              </div>
             </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+            
+            <div class="card-actions">
+              <el-button size="small" @click="previewSheet(sheet)">
+                预览
+              </el-button>
+              <el-button size="small" type="primary" @click="downloadSheet(sheet)">
+                下载
+              </el-button>
+              <template v-if="userStore.user?.is_admin">
+                <el-button size="small" :type="sheet.is_featured ? 'warning' : 'default'" @click="toggleFeature(sheet)">
+                  {{ sheet.is_featured ? '取消置顶' : '置顶' }}
+                </el-button>
+                <el-button size="small" type="danger" @click="confirmDelete(sheet)">
+                  删除
+                </el-button>
+              </template>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
+
+      <div class="pagination-container" v-if="total > pageSize">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :total="total"
+          :page-sizes="[12, 24, 48]"
+          layout="total, sizes, prev, pager, next"
+          @size-change="fetchSpreadsheets"
+          @current-change="fetchSpreadsheets"
+        />
+      </div>
+    </div>
+
+    <UploadDialog v-model="uploadDialogVisible" @success="handleUploadSuccess" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search, Star, View, Download, User, StarFilled, Close, Document } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import { WUWA_CHARACTERS } from '../data/characters'
-import api from '../api'
+import { Search, Star, View, User, Upload } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import UploadDialog from '../components/UploadDialog.vue'
 import { useUserStore } from '../stores/user'
+import api from '../api'
 
 const router = useRouter()
 const userStore = useUserStore()
 
 const searchKeyword = ref('')
 const selectedArea = ref('')
-const selectedCharacter = ref('')
-const sortBy = ref('created_at')
-const sortOrder = ref('desc')
-const showFeaturedOnly = ref(false)
-const showMySpreadsheets = ref(false)
-
 const loading = ref(false)
 const spreadsheets = ref<any[]>([])
 const currentPage = ref(1)
-const pageSize = ref(20)
+const pageSize = ref(12)
 const total = ref(0)
-const characters = WUWA_CHARACTERS
 
-const characterMap = computed(() => {
-  const map: Record<string, string> = {}
-  characters.forEach(char => {
-    map[char.id] = char.name
-  })
-  return map
-})
-
-function getCharacterName(id: string): string {
-  return characterMap.value[id] || id
-}
-
-function getElementTagType(element: string): any {
-  const typeMap: Record<string, any> = {
-    '光': 'warning',
-    '暗': 'info',
-    '火': 'danger',
-    '水': 'primary',
-    '风': 'success',
-    '土': ''
-  }
-  return typeMap[element] || ''
-}
+const uploadDialogVisible = ref(false)
 
 async function fetchSpreadsheets() {
   loading.value = true
   try {
-    const params = new URLSearchParams({
-      page: currentPage.value.toString(),
-      page_size: pageSize.value.toString(),
-      sort_by: sortBy.value,
-      sort_order: sortOrder.value
-    })
-    
+    const params: any = {
+      page: currentPage.value,
+      page_size: pageSize.value
+    }
+
     if (selectedArea.value) {
-      params.append('area', selectedArea.value)
+      params.area = selectedArea.value
     }
-    
-    if (selectedCharacter.value) {
-      params.append('character_tag', selectedCharacter.value)
-    }
-    
+
     if (searchKeyword.value) {
-      params.append('search', searchKeyword.value)
+      params.search = searchKeyword.value
     }
-    
-    if (showFeaturedOnly.value) {
-      params.append('featured', 'true')
-    }
-    
-    if (showMySpreadsheets.value && userStore.user) {
-      params.append('owner_id', userStore.user.id.toString())
-    }
-    
-    const response = await fetch(`/api/spreadsheets?${params}`, {
-      headers: {
-        'Authorization': userStore.token ? `Bearer ${userStore.token}` : ''
-      }
-    })
-    if (response.ok) {
-      const data = await response.json()
-      spreadsheets.value = data.items || []
-      total.value = data.total || 0
-    }
+
+    const data = await api.get('/spreadsheets', { params })
+    spreadsheets.value = data.items || []
+    total.value = data.total || 0
   } catch (error) {
-    ElMessage.error('加载表格列表失败')
-    console.error('Failed to fetch spreadsheets:', error)
+    ElMessage.error('加载失败')
   } finally {
     loading.value = false
   }
 }
 
-function handleAreaSelect(area: string) {
-  selectedArea.value = area
-  currentPage.value = 1
+function openUploadDialog() {
+  if (!userStore.isAuthenticated) {
+    ElMessage.warning('请先登录后上传')
+    return
+  }
+  uploadDialogVisible.value = true
+}
+
+function handleUploadSuccess() {
   fetchSpreadsheets()
 }
 
-function handleCharacterClick(charId: string) {
-  selectedCharacter.value = selectedCharacter.value === charId ? '' : charId
-  currentPage.value = 1
-  fetchSpreadsheets()
+function previewSheet(sheet: any) {
+  const isOwner = userStore.user && sheet.owner_id === userStore.user.id
+  const isAdmin = userStore.user?.is_admin
+  
+  router.push({
+    path: '/calculator',
+    query: {
+      preview: sheet.id,
+      editable: (isOwner || isAdmin) ? 'true' : 'false'
+    }
+  })
 }
 
-function viewSpreadsheet(sheet: any) {
-  ElMessage.info(`查看表格: ${sheet.title}`)
+async function downloadSheet(sheet: any) {
+  try {
+    const data = await api.get(`/spreadsheets/${sheet.id}/download`)
+    if (data.file_url) {
+      const fileResponse = await fetch(data.file_url)
+      const blob = await fileResponse.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = sheet.title + '.xlsx'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+    }
+  } catch (error) {
+    ElMessage.error('下载失败')
+  }
+}
+
+async function toggleStar(sheet: any) {
+  if (!userStore.isAuthenticated) {
+    ElMessage.warning('请先登录')
+    return
+  }
+  
+  try {
+    if (sheet.has_starred) {
+      await api.delete(`/stars/spreadsheet/${sheet.id}`)
+      sheet.star_count = (sheet.star_count || 0) - 1
+      sheet.has_starred = false
+    } else {
+      await api.post('/stars', {
+        spreadsheet_id: sheet.id
+      })
+      sheet.star_count = (sheet.star_count || 0) + 1
+      sheet.has_starred = true
+    }
+  } catch (error) {
+    ElMessage.error('操作失败')
+  }
+}
+
+async function toggleFeature(sheet: any) {
+  if (!userStore.user?.is_admin) {
+    ElMessage.warning('需要管理员权限')
+    return
+  }
+  
+  try {
+    await api.put(`/spreadsheets/${sheet.id}/admin`, { 
+      is_featured: !sheet.is_featured 
+    })
+    ElMessage.success(sheet.is_featured ? '已取消置顶' : '已置顶')
+    fetchSpreadsheets()
+  } catch (error) {
+    ElMessage.error('操作失败')
+  }
+}
+
+async function confirmDelete(sheet: any) {
+  if (!userStore.user?.is_admin) {
+    ElMessage.warning('需要管理员权限')
+    return
+  }
+  
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除表格"${sheet.title}"吗？此操作不可恢复。`,
+      '删除确认',
+      {
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+    
+    await api.delete(`/spreadsheets/${sheet.id}`)
+    ElMessage.success('已删除')
+    fetchSpreadsheets()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败')
+    }
+  }
 }
 
 onMounted(() => {
@@ -307,126 +270,65 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-.content-row {
-  margin-top: 20px;
-}
-
-.sidebar-card {
-  margin-bottom: 20px;
-}
-
-.tags-cloud {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.hot-tag {
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.hot-tag:hover {
-  transform: scale(1.05);
-}
-
-.filter-options {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .spreadsheet-list {
   min-height: 400px;
 }
 
 .spreadsheet-card {
   margin-bottom: 20px;
-  cursor: pointer;
-  transition: all 0.3s;
 }
 
-.spreadsheet-card:hover {
-  transform: translateY(-2px);
-}
-
-.spreadsheet-card.is-featured {
-  border-left: 4px solid #e6a23c;
-}
-
-.spreadsheet-card.is-banned {
-  opacity: 0.6;
-  border-left: 4px solid #f56c6c;
-}
-
-.spreadsheet-card.is-draft {
-  border-left: 4px solid #909399;
-}
-
-.card-content {
-  padding: 5px 0;
-}
-
-.card-title {
+.card-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
+  margin-bottom: 12px;
 }
 
-.title-text {
+.card-header .title {
   font-size: 16px;
   font-weight: 600;
-  color: #333;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
-  min-width: 0;
-}
-
-.card-description {
-  color: #666;
-  font-size: 14px;
-  margin-bottom: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  min-height: 40px;
-}
-
-.character-tags {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
+}
+
+.sheet-number {
+  font-size: 12px;
+  color: #888;
+  font-family: monospace;
+}
+
+.card-body {
   margin-bottom: 12px;
 }
 
-.character-tag {
-  cursor: default;
-}
-
-.card-meta {
+.meta {
   display: flex;
   gap: 16px;
-  color: #999;
+  color: #888;
   font-size: 13px;
-  flex-wrap: wrap;
 }
 
-.meta-item {
+.meta span {
   display: flex;
   align-items: center;
   gap: 4px;
+  cursor: pointer;
+}
+
+.meta .star-count:hover {
+  color: #f7ba2a;
+}
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .pagination-container {

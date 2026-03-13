@@ -1,56 +1,64 @@
 <template>
   <div class="register-container">
-    <el-card class="register-card">
-      <template #header>
-        <div class="card-header">
-          <h2>用户注册</h2>
-        </div>
-      </template>
+    <div class="register-card">
+      <h1 class="register-title">WutheringWavesDPS</h1>
+      <p class="register-subtitle">鸣潮拉表开源社区</p>
       
-      <el-form :model="registerForm" :rules="rules" ref="registerFormRef" label-width="80px">
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="registerForm.username" placeholder="请输入用户名" />
+      <el-form :model="registerForm" :rules="rules" ref="registerFormRef" class="register-form">
+        <el-form-item prop="username">
+          <el-input 
+            v-model="registerForm.username" 
+            placeholder="用户名"
+            size="large"
+          />
         </el-form-item>
         
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="registerForm.email" type="email" placeholder="请输入邮箱" />
-        </el-form-item>
-        
-        <el-form-item label="密码" prop="password">
+        <el-form-item prop="password">
           <el-input 
             v-model="registerForm.password" 
             type="password" 
-            placeholder="请输入密码"
+            placeholder="密码"
+            size="large"
             show-password
           />
         </el-form-item>
         
-        <el-form-item label="确认密码" prop="confirmPassword">
+        <el-form-item prop="confirmPassword">
           <el-input 
             v-model="registerForm.confirmPassword" 
             type="password" 
-            placeholder="请再次输入密码"
+            placeholder="确认密码"
+            size="large"
             show-password
             @keyup.enter="handleRegister"
           />
         </el-form-item>
         
-        <el-form-item label="昵称" prop="display_name">
-          <el-input v-model="registerForm.display_name" placeholder="请输入昵称（可选）" />
+        <el-form-item prop="display_name">
+          <el-input 
+            v-model="registerForm.display_name" 
+            placeholder="昵称（可选）"
+            size="large"
+          />
         </el-form-item>
         
         <el-form-item>
-          <el-button type="primary" @click="handleRegister" :loading="loading" style="width: 100%">
+          <el-button 
+            type="primary" 
+            @click="handleRegister" 
+            :loading="loading" 
+            size="large"
+            style="width: 100%"
+          >
             注册
           </el-button>
         </el-form-item>
       </el-form>
       
-      <div class="login-link">
-        已有账号？
-        <router-link to="/login">立即登录</router-link>
+      <div class="register-footer">
+        <p>已有账号？<router-link to="/login">立即登录</router-link></p>
       </div>
-    </el-card>
+    </div>
   </div>
 </template>
 
@@ -69,13 +77,12 @@ const loading = ref(false)
 
 const registerForm = reactive({
   username: '',
-  email: '',
   password: '',
   confirmPassword: '',
   display_name: ''
 })
 
-const validateConfirmPassword = (rule: any, value: any, callback: any) => {
+const validateConfirmPassword = (_rule: any, value: any, callback: any) => {
   if (value === '') {
     callback(new Error('请再次输入密码'))
   } else if (value !== registerForm.password) {
@@ -85,18 +92,36 @@ const validateConfirmPassword = (rule: any, value: any, callback: any) => {
   }
 }
 
+const validateUsername = (_rule: any, value: any, callback: any) => {
+  if (!value) {
+    callback(new Error('请输入用户名'))
+  } else if (!/^[a-zA-Z0-9]+$/.test(value)) {
+    callback(new Error('用户名只能包含英文和数字'))
+  } else if (value.length < 3 || value.length > 50) {
+    callback(new Error('用户名长度在 3 到 50 个字符'))
+  } else {
+    callback()
+  }
+}
+
+const validatePassword = (_rule: any, value: any, callback: any) => {
+  if (!value) {
+    callback(new Error('请输入密码'))
+  } else if (!/^[a-zA-Z0-9]+$/.test(value)) {
+    callback(new Error('密码只能包含英文和数字'))
+  } else if (value.length < 6) {
+    callback(new Error('密码长度不能少于 6 个字符'))
+  } else {
+    callback()
+  }
+}
+
 const rules: FormRules = {
   username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 50, message: '用户名长度在 3 到 50 个字符', trigger: 'blur' }
-  ],
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
+    { required: true, validator: validateUsername, trigger: 'blur' }
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于 6 个字符', trigger: 'blur' }
+    { required: true, validator: validatePassword, trigger: 'blur' }
   ],
   confirmPassword: [
     { required: true, validator: validateConfirmPassword, trigger: 'blur' }
@@ -112,7 +137,6 @@ async function handleRegister() {
       try {
         const success = await userStore.register({
           username: registerForm.username,
-          email: registerForm.email,
           password: registerForm.password,
           display_name: registerForm.display_name || undefined
         })
@@ -131,38 +155,56 @@ async function handleRegister() {
 
 <style scoped>
 .register-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1a1a2e;
 }
 
 .register-card {
-  width: 450px;
+  width: 400px;
+  padding: 40px;
+  background: #16213e;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
-.card-header {
+.register-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 8px 0;
   text-align: center;
 }
 
-.card-header h2 {
+.register-subtitle {
+  font-size: 14px;
+  color: #888;
+  margin: 0 0 32px 0;
+  text-align: center;
+}
+
+.register-form {
+  margin-bottom: 16px;
+}
+
+.register-footer {
+  text-align: center;
+}
+
+.register-footer p {
   margin: 0;
-  color: #333;
+  color: #888;
+  font-size: 14px;
 }
 
-.login-link {
-  text-align: center;
-  margin-top: 20px;
-  color: #666;
-}
-
-.login-link a {
+.register-footer a {
   color: #409eff;
   text-decoration: none;
 }
 
-.login-link a:hover {
+.register-footer a:hover {
   text-decoration: underline;
 }
 </style>

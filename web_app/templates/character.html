@@ -1,0 +1,672 @@
+{% extends "base.html" %}
+
+{% block title %}{{ name }} - 角色详情{% endblock %}
+
+{% block extra_css %}
+<style>
+.character-detail-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.character-header {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    padding: 24px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.character-title h1 {
+    font-size: 28px;
+    margin-bottom: 8px;
+}
+
+.character-title span {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.character-actions {
+    display: flex;
+    gap: 12px;
+}
+
+/* Excel风格拉表 */
+.lalabiao-container {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+
+.lalabiao-toolbar {
+    background: var(--bg-card);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.lalabiao-toolbar h3 {
+    font-size: 14px;
+    margin-right: auto;
+}
+
+/* 面板配置区 */
+.panel-config {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-card);
+}
+
+.panel-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 16px;
+}
+
+.panel-section {
+    background: var(--bg-secondary);
+    border-radius: var(--radius);
+    padding: 16px;
+    border: 1px solid var(--border);
+}
+
+.panel-section h4 {
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+.panel-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+.panel-row label {
+    color: var(--text-secondary);
+}
+
+.panel-row input {
+    width: 70px;
+    padding: 4px 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 12px;
+    text-align: right;
+}
+
+.panel-row input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+/* Excel表格 */
+.excel-table-container {
+    overflow-x: auto;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.excel-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 1400px;
+}
+
+.excel-table th {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-weight: 600;
+    padding: 10px 8px;
+    border: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.excel-table td {
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-secondary);
+}
+
+.excel-table input {
+    width: 100%;
+    padding: 4px;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: 13px;
+    text-align: center;
+}
+
+.excel-table input:focus {
+    outline: 2px solid var(--accent);
+    background: var(--bg-card);
+}
+
+.excel-table .col-number {
+    width: 40px;
+    text-align: center;
+    background: var(--bg-card);
+    font-weight: 600;
+}
+
+.excel-table .col-action {
+    width: 100px;
+}
+
+.excel-table .col-multiplier {
+    width: 80px;
+}
+
+.excel-table .col-type {
+    width: 50px;
+}
+
+.excel-table .col-zone {
+    width: 70px;
+}
+
+.excel-table .col-damage {
+    width: 100px;
+    background: rgba(16, 185, 129, 0.1);
+    font-weight: 600;
+    color: var(--success);
+}
+
+/* 统计栏 */
+.stats-bar {
+    background: var(--bg-card);
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 32px;
+    justify-content: flex-end;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-item .label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.stat-item .value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.stat-item.total .value {
+    color: var(--success);
+}
+
+/* 响应式 */
+@media (max-width: 1200px) {
+    .panel-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .panel-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .character-header {
+        flex-direction: column;
+        gap: 16px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="character-detail-container">
+    <!-- 角色头部 -->
+    <div class="character-header">
+        <div class="character-title">
+            <h1>{{ name }}</h1>
+            <span>点击技能可直接编辑排轴</span>
+        </div>
+        <div class="character-actions">
+            <button class="btn btn-secondary" onclick="loadFromDatabase()">从数据库加载技能</button>
+            <button class="btn btn-primary" onclick="calculateAll()">重新计算</button>
+            <button class="btn btn-secondary" onclick="exportData()">导出拉表</button>
+        </div>
+    </div>
+    
+    <!-- 拉表容器 -->
+    <div class="lalabiao-container">
+        <!-- 工具栏 -->
+        <div class="lalabiao-toolbar">
+            <h3>📊 排轴计算器</h3>
+            <button class="btn btn-sm" onclick="addRow()">+ 添加行</button>
+            <button class="btn btn-sm" onclick="deleteRow()">- 删除行</button>
+            <button class="btn btn-sm" onclick="copyRow()">复制</button>
+            <button class="btn btn-sm" onclick="pasteRow()">粘贴</button>
+        </div>
+        
+        <!-- 面板配置 -->
+        <div class="panel-config">
+            <div class="panel-grid">
+                <!-- 攻击区 -->
+                <div class="panel-section">
+                    <h4>⚔️ 攻击区</h4>
+                    <div class="panel-row">
+                        <label>白值</label>
+                        <input type="number" id="base-atk" value="1024">
+                    </div>
+                    <div class="panel-row">
+                        <label>固有武器</label>
+                        <input type="number" id="weapon-atk" value="24">
+                    </div>
+                    <div class="panel-row">
+                        <label>主副词条</label>
+                        <input type="number" id="echo-atk" value="61.8">
+                    </div>
+                    <div class="panel-row">
+                        <label>被拐攻击</label>
+                        <input type="number" id="support-atk" value="61.5">
+                    </div>
+                    <div class="panel-row">
+                        <label>声骸固定</label>
+                        <input type="number" id="fixed-atk" value="350">
+                    </div>
+                </div>
+                
+                <!-- 加成区 -->
+                <div class="panel-section">
+                    <h4>🔥 加成区</h4>
+                    <div class="panel-row">
+                        <label>3C声骸</label>
+                        <input type="number" id="c3-bonus" value="60">
+                    </div>
+                    <div class="panel-row">
+                        <label>套装首位</label>
+                        <input type="number" id="set-first" value="22">
+                    </div>
+                    <div class="panel-row">
+                        <label>套装</label>
+                        <input type="number" id="set-bonus" value="20">
+                    </div>
+                    <div class="panel-row">
+                        <label>被拐属伤</label>
+                        <input type="number" id="support-element" value="12">
+                    </div>
+                    <div class="panel-row">
+                        <label>e加成</label>
+                        <input type="number" id="e-bonus" value="49">
+                    </div>
+                    <div class="panel-row">
+                        <label>q加成</label>
+                        <input type="number" id="q-bonus" value="55">
+                    </div>
+                </div>
+                
+                <!-- 暴击区 -->
+                <div class="panel-section">
+                    <h4>🎯 暴击区</h4>
+                    <div class="panel-row">
+                        <label>基础与固有</label>
+                        <input type="number" id="base-crit" value="13">
+                    </div>
+                    <div class="panel-row">
+                        <label>武器</label>
+                        <input type="number" id="weapon-crit" value="24.3">
+                    </div>
+                    <div class="panel-row">
+                        <label>套装</label>
+                        <input type="number" id="set-crit" value="20">
+                    </div>
+                    <div class="panel-row">
+                        <label>主副词条</label>
+                        <input type="number" id="echo-crit" value="40.5">
+                    </div>
+                    <div class="panel-row">
+                        <label>队友</label>
+                        <input type="number" id="support-crit" value="12.5">
+                    </div>
+                </div>
+                
+                <!-- 暴伤区 -->
+                <div class="panel-section">
+                    <h4>💥 暴伤区</h4>
+                    <div class="panel-row">
+                        <label>基础与固有</label>
+                        <input type="number" id="base-crit-dmg" value="150">
+                    </div>
+                    <div class="panel-row">
+                        <label>武器</label>
+                        <input type="number" id="weapon-crit-dmg" value="0">
+                    </div>
+                    <div class="panel-row">
+                        <label>套装</label>
+                        <input type="number" id="set-crit-dmg" value="0">
+                    </div>
+                    <div class="panel-row">
+                        <label>主副词条</label>
+                        <input type="number" id="echo-crit-dmg" value="125">
+                    </div>
+                    <div class="panel-row">
+                        <label>队友</label>
+                        <input type="number" id="support-crit-dmg" value="25">
+                    </div>
+                </div>
+                
+                <!-- 加深区 -->
+                <div class="panel-section">
+                    <h4>🔺 加深区</h4>
+                    <div class="panel-row">
+                        <label>全加深</label>
+                        <input type="number" id="all-amplify" value="35">
+                    </div>
+                    <div class="panel-row">
+                        <label>e加深</label>
+                        <input type="number" id="e-amplify" value="25">
+                    </div>
+                    <div class="panel-row">
+                        <label>q加深</label>
+                        <input type="number" id="q-amplify" value="32">
+                    </div>
+                </div>
+                
+                <!-- 副词条 -->
+                <div class="panel-section">
+                    <h4>📋 副词条</h4>
+                    <div class="panel-row">
+                        <label>大攻击</label>
+                        <input type="number" id="sub-atk" value="25.8">
+                    </div>
+                    <div class="panel-row">
+                        <label>共技伤害</label>
+                        <input type="number" id="sub-skill" value="17.2">
+                    </div>
+                    <div class="panel-row">
+                        <label>暴击</label>
+                        <input type="number" id="sub-crit" value="40.5">
+                    </div>
+                    <div class="panel-row">
+                        <label>爆伤</label>
+                        <input type="number" id="sub-crit-dmg" value="81">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Excel风格表格 -->
+        <div class="excel-table-container">
+            <table class="excel-table" id="action-table">
+                <thead>
+                    <tr>
+                        <th class="col-number">#</th>
+                        <th class="col-action">动作</th>
+                        <th class="col-multiplier">倍率%</th>
+                        <th class="col-type">类型</th>
+                        <th class="col-zone">面板攻击</th>
+                        <th class="col-zone">攻击区</th>
+                        <th class="col-zone">加成区</th>
+                        <th class="col-zone">双爆区</th>
+                        <th class="col-zone">加深区</th>
+                        <th class="col-zone">防御区</th>
+                        <th class="col-zone">抗性区</th>
+                        <th class="col-zone">倍率提升</th>
+                        <th class="col-zone">易伤区</th>
+                        <th class="col-zone">独立乘区</th>
+                        <th class="col-damage">伤害</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <!-- 动态生成行 -->
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 统计栏 -->
+        <div class="stats-bar">
+            <div class="stat-item">
+                <div class="label">动作数</div>
+                <div class="value" id="action-count">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="label">总伤害</div>
+                <div class="value" id="total-damage">0</div>
+            </div>
+            <div class="stat-item total">
+                <div class="label">DPS (25秒)</div>
+                <div class="value" id="dps-value">0</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 当前角色名
+const characterName = '{{ name }}';
+let rowCount = 0;
+let clipboardRow = null;
+
+// 初始化
+ document.addEventListener('DOMContentLoaded', function() {
+    // 添加初始空行
+    for (let i = 0; i < 5; i++) {
+        addRow();
+    }
+    
+    // 从数据库加载技能
+    loadFromDatabase();
+});
+
+// 添加行
+function addRow() {
+    const tbody = document.getElementById('table-body');
+    const row = document.createElement('tr');
+    row.dataset.index = rowCount;
+    
+    row.innerHTML = `
+        <td class="col-number">${rowCount + 1}</td>
+        <td class="col-action"><input type="text" class="action-name" placeholder="动作名称"></td>
+        <td class="col-multiplier"><input type="number" class="multiplier" value="100" step="0.01"></td>
+        <td class="col-type">
+            <select class="skill-type" style="width: 100%; background: transparent; border: none; color: var(--text-primary);">
+                <option value="e">e</option>
+                <option value="q">q</option>
+                <option value="a">a</option>
+                <option value="h">h</option>
+            </select>
+        </td>
+        <td class="col-zone"><input type="number" class="panel-atk" readonly></td>
+        <td class="col-zone"><input type="number" class="atk-zone" value="1.8148" step="0.0001"></td>
+        <td class="col-zone"><input type="number" class="bonus-zone" value="1.432" step="0.0001"></td>
+        <td class="col-zone"><input type="number" class="crit-zone" value="3.425" step="0.0001"></td>
+        <td class="col-zone"><input type="number" class="amplify-zone" value="0.6" step="0.01"></td>
+        <td class="col-zone"><input type="number" class="def-zone" value="0.5093" step="0.0001"></td>
+        <td class="col-zone"><input type="number" class="res-zone" value="0.8" step="0.01"></td>
+        <td class="col-zone"><input type="number" class="multiplier-boost" value="0" step="0.01"></td>
+        <td class="col-zone"><input type="number" class="vulnerable-zone" value="0" step="0.01"></td>
+        <td class="col-zone"><input type="number" class="independent-zone" value="1" step="0.01"></td>
+        <td class="col-damage"><input type="number" class="damage" readonly></td>
+    `;
+    
+    tbody.appendChild(row);
+    rowCount++;
+    updateRowNumbers();
+    
+    // 添加输入监听
+    row.querySelectorAll('input').forEach(input => {
+        input.addEventListener('change', () => calculateRow(row));
+    });
+    row.querySelector('select').addEventListener('change', () => calculateRow(row));
+}
+
+// 删除行
+function deleteRow() {
+    const tbody = document.getElementById('table-body');
+    if (tbody.children.length > 0) {
+        tbody.removeChild(tbody.lastElementChild);
+        rowCount--;
+        updateRowNumbers();
+        updateStats();
+    }
+}
+
+// 复制行
+function copyRow() {
+    const tbody = document.getElementById('table-body');
+    if (tbody.children.length > 0) {
+        const lastRow = tbody.lastElementChild;
+        clipboardRow = {};
+        lastRow.querySelectorAll('input').forEach(input => {
+            clipboardRow[input.className] = input.value;
+        });
+        clipboardRow['skill-type'] = lastRow.querySelector('.skill-type').value;
+    }
+}
+
+// 粘贴行
+function pasteRow() {
+    if (clipboardRow) {
+        addRow();
+        const tbody = document.getElementById('table-body');
+        const lastRow = tbody.lastElementChild;
+        Object.keys(clipboardRow).forEach(key => {
+            const input = lastRow.querySelector('.' + key);
+            if (input) input.value = clipboardRow[key];
+        });
+        lastRow.querySelector('.skill-type').value = clipboardRow['skill-type'];
+        calculateRow(lastRow);
+    }
+}
+
+// 更新行号
+function updateRowNumbers() {
+    document.querySelectorAll('#table-body tr').forEach((row, index) => {
+        row.querySelector('.col-number').textContent = index + 1;
+    });
+}
+
+// 计算单行伤害
+function calculateRow(row) {
+    const panelAtk = parseFloat(document.getElementById('base-atk').value) * 
+                     (1 + parseFloat(document.getElementById('weapon-atk').value) / 100 +
+                      parseFloat(document.getElementById('echo-atk').value) / 100 +
+                      parseFloat(document.getElementById('support-atk').value) / 100) +
+                     parseFloat(document.getElementById('fixed-atk').value);
+    
+    const multiplier = parseFloat(row.querySelector('.multiplier').value) / 100;
+    const atkZone = parseFloat(row.querySelector('.atk-zone').value);
+    const bonusZone = parseFloat(row.querySelector('.bonus-zone').value);
+    const critZone = parseFloat(row.querySelector('.crit-zone').value);
+    const amplifyZone = 1 + parseFloat(row.querySelector('.amplify-zone').value);
+    const defZone = parseFloat(row.querySelector('.def-zone').value);
+    const resZone = parseFloat(row.querySelector('.res-zone').value);
+    const multiplierBoost = 1 + parseFloat(row.querySelector('.multiplier-boost').value) / 100;
+    const vulnerableZone = 1 + parseFloat(row.querySelector('.vulnerable-zone').value) / 100;
+    const independentZone = parseFloat(row.querySelector('.independent-zone').value);
+    
+    // 计算面板攻击显示
+    row.querySelector('.panel-atk').value = Math.round(panelAtk);
+    
+    // 计算伤害
+    const damage = panelAtk * multiplier * atkZone * bonusZone * critZone * 
+                   amplifyZone * defZone * resZone * multiplierBoost * 
+                   vulnerableZone * independentZone;
+    
+    row.querySelector('.damage').value = Math.round(damage);
+    
+    updateStats();
+}
+
+// 计算所有行
+function calculateAll() {
+    document.querySelectorAll('#table-body tr').forEach(row => {
+        calculateRow(row);
+    });
+}
+
+// 更新统计
+function updateStats() {
+    const rows = document.querySelectorAll('#table-body tr');
+    let totalDamage = 0;
+    
+    rows.forEach(row => {
+        const damage = parseFloat(row.querySelector('.damage').value) || 0;
+        totalDamage += damage;
+    });
+    
+    document.getElementById('action-count').textContent = rows.length;
+    document.getElementById('total-damage').textContent = totalDamage.toLocaleString();
+    document.getElementById('dps-value').textContent = Math.round(totalDamage / 25).toLocaleString();
+}
+
+// 从数据库加载技能
+async function loadFromDatabase() {
+    try {
+        const res = await fetch(`/api/character/${characterName}`);
+        const data = await res.json();
+        
+        if (data.success && data.data.skills && data.data.skills.length > 0) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            rowCount = 0;
+            
+            data.data.skills.slice(0, 20).forEach(skill => {
+                addRow();
+                const lastRow = tbody.lastElementChild;
+                lastRow.querySelector('.action-name').value = skill.skill_code;
+                lastRow.querySelector('.multiplier').value = (skill.multiplier * 100).toFixed(2);
+                
+                // 根据技能类型设置
+                let skillType = 'e';
+                if (skill.skill_type && skill.skill_type.includes('普攻')) skillType = 'a';
+                else if (skill.skill_type && skill.skill_type.includes('解放')) skillType = 'q';
+                lastRow.querySelector('.skill-type').value = skillType;
+            });
+            
+            calculateAll();
+        }
+    } catch (e) {
+        console.error('加载技能失败:', e);
+    }
+}
+
+// 导出数据
+function exportData() {
+    const rows = [];
+    document.querySelectorAll('#table-body tr').forEach(row => {
+        rows.push({
+            action: row.querySelector('.action-name').value,
+            multiplier: row.querySelector('.multiplier').value,
+            type: row.querySelector('.skill-type').value,
+            damage: row.querySelector('.damage').value
+        });
+    });
+    
+    const data = JSON.stringify(rows, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${characterName}_拉表.json`;
+    a.click();
+}
+</script>
+{% endblock %}

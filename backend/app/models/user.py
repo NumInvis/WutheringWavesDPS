@@ -2,7 +2,6 @@
 用户模型
 """
 from sqlalchemy import Column, String, Text, Boolean, DateTime
-from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from datetime import datetime
 from .base import Base, TimestampMixin
@@ -12,7 +11,7 @@ class User(Base, TimestampMixin):
     """用户表"""
     __tablename__ = "users"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     username = Column(String(50), unique=True, nullable=False, index=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)

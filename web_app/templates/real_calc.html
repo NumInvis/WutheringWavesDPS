@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鸣潮排轴DPS计算器 - 专业版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            font-size: 12px;
+        }
+        
+        .excel-grid {
+            display: grid;
+            gap: 1px;
+            background: #d4d4d4;
+            border: 1px solid #d4d4d4;
+        }
+        
+        .excel-cell {
+            background: white;
+            padding: 4px 6px;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            font-size: 11px;
+            position: relative;
+        }
+        
+        .excel-cell.header {
+            background: #f5f5f5;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .excel-cell.label {
+            background: #fafafa;
+            color: #666;
+        }
+        
+        .excel-cell input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            font-size: 11px;
+            padding: 2px;
+            text-align: right;
+        }
+        
+        .excel-cell input:focus {
+            outline: 2px solid #3b82f6;
+            background: #eff6ff;
+        }
+        
+        .excel-cell.formula {
+            color: #3b82f6;
+            font-style: italic;
+        }
+        
+        .excel-cell.result {
+            background: #f0f9ff;
+            font-weight: 500;
+            color: #0369a1;
+        }
+        
+        .char-section {
+            margin-bottom: 2px;
+            border: 2px solid #e5e7eb;
+        }
+        
+        .char-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 6px 12px;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        
+        .damage-row {
+            background: #fef3c7 !important;
+            font-weight: 600;
+        }
+        
+        .total-row {
+            background: #dbeafe !important;
+            font-weight: 700;
+        }
+        
+        .panel-grid {
+            display: grid;
+            grid-template-columns: 80px 100px 80px 100px 80px 100px 80px 100px 80px 100px 80px 100px 60px 80px;
+            gap: 1px;
+            background: #d4d4d4;
+        }
+        
+        .action-grid {
+            display: grid;
+            grid-template-columns: 120px 60px 80px 80px 80px 80px 80px 80px 80px 80px 80px 100px;
+            gap: 1px;
+            background: #d4d4d4;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 100px 120px 100px 80px 100px;
+            gap: 1px;
+            background: #d4d4d4;
+        }
+        
+        .env-grid {
+            display: grid;
+            grid-template-columns: 100px 80px 100px 80px 100px 80px 100px 80px;
+            gap: 1px;
+            background: #d4d4d4;
+        }
+        
+        .effect-grid {
+            display: grid;
+            grid-template-columns: 80px 100px 100px 80px 80px 80px 80px 80px 100px;
+            gap: 1px;
+            background: #d4d4d4;
+        }
+        
+        .tab-btn {
+            padding: 8px 16px;
+            background: #e5e7eb;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .tab-btn.active {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .sheet-container {
+            display: none;
+            padding: 16px;
+            background: white;
+            min-height: 600px;
+        }
+        
+        .sheet-container.active {
+            display: block;
+        }
+        
+        .btn {
+            padding: 6px 12px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .btn:hover {
+            background: #2563eb;
+        }
+        
+        .btn-success {
+            background: #10b981;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .formula-bar {
+            background: white;
+            border: 1px solid #d4d4d4;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #3b82f6;
+        }
+        
+        .cell-ref {
+            position: absolute;
+            top: 1px;
+            left: 2px;
+            font-size: 8px;
+            color: #999;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="min-h-screen">
+        <!-- Header -->
+        <div class="bg-gray-800 text-white p-3 flex justify-between items-center">
+            <h1 class="text-lg font-bold">鸣潮排轴DPS计算器 - 专业版</h1>
+            <div class="flex gap-2">
+                <button class="btn" onclick="addCharacter()">+ 添加角色</button>
+                <button class="btn btn-success" onclick="calculateAll()">计算全部</button>
+                <button class="btn" onclick="exportToExcel()">导出Excel</button>
+                <button class="btn" onclick="saveData()">保存</button>
+                <button class="btn" onclick="loadData()">加载</button>
+            </div>
+        </div>
+        
+        <!-- Formula Bar -->
+        <div class="bg-gray-100 p-2">
+            <div class="formula-bar" id="formulaBar">点击单元格查看公式...</div>
+        </div>
+        
+        <!-- Tabs -->
+        <div class="flex border-b">
+            <button class="tab-btn active" onclick="switchTab('panel')">角色面板</button>
+            <button class="tab-btn" onclick="switchTab('damage')">伤害计算</button>
+            <button class="tab-btn" onclick="switchTab('effect')">效应伤害</button>
+            <button class="tab-btn" onclick="switchTab('zhenxie')">震谐伤害</button>
+            <button class="tab-btn" onclick="switchTab('env')">环境参数</button>
+            <button class="tab-btn" onclick="switchTab('summary')">汇总统计</button>
+        </div>
+        
+        <!-- Sheet: 角色面板 -->
+        <div id="sheet-panel" class="sheet-container active">
+            <div class="mb-4">
+                <h2 class="text-sm font-bold mb-2">角色面板配置</h2>
+                <div id="charPanels"></div>
+            </div>
+        </div>
+        
+        <!-- Sheet: 伤害计算 -->
+        <div id="sheet-damage" class="sheet-container">
+            <div class="mb-4">
+                <h2 class="text-sm font-bold mb-2">动作伤害计算</h2>
+                <div id="damageCalculations"></div>
+            </div>
+        </div>
+        
+        <!-- Sheet: 效应伤害 -->
+        <div id="sheet-effect" class="sheet-container">
+            <div class="mb-4">
+                <h2 class="text-sm font-bold mb-2">效应伤害 (光躁/聚爆/霜渐/电磁/风蚀)</h2>
+                <div id="effectDamage"></div>
+            </div>
+        </div>
+        
+        <!-- Sheet: 震谐伤害 -->
+        <div id="sheet-zhenxie" class="sheet-container">
+            <div class="mb-4">
+                <h2 class="text-sm font-bold mb-2">震谐伤害 (角色1/角色2/角色3/谐度击破)</h2>
+                <div id="zhenxieDamage"></div>
+            </div>
+        </div>
+        
+        <!-- Sheet: 环境参数 -->
+        <div id="sheet-env" class="sheet-container">
+            <div class="mb-4">
+                <h2 class="text-sm font-bold mb-2">环境参数设置</h2>
+                <div class="env-grid mb-4">
+                    <div class="excel-cell header">参数名</div>
+                    <div class="excel-cell header">数值</div>
+                    <div class="excel-cell header">参数名</div>
+                    <div class="excel-cell header">数值</div>
+                    <div class="excel-cell header">参数名</div>
+                    <div class="excel-cell header">数值</div>
+                    <div class="excel-cell header">参数名</div>
+                    <div class="excel-cell header">数值</div>
+                    
+                    <div class="excel-cell label">角色等级</div>
+                    <div class="excel-cell"><input type="number" id="env-charLevel" value="90" onchange="updateEnv()"></div>
+                    <div class="excel-cell label">怪物等级</div>
+                    <div class="excel-cell"><input type="number" id="env-monsterLevel" value="100" onchange="updateEnv()"></div>
+                    <div class="excel-cell label">减防%</div>
+                    <div class="excel-cell"><input type="number" id="env-defReduction" value="0" step="0.01" onchange="updateEnv()"></div>
+                    <div class="excel-cell label">无视防御%</div>
+                    <div class="excel-cell"><input type="number" id="env-defIgnore" value="0" step="0.01" onchange="updateEnv()"></div>
+                    
+                    <div class="excel-cell label">抗性</div>
+                    <div class="excel-cell"><input type="number" id="env-resistance" value="0.2" step="0.01" onchange="updateEnv()"></div>
+                    <div class="excel-cell label">轴长(秒)</div>
+                    <div class="excel-cell"><input type="number" id="env-duration" value="25" onchange="updateEnv()"></div>
+                    <div class="excel-cell label">易伤区</div>
+                    <div class="excel-cell"><input type="number" id="env-vuln" value="0" step="0.01" onchange="updateEnv()"></div>
+                    <div class="excel-cell label">最终伤害提升</div>
+                    <div class="excel-cell"><input type="number" id="env-finalDmg" value="0" step="0.01" onchange="updateEnv()"></div>
+                </div>
+                
+                <div class="bg-blue-50 p-4 rounded text-sm">
+                    <h3 class="font-bold mb-2">参数说明：</h3>
+                    <ul class="list-disc pl-5 space-y-1 text-gray-700">
+                        <li><b>角色等级</b>：影响防御区计算，默认90级</li>
+                        <li><b>怪物等级</b>：影响防御区计算，默认100级</li>
+                        <li><b>减防%</b>：减防效果百分比（如守岸人提供18%减防）</li>
+                        <li><b>无视防御%</b>：无视防御效果百分比</li>
+                        <li><b>抗性</b>：怪物抗性，默认0.2（20%）</li>
+                        <li><b>轴长</b>：战斗时间长度，用于计算DPS</li>
+                        <li><b>易伤区</b>：额外易伤加成</li>
+                        <li><b>最终伤害提升</b>：最终伤害乘区加成</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sheet: 汇总统计 -->
+        <div id="sheet-summary" class="sheet-container">
+            <div class="mb-4">
+                <h2 class="text-sm font-bold mb-2">队伍伤害汇总</h2>
+                <div class="summary-grid mb-4">
+                    <div class="excel-cell header">角色</div>
+                    <div class="excel-cell header">总伤害</div>
+                    <div class="excel-cell header">DPS</div>
+                    <div class="excel-cell header">占比</div>
+                    <div class="excel-cell header">动作数</div>
+                </div>
+                <div id="summaryContent"></div>
+                
+                <div class="mt-4 p-4 bg-gray-100 rounded">
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold">队伍总伤害：</span>
+                        <span id="teamTotalDamage" class="text-xl font-bold text-blue-600">0</span>
+                    </div>
+                    <div class="flex justify-between items-center mt-2">
+                        <span class="font-bold">队伍总DPS：</span>
+                        <span id="teamTotalDPS" class="text-xl font-bold text-green-600">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 数据存储
+        const state = {
+            characters: [],
+            actions: {},
+            effects: [],
+            zhenxie: [],
+            env: {
+                charLevel: 90,
+                monsterLevel: 100,
+                defReduction: 0,
+                defIgnore: 0,
+                resistance: 0.2,
+                duration: 25,
+                vuln: 0,
+                finalDmg: 0
+            }
+        };
+        
+        // 初始化3个默认角色
+        function initDefaultChars() {
+            const defaultChars = ['角色1', '角色2', '角色3'];
+            defaultChars.forEach((name, idx) => {
+                addCharacterData(idx, name);
+            });
+            renderAll();
+        }
+        
+        function addCharacterData(idx, name) {
+            state.characters.push({
+                id: idx,
+                name: name,
+                mainType: 'a', // 主类型: a/e/r/q
+                c3Count: 2,    // 3C属伤数
+                
+                // 攻击区
+                baseAtk: 400,      // 白值
+                weaponAtk: 0.12,   // 固有武器
+                artifactAtk: 0.36, // 主副词条
+                selfBuffAtk: 0,    // 自拐攻击
+                teamBuffAtk: 0.25, // 被拐攻击
+                echoAtk: 350,      // 声骸固定攻击
+                extraAtk: 0,       // 额外固定攻击
+                
+                // 加成区
+                c3Bonus: 0.3,      // 3C声骸
+                setBonus: 0.22,    // 套装首位
+                selfDmgBonus: 0,   // 自拐属伤
+                teamDmgBonus: 0,   // 被拐属伤
+                otherDmgBonus: 0,  // 其他属伤
+                typeBonus: 0,      // 主类型加成
+                
+                // 暴击区
+                baseCrit: 0.05,    // 基础与固有
+                weaponCrit: 0,     // 武器
+                setCrit: 0,        // 套装
+                artifactCrit: 0.3, // 主副词条
+                chainCrit: 0,      // 共鸣链
+                teamCrit: 0,       // 队友
+                
+                // 爆伤区
+                baseCritDmg: 0.5,  // 基础与固有
+                weaponCritDmg: 0,  // 武器
+                setCritDmg: 0,     // 套装
+                artifactCritDmg: 0.5, // 主副词条
+                chainCritDmg: 0,   // 共鸣链
+                teamCritDmg: 0,    // 队友
+                
+                // 加深区
+                globalDeepen: 0.15, // 全加深
+                typeDeepen: 0,      // 主类型加深
+                
+                // 副词条
+                atkPercent: 0,      // 大攻击
+                typeDmg: 0,         // 普攻/重击/共鸣技能伤害
+                critRate: 0,        // 暴击
+                critDmg: 0          // 爆伤
+            });
+            
+            state.actions[idx] = [];
+        }
+        
+        // 计算函数
+        function calcAttackZone(char) {
+            // 攻击 = 白值*(1+攻击加成)+固定攻击
+            const atkBonus = char.weaponAtk + char.artifactAtk + char.selfBuffAtk + char.teamBuffAtk;
+            const totalAtk = char.baseAtk * (1 + atkBonus) + char.echoAtk + char.extraAtk;
+            return { total: totalAtk, bonus: atkBonus };
+        }
+        
+        function calcCritZone(char) {
+            // 面板暴击 = MIN(100%, SUM(暴击来源))
+            const panelCrit = Math.min(1.0, char.baseCrit + char.weaponCrit + char.setCrit + 
+                                      char.artifactCrit + char.chainCrit + char.teamCrit);
+            // 溢出暴击
+            const rawCrit = char.baseCrit + char.weaponCrit + char.setCrit + 
+                           char.artifactCrit + char.chainCrit + char.teamCrit;
+            const overflowCrit = Math.max(0, rawCrit - 1);
+            
+            return { panel: panelCrit, overflow: overflowCrit };
+        }
+        
+        function calcCritDmgZone(char) {
+            // 面板爆伤 = SUM(爆伤来源)
+            const panelCritDmg = char.baseCritDmg + char.weaponCritDmg + char.setCritDmg + 
+                                char.artifactCritDmg + char.chainCritDmg + char.teamCritDmg;
+            return panelCritDmg;
+        }
+        
+        function calcCritDamageZone(char) {
+            // 双爆区 = 1+暴击*(爆伤-1)
+            const crit = calcCritZone(char);
+            const critDmg = calcCritDmgZone(char);
+            return 1 + crit.panel * (critDmg - 1);
+        }
+        
+        function calcBonusZone(char) {
+            // 加成区 = 3C声骸+套装首位+自拐属伤+被拐属伤+其他属伤+主类型加成
+            return char.c3Bonus + char.setBonus + char.selfDmgBonus + char.teamDmgBonus + 
+                   char.otherDmgBonus + char.typeBonus;
+        }
+        
+        function calcDeepenZone(char) {
+            // 加深区
+            return char.globalDeepen + char.typeDeepen;
+        }
+        
+        function calcDefZone() {
+            // 防御区 = (800+8*角色等级) / ((800+8*角色等级) + (792+8*怪物等级)*(1-减防%)*(1-无视防御%))
+            const charDef = 800 + 8 * state.env.charLevel;
+            const monsterDef = (792 + 8 * state.env.monsterLevel) * 
+                              (1 - state.env.defReduction / 100) * 
+                              (1 - state.env.defIgnore / 100);
+            return charDef / (charDef + monsterDef);
+        }
+        
+        function calcResZone() {
+            // 抗性区
+            const res = state.env.resistance;
+            if (res < 0) {
+                return 1 + Math.abs(res) / 2;
+            } else if (res <= 0.8) {
+                return 1 - res;
+            } else {
+                return 1 / (5 * (res + 0.2));
+            }
+        }
+        
+        function calcActionDamage(char, action) {
+            // 次数*白值*倍率*(1+攻击区)*(1+加成区)*双爆区*(1+加深区)*防御区*抗性区*(1+倍率提升)*(1+易伤)*(1+最终伤害)
+            const atkZone = calcAttackZone(char);
+            const bonusZone = calcBonusZone(char);
+            const critZone = calcCritDamageZone(char);
+            const deepenZone = calcDeepenZone(char);
+            const defZone = calcDefZone();
+            const resZone = calcResZone();
+            
+            const damage = action.count * char.baseAtk * action.multiplier * 
+                          (1 + atkZone.bonus) * (1 + bonusZone) * critZone * 
+                          (1 + deepenZone) * defZone * resZone * 
+                          (1 + action.multiplierBoost) * (1 + state.env.vuln) * (1 + state.env.finalDmg);
+            
+            return damage;
+        }
+        
+        // 渲染函数
+        function renderCharPanel(char, idx) {
+            const atkZone = calcAttackZone(char);
+            const critZone = calcCritZone(char);
+            const critDmgZone = calcCritDmgZone(char);
+            
+            return `
+            <div class="char-section">
+                <div class="char-header">${char.name}</div>
+                <div class="panel-grid">
+                    <!-- 第一行：标题 -->
+                    <div class="excel-cell header">角色主类型</div>
+                    <div class="excel-cell">
+                        <input type="text" value="${char.mainType}" onchange="updateChar(${idx}, 'mainType', this.value)">
+                    </div>
+                    <div class="excel-cell header">3C属伤数</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.c3Count}" onchange="updateChar(${idx}, 'c3Count', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    
+                    <!-- 第二行：攻击区标题 -->
+                    <div class="excel-cell header">攻击</div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell header">加成区</div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell header">暴击</div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell header">暴击伤害</div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell header">加深区</div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell header">副词条</div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    
+                    <!-- 白值行 -->
+                    <div class="excel-cell label">白值</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.baseAtk}" onchange="updateChar(${idx}, 'baseAtk', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell label">3C声骸</div>
+                    <div class="excel-cell formula">=${char.c3Count}*30%</div>
+                    <div class="excel-cell label">基础与固有</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.baseCrit}" step="0.01" onchange="updateChar(${idx}, 'baseCrit', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell label">基础与固有</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.baseCritDmg}" step="0.01" onchange="updateChar(${idx}, 'baseCritDmg', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell label">全加深</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.globalDeepen}" step="0.01" onchange="updateChar(${idx}, 'globalDeepen', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell label">大攻击</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.atkPercent}" step="0.01" onchange="updateChar(${idx}, 'atkPercent', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    
+                    <!-- 固有武器行 -->
+                    <div class="excel-cell label">固有武器</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.weaponAtk}" step="0.01" onchange="updateChar(${idx}, 'weaponAtk', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell label">套装首位</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.setBonus}" step="0.01" onchange="updateChar(${idx}, 'setBonus', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell label">武器</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.weaponCrit}" step="0.01" onchange="updateChar(${idx}, 'weaponCrit', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell label">武器</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.weaponCritDmg}" step="0.01" onchange="updateChar(${idx}, 'weaponCritDmg', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell label">${char.mainType}加深</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.typeDeepen}" step="0.01" onchange="updateChar(${idx}, 'typeDeepen', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell label">${char.mainType}伤害</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.typeDmg}" step="0.01" onchange="updateChar(${idx}, 'typeDmg', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    
+                    <!-- 主副词条行 -->
+                    <div class="excel-cell label">主副词条</div>
+                    <div class="excel-cell formula">=18%+18%+${char.atkPercent}+(2-${char.c3Count})*3</div>
+                    <div class="excel-cell label">自拐属伤</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.selfDmgBonus}" step="0.01" onchange="updateChar(${idx}, 'selfDmgBonus', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell label">套装</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.setCrit}" step="0.01" onchange="updateChar(${idx}, 'setCrit', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell label">套装</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.setCritDmg}" step="0.01" onchange="updateChar(${idx}, 'setCritDmg', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell label">暴击</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.critRate}" step="0.01" onchange="updateChar(${idx}, 'critRate', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    
+                    <!-- 自拐攻击行 -->
+                    <div class="excel-cell label">自拐攻击</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.selfBuffAtk}" step="0.01" onchange="updateChar(${idx}, 'selfBuffAtk', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell label">被拐属伤</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.teamDmgBonus}" step="0.01" onchange="updateChar(${idx}, 'teamDmgBonus', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell label">主副词条</div>
+                    <div class="excel-cell formula">=${char.critRate}</div>
+                    <div class="excel-cell label">主副词条</div>
+                    <div class="excel-cell formula">=${char.critDmg}+44%</div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell label">爆伤</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.critDmg}" step="0.01" onchange="updateChar(${idx}, 'critDmg', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    
+                    <!-- 被拐攻击行 -->
+                    <div class="excel-cell label">被拐攻击</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.teamBuffAtk}" step="0.01" onchange="updateChar(${idx}, 'teamBuffAtk', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell label">其他属伤</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.otherDmgBonus}" step="0.01" onchange="updateChar(${idx}, 'otherDmgBonus', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell label">共鸣链</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.chainCrit}" step="0.01" onchange="updateChar(${idx}, 'chainCrit', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell label">共鸣链</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.chainCritDmg}" step="0.01" onchange="updateChar(${idx}, 'chainCritDmg', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    
+                    <!-- 声骸固定攻击行 -->
+                    <div class="excel-cell label">声骸固定攻击</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.echoAtk}" onchange="updateChar(${idx}, 'echoAtk', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell label">${char.mainType}加成</div>
+                    <div class="excel-cell formula">=${char.typeDmg}+${char.setBonus}</div>
+                    <div class="excel-cell label">队友</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.teamCrit}" step="0.01" onchange="updateChar(${idx}, 'teamCrit', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell label">队友</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.teamCritDmg}" step="0.01" onchange="updateChar(${idx}, 'teamCritDmg', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    
+                    <!-- 额外固定攻击行 -->
+                    <div class="excel-cell label">额外固定攻击</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${char.extraAtk}" onchange="updateChar(${idx}, 'extraAtk', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell label">面板暴击率</div>
+                    <div class="excel-cell result">${(critZone.panel * 100).toFixed(1)}%</div>
+                    <div class="excel-cell label">面板暴击伤害</div>
+                    <div class="excel-cell result">${(critDmgZone * 100).toFixed(1)}%</div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    
+                    <!-- 溢出暴击行 -->
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell label">溢出暴击</div>
+                    <div class="excel-cell result">${(critZone.overflow * 100).toFixed(1)}%</div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                    <div class="excel-cell"></div>
+                </div>
+            </div>
+            `;
+        }
+        
+        function renderDamageCalc(char, idx) {
+            const actions = state.actions[idx] || [];
+            let actionsHtml = '';
+            
+            actions.forEach((action, aidx) => {
+                const damage = calcActionDamage(char, action);
+                actionsHtml += `
+                <div class="action-grid">
+                    <div class="excel-cell">
+                        <input type="text" value="${action.name}" placeholder="动作名" 
+                               onchange="updateAction(${idx}, ${aidx}, 'name', this.value)">
+                    </div>
+                    <div class="excel-cell">
+                        <input type="number" value="${action.count}" placeholder="次数"
+                               onchange="updateAction(${idx}, ${aidx}, 'count', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell">
+                        <input type="number" value="${action.multiplier}" step="0.01" placeholder="倍率"
+                               onchange="updateAction(${idx}, ${aidx}, 'multiplier', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell formula">${(calcAttackZone(char).bonus * 100).toFixed(1)}%</div>
+                    <div class="excel-cell formula">${(calcBonusZone(char) * 100).toFixed(1)}%</div>
+                    <div class="excel-cell formula">${calcCritDamageZone(char).toFixed(3)}</div>
+                    <div class="excel-cell formula">${(calcDeepenZone(char) * 100).toFixed(1)}%</div>
+                    <div class="excel-cell formula">${calcDefZone().toFixed(4)}</div>
+                    <div class="excel-cell formula">${calcResZone().toFixed(4)}</div>
+                    <div class="excel-cell">
+                        <input type="number" value="${action.multiplierBoost}" step="0.01" placeholder="倍率提升"
+                               onchange="updateAction(${idx}, ${aidx}, 'multiplierBoost', parseFloat(this.value))">
+                    </div>
+                    <div class="excel-cell damage-row">${Math.round(damage).toLocaleString()}</div>
+                </div>
+                `;
+            });
+            
+            // 添加新动作行
+            actionsHtml += `
+            <div class="action-grid">
+                <div class="excel-cell">
+                    <input type="text" id="new-action-name-${idx}" placeholder="新动作名">
+                </div>
+                <div class="excel-cell">
+                    <input type="number" id="new-action-count-${idx}" value="1" placeholder="次数">
+                </div>
+                <div class="excel-cell">
+                    <input type="number" id="new-action-multiplier-${idx}" value="1" step="0.01" placeholder="倍率">
+                </div>
+                <div class="excel-cell"></div>
+                <div class="excel-cell"></div>
+                <div class="excel-cell"></div>
+                <div class="excel-cell"></div>
+                <div class="excel-cell"></div>
+                <div class="excel-cell"></div>
+                <div class="excel-cell">
+                    <input type="number" id="new-action-boost-${idx}" value="0" step="0.01" placeholder="倍率提升">
+                </div>
+                <div class="excel-cell">
+                    <button class="btn btn-success" onclick="addAction(${idx})">+ 添加</button>
+                </div>
+            </div>
+            `;
+            
+            return `
+            <div class="char-section">
+                <div class="char-header">${char.name} - 伤害计算</div>
+                <div class="action-grid">
+                    <div class="excel-cell header">动作名</div>
+                    <div class="excel-cell header">次数</div>
+                    <div class="excel-cell header">倍率</div>
+                    <div class="excel-cell header">攻击区</div>
+                    <div class="excel-cell header">加成区</div>
+                    <div class="excel-cell header">双爆区</div>
+                    <div class="excel-cell header">加深区</div>
+                    <div class="excel-cell header">防御区</div>
+                    <div class="excel-cell header">抗性区</div>
+                    <div class="excel-cell header">倍率提升</div>
+                    <div class="excel-cell header">伤害</div>
+                </div>
+                ${actionsHtml}
+            </div>
+            `;
+        }
+        
+        function renderEffectDamage() {
+            const effects = ['光躁', '聚爆', '霜渐', '电磁', '风蚀'];
+            let html = `
+            <div class="effect-grid">
+                <div class="excel-cell header">效应类型</div>
+                <div class="excel-cell header">白值</div>
+                <div class="excel-cell header">倍率</div>
+                <div class="excel-cell header">次数</div>
+                <div class="excel-cell header">攻击区</div>
+                <div class="excel-cell header">加成区</div>
+                <div class="excel-cell header">双爆区</div>
+                <div class="excel-cell header">加深区</div>
+                <div class="excel-cell header">伤害</div>
+            </div>
+            `;
+            
+            effects.forEach((effect, idx) => {
+                html += `
+                <div class="effect-grid">
+                    <div class="excel-cell label">${effect}</div>
+                    <div class="excel-cell">
+                        <input type="number" id="effect-base-${idx}" value="1000" onchange="updateEffect(${idx})">
+                    </div>
+                    <div class="excel-cell">
+                        <input type="number" id="effect-multiplier-${idx}" value="0.5" step="0.01" onchange="updateEffect(${idx})">
+                    </div>
+                    <div class="excel-cell">
+                        <input type="number" id="effect-count-${idx}" value="10" onchange="updateEffect(${idx})">
+                    </div>
+                    <div class="excel-cell">
+                        <input type="number" id="effect-atk-${idx}" value="0" step="0.01" onchange="updateEffect(${idx})">
+                    </div>
+                    <div class="excel-cell">
+                        <input type="number" id="effect-bonus-${idx}" value="0" step="0.01" onchange="updateEffect(${idx})">
+                    </div>
+                    <div class="excel-cell">
+                        <input type="number" id="effect-crit-${idx}" value="1" step="0.01" onchange="updateEffect(${idx})">
+                    </div>
+                    <div class="excel-cell">
+                        <input type="number" id="effect-deepen-${idx}" value="0" step="0.01" onchange="updateEffect(${idx})">
+                    </div>
+                    <div class="excel-cell result" id="effect-damage-${idx}">0</div>
+                </div>
+                `;
+            });
+            
+            return html;
+        }
+        
+        function renderZhenxieDamage() {
+            const types = ['角色1震谐', '角色2震谐', '角色3震谐', '谐度击破'];
+            let html = `
+            <div class="effect-grid">
+                <div class="excel-cell header">震谐类型</div>
+                <div class="excel-cell header">白值</div>
+                <div class="excel-cell header">倍率</div>
+                <div class="excel-cell header">次数</div>
+                <div class="excel-cell header">攻击区</div>
+                <div class="excel-cell header">加成区</div>
+                <div class="excel-cell header">双爆区</div>
+                <div class="excel-cell header">加深区</div>
+                <div class="excel-cell header">伤害</div>
+            </div>
+            `;
+            
+            types.forEach((type, idx) => {
+                html += `
+                <div class="effect-grid">
+                    <div class="excel-cell label">${type}</div>
+                    <div class="excel-cell">
+                        <input type="number" id="zhenxie-base-${idx}" value="1000" onchange="updateZhenxie(${idx})">
+                    </div>
+                    <div class="excel-cell">
+                        <input type="number" id="zhenxie-multiplier-${idx}" value="2" step="0.01" onchange="updateZhenxie(${idx})">
+                    </div>
+                    <div class="excel-cell">
+                        <input type="number" id="zhenxie-count-${idx}" value="1" onchange="updateZhenxie(${idx})">
+                    </div>
+                    <div class="excel-cell">
+                        <input type="number" id="zhenxie-atk-${idx}" value="0" step="0.01" onchange="updateZhenxie(${idx})">
+                    </div>
+                    <div class="excel-cell">
+                        <input type="number" id="zhenxie-bonus-${idx}" value="0" step="0.01" onchange="updateZhenxie(${idx})">
+                    </div>
+                    <div class="excel-cell">
+                        <input type="number" id="zhenxie-crit-${idx}" value="1" step="0.01" onchange="updateZhenxie(${idx})">
+                    </div>
+                    <div class="excel-cell">
+                        <input type="number" id="zhenxie-deepen-${idx}" value="0" step="0.01" onchange="updateZhenxie(${idx})">
+                    </div>
+                    <div class="excel-cell result" id="zhenxie-damage-${idx}">0</div>
+                </div>
+                `;
+            });
+            
+            return html;
+        }
+        
+        function renderSummary() {
+            let html = '';
+            let teamTotal = 0;
+            
+            state.characters.forEach((char, idx) => {
+                const actions = state.actions[idx] || [];
+                let charTotal = 0;
+                
+                actions.forEach(action => {
+                    charTotal += calcActionDamage(char, action);
+                });
+                
+                teamTotal += charTotal;
+                const dps = charTotal / state.env.duration;
+                
+                html += `
+                <div class="summary-grid">
+                    <div class="excel-cell">${char.name}</div>
+                    <div class="excel-cell">${Math.round(charTotal).toLocaleString()}</div>
+                    <div class="excel-cell">${Math.round(dps).toLocaleString()}</div>
+                    <div class="excel-cell">-</div>
+                    <div class="excel-cell">${actions.length}</div>
+                </div>
+                `;
+            });
+            
+            document.getElementById('summaryContent').innerHTML = html;
+            document.getElementById('teamTotalDamage').textContent = Math.round(teamTotal).toLocaleString();
+            document.getElementById('teamTotalDPS').textContent = Math.round(teamTotal / state.env.duration).toLocaleString();
+        }
+        
+        function renderAll() {
+            // 渲染角色面板
+            let panelsHtml = '';
+            state.characters.forEach((char, idx) => {
+                panelsHtml += renderCharPanel(char, idx);
+            });
+            document.getElementById('charPanels').innerHTML = panelsHtml;
+            
+            // 渲染伤害计算
+            let damageHtml = '';
+            state.characters.forEach((char, idx) => {
+                damageHtml += renderDamageCalc(char, idx);
+            });
+            document.getElementById('damageCalculations').innerHTML = damageHtml;
+            
+            // 渲染效应伤害
+            document.getElementById('effectDamage').innerHTML = renderEffectDamage();
+            
+            // 渲染震谐伤害
+            document.getElementById('zhenxieDamage').innerHTML = renderZhenxieDamage();
+            
+            // 渲染汇总
+            renderSummary();
+        }
+        
+        // 更新函数
+        function updateChar(idx, field, value) {
+            state.characters[idx][field] = value;
+            renderAll();
+        }
+        
+        function updateAction(charIdx, actionIdx, field, value) {
+            state.actions[charIdx][actionIdx][field] = value;
+            renderAll();
+        }
+        
+        function addAction(charIdx) {
+            const name = document.getElementById(`new-action-name-${charIdx}`).value;
+            const count = parseFloat(document.getElementById(`new-action-count-${charIdx}`).value) || 1;
+            const multiplier = parseFloat(document.getElementById(`new-action-multiplier-${charIdx}`).value) || 1;
+            const boost = parseFloat(document.getElementById(`new-action-boost-${charIdx}`).value) || 0;
+            
+            if (!name) {
+                alert('请输入动作名');
+                return;
+            }
+            
+            state.actions[charIdx].push({
+                name: name,
+                count: count,
+                multiplier: multiplier,
+                multiplierBoost: boost
+            });
+            
+            renderAll();
+        }
+        
+        function updateEnv() {
+            state.env.charLevel = parseFloat(document.getElementById('env-charLevel').value) || 90;
+            state.env.monsterLevel = parseFloat(document.getElementById('env-monsterLevel').value) || 100;
+            state.env.defReduction = parseFloat(document.getElementById('env-defReduction').value) || 0;
+            state.env.defIgnore = parseFloat(document.getElementById('env-defIgnore').value) || 0;
+            state.env.resistance = parseFloat(document.getElementById('env-resistance').value) || 0.2;
+            state.env.duration = parseFloat(document.getElementById('env-duration').value) || 25;
+            state.env.vuln = parseFloat(document.getElementById('env-vuln').value) || 0;
+            state.env.finalDmg = parseFloat(document.getElementById('env-finalDmg').value) || 0;
+            
+            renderAll();
+        }
+        
+        function updateEffect(idx) {
+            const base = parseFloat(document.getElementById(`effect-base-${idx}`).value) || 0;
+            const multiplier = parseFloat(document.getElementById(`effect-multiplier-${idx}`).value) || 0;
+            const count = parseFloat(document.getElementById(`effect-count-${idx}`).value) || 0;
+            const atk = parseFloat(document.getElementById(`effect-atk-${idx}`).value) || 0;
+            const bonus = parseFloat(document.getElementById(`effect-bonus-${idx}`).value) || 0;
+            const crit = parseFloat(document.getElementById(`effect-crit-${idx}`).value) || 1;
+            const deepen = parseFloat(document.getElementById(`effect-deepen-${idx}`).value) || 0;
+            
+            const defZone = calcDefZone();
+            const resZone = calcResZone();
+            
+            const damage = count * base * multiplier * (1 + atk) * (1 + bonus) * crit * 
+                          (1 + deepen) * defZone * resZone * 
+                          (1 + state.env.vuln) * (1 + state.env.finalDmg);
+            
+            document.getElementById(`effect-damage-${idx}`).textContent = Math.round(damage).toLocaleString();
+        }
+        
+        function updateZhenxie(idx) {
+            const base = parseFloat(document.getElementById(`zhenxie-base-${idx}`).value) || 0;
+            const multiplier = parseFloat(document.getElementById(`zhenxie-multiplier-${idx}`).value) || 0;
+            const count = parseFloat(document.getElementById(`zhenxie-count-${idx}`).value) || 0;
+            const atk = parseFloat(document.getElementById(`zhenxie-atk-${idx}`).value) || 0;
+            const bonus = parseFloat(document.getElementById(`zhenxie-bonus-${idx}`).value) || 0;
+            const crit = parseFloat(document.getElementById(`zhenxie-crit-${idx}`).value) || 1;
+            const deepen = parseFloat(document.getElementById(`zhenxie-deepen-${idx}`).value) || 0;
+            
+            const defZone = calcDefZone();
+            const resZone = calcResZone();
+            
+            const damage = count * base * multiplier * (1 + atk) * (1 + bonus) * crit * 
+                          (1 + deepen) * defZone * resZone * 
+                          (1 + state.env.vuln) * (1 + state.env.finalDmg);
+            
+            document.getElementById(`zhenxie-damage-${idx}`).textContent = Math.round(damage).toLocaleString();
+        }
+        
+        function addCharacter() {
+            const name = prompt('请输入角色名称:');
+            if (name) {
+                addCharacterData(state.characters.length, name);
+                renderAll();
+            }
+        }
+        
+        function calculateAll() {
+            renderAll();
+            alert('计算完成！');
+        }
+        
+        function switchTab(tab) {
+            document.querySelectorAll('.sheet-container').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(`sheet-${tab}`).classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        function exportToExcel() {
+            alert('导出功能开发中...');
+        }
+        
+        function saveData() {
+            localStorage.setItem('wuwaCalcData', JSON.stringify(state));
+            alert('数据已保存到本地！');
+        }
+        
+        function loadData() {
+            const saved = localStorage.getItem('wuwaCalcData');
+            if (saved) {
+                const data = JSON.parse(saved);
+                Object.assign(state, data);
+                renderAll();
+                alert('数据已加载！');
+            } else {
+                alert('没有找到保存的数据！');
+            }
+        }
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initDefaultChars();
+        });
+    </script>
+</body>
+</html>

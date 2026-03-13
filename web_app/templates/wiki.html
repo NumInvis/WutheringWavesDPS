@@ -1,0 +1,393 @@
+{% extends "base.html" %}
+
+{% block title %}鸣潮常识手册 - Wiki{% endblock %}
+
+{% block extra_css %}
+<style>
+.wiki-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 24px;
+}
+
+.wiki-sidebar {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    padding: 20px;
+    height: fit-content;
+    position: sticky;
+    top: 80px;
+}
+
+.wiki-sidebar h3 {
+    font-size: 16px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.wiki-nav {
+    list-style: none;
+}
+
+.wiki-nav li {
+    margin-bottom: 4px;
+}
+
+.wiki-nav a {
+    display: block;
+    padding: 8px 12px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-radius: var(--radius);
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.wiki-nav a:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.wiki-nav a.active {
+    background: var(--accent);
+    color: white;
+}
+
+.wiki-content {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    padding: 32px;
+}
+
+.wiki-section {
+    margin-bottom: 40px;
+}
+
+.wiki-section h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--accent);
+}
+
+.wiki-section h3 {
+    font-size: 18px;
+    margin: 24px 0 16px;
+    color: var(--accent-light);
+}
+
+.wiki-section h4 {
+    font-size: 16px;
+    margin: 20px 0 12px;
+    color: var(--text-primary);
+}
+
+.wiki-section p {
+    line-height: 1.8;
+    margin-bottom: 12px;
+    color: var(--text-secondary);
+}
+
+.wiki-section ul, .wiki-section ol {
+    margin: 12px 0;
+    padding-left: 24px;
+}
+
+.wiki-section li {
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+}
+
+.wiki-section strong {
+    color: var(--text-primary);
+}
+
+.wiki-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 14px;
+}
+
+.wiki-table th,
+.wiki-table td {
+    padding: 12px;
+    text-align: left;
+    border: 1px solid var(--border);
+}
+
+.wiki-table th {
+    background: var(--bg-card);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.wiki-table td {
+    color: var(--text-secondary);
+}
+
+.wiki-table tr:hover td {
+    background: var(--bg-hover);
+}
+
+.formula {
+    background: var(--bg-card);
+    padding: 16px 20px;
+    border-radius: var(--radius);
+    margin: 16px 0;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    color: var(--accent-light);
+    overflow-x: auto;
+}
+
+.info-box {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05));
+    border-left: 4px solid var(--accent);
+    padding: 16px 20px;
+    margin: 20px 0;
+    border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.info-box h4 {
+    margin-top: 0;
+    color: var(--accent);
+}
+
+@media (max-width: 768px) {
+    .wiki-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .wiki-sidebar {
+        position: static;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wiki-container">
+    <!-- 侧边导航 -->
+    <aside class="wiki-sidebar">
+        <h3>📚 目录</h3>
+        <ul class="wiki-nav">
+            <li><a href="#damage" class="active">伤害体系</a></li>
+            <li><a href="#harmony">谐度破坏体系</a></li>
+            <li><a href="#effect">效应体系</a></li>
+            <li><a href="#action">动作指令体系</a></li>
+            <li><a href="#toughness">受击与韧性系统</a></li>
+            <li><a href="#gather">聚怪牵引机制</a></li>
+            <li><a href="#endgame">高难模式</a></li>
+            <li><a href="#mechanics">白条弹刀闪反</a></li>
+            <li><a href="#echo">声骸词条</a></li>
+        </ul>
+    </aside>
+    
+    <!-- 内容区 -->
+    <div class="wiki-content">
+        <!-- 伤害体系 -->
+        <section class="wiki-section" id="damage">
+            <h2>🎯 伤害体系</h2>
+            
+            <h3>伤害计算</h3>
+            <p>不同乘区之间乘算，同一乘区之内加算，最终得出伤害。</p>
+            
+            <h4>1. 基础属性区</h4>
+            <p>攻击/生命/防御等角色的基础属性白值，以及基于该白值的百分比加成。</p>
+            <div class="formula">白值 × (1 + 百分比) + 固定值</div>
+            
+            <h4>2. 双爆期望区</h4>
+            <p>计算公式为：1 + (暴击伤害 - 1) × 暴击率。暴击率最高为100%。</p>
+            
+            <h4>3. 伤害加成区</h4>
+            <p>包含属性伤害加成、特定伤害类别（如普攻、共鸣技能）加成、通用的伤害提升等。互相之间加算。</p>
+            
+            <h4>4. 伤害加深区</h4>
+            <p>包含属性伤害加深、伤害类别加深等。</p>
+            
+            <h4>5. 防御区</h4>
+            <div class="formula">
+                防御乘数 = (800 + 8 × Lc) / [(800 + 8 × Lc) + (792 + 8 × Lm) × (1 - 无视防御) × (1 - 减防)]
+            </div>
+            <p>其中，Lc为角色等级，Lm为怪物等级。</p>
+            
+            <div class="info-box">
+                <h4>截止3.1版本</h4>
+                <p><strong>减防区：</strong>虚湮效应，弗洛洛专武，卡提希娅专武，赞妮专武，长离固有，长离的六链，珂莱塔固有，露帕6链。</p>
+                <p><strong>无视防御区：</strong>洛可可6链，坎特蕾拉6链，奥古斯塔专武，嘉贝莉娜专武，尤诺专武，千咲虚湮之线，爱弥斯专武。</p>
+            </div>
+            
+            <h4>6. 抗性区</h4>
+            <p><strong>基础环境抗性：</strong></p>
+            <ul>
+                <li>大世界：10%</li>
+                <li>深塔、冥歌海墟、矩阵：20%</li>
+            </ul>
+            
+            <p><strong>环境逆抗惩罚</strong>（在基础抗性上叠加）：</p>
+            <table class="wiki-table">
+                <tr>
+                    <th>环境</th>
+                    <th>惩罚</th>
+                    <th>总抗性</th>
+                </tr>
+                <tr><td>深塔</td><td>40%</td><td>60%</td></tr>
+                <tr><td>海墟</td><td>30%</td><td>50%</td></tr>
+                <tr><td>大世界</td><td>30%</td><td>40%</td></tr>
+                <tr><td>矩阵</td><td>20%</td><td>40%</td></tr>
+                <tr><td>全息</td><td>70%</td><td>80%</td></tr>
+            </table>
+            
+            <h4>7. 特殊独立乘区</h4>
+            <p>如易伤、最终伤害提升等。同名加算，异名乘算。</p>
+        </section>
+        
+        <!-- 谐度破坏体系 -->
+        <section class="wiki-section" id="harmony">
+            <h2>🎵 谐度破坏体系</h2>
+            
+            <h3>基础概念</h3>
+            <ul>
+                <li><strong>涉及概念：</strong>偏谐值、谐度破坏、施加震谐偏移/集谐偏移、震谐响应</li>
+                <li><strong>体系属性：</strong>谐度破坏增幅、偏谐值累积效率</li>
+                <li><strong>伤害类型：</strong>谐度击破伤害、震谐伤害</li>
+            </ul>
+            <p>注：截止3.1版本，1C偏谐值为280，3C偏谐值840，4C偏谐值3840。</p>
+            
+            <h3>特有伤害乘区</h3>
+            <table class="wiki-table">
+                <tr>
+                    <th>乘区类型</th>
+                    <th>效果</th>
+                </tr>
+                <tr>
+                    <td>第121类最终伤害乘区</td>
+                    <td>聚爆效应对目标造成的伤害倍率提升</td>
+                </tr>
+                <tr>
+                    <td>第1类最终伤害乘区</td>
+                    <td>目标受到的聚爆效应可触发暴击，暴击率固定80%，暴击伤害固定275%</td>
+                </tr>
+                <tr>
+                    <td>第1001类最终伤害乘区</td>
+                    <td>集谐·干涉状态使角色对目标造成的最终伤害提升</td>
+                </tr>
+            </table>
+        </section>
+        
+        <!-- 效应体系 -->
+        <section class="wiki-section" id="effect">
+            <h2>⚡ 效应体系</h2>
+            
+            <h3>效应伤害计算规则</h3>
+            <div class="formula">
+                异常伤害 = 效应常数 × 倍率 × 防御区 × 抗性区 × (1 + 角色特殊增伤)
+            </div>
+            <p>注：对角色的异常伤害计算会额外乘以0.3134的固定系数。</p>
+            
+            <h3>效应核心机制</h3>
+            <table class="wiki-table">
+                <tr>
+                    <th>效应名称</th>
+                    <th>单层持续时间</th>
+                    <th>层数上限</th>
+                    <th>结算周期</th>
+                    <th>结算规则</th>
+                </tr>
+                <tr>
+                    <td>风蚀效应</td>
+                    <td>14.8s</td>
+                    <td>3层</td>
+                    <td>3s</td>
+                    <td>重复获得刷新持续时间；每3秒结算对应层数倍率</td>
+                </tr>
+                <tr>
+                    <td>电磁效应</td>
+                    <td>15s</td>
+                    <td>10层</td>
+                    <td>5s</td>
+                    <td>重复获得刷新持续时间；结算时移除50%当前层数；满层可额外叠10层爆发层数</td>
+                </tr>
+                <tr>
+                    <td>霜渐效应</td>
+                    <td>15s</td>
+                    <td>10层</td>
+                    <td>-</td>
+                    <td>重复获得刷新持续时间；满层清空层数并冻结目标4s</td>
+                </tr>
+                <tr>
+                    <td>聚爆效应</td>
+                    <td>15s</td>
+                    <td>10层</td>
+                    <td>满层结算</td>
+                    <td>重复获得刷新持续时间；满层一次性结算倍率，结算半径3米，冷却0.2s</td>
+                </tr>
+                <tr>
+                    <td>光噪效应</td>
+                    <td>3s</td>
+                    <td>10层</td>
+                    <td>3s</td>
+                    <td>每3秒结算对应层数倍率，结算后层数减1</td>
+                </tr>
+                <tr>
+                    <td>虚湮效应</td>
+                    <td>25s</td>
+                    <td>3层</td>
+                    <td>-</td>
+                    <td>持续时间结束清空层数；每层降低目标对应比例防御</td>
+                </tr>
+            </table>
+        </section>
+        
+        <!-- 声骸词条 -->
+        <section class="wiki-section" id="echo">
+            <h2>🔮 声骸词条</h2>
+            
+            <h3>声骸主词条</h3>
+            <table class="wiki-table">
+                <tr>
+                    <th>声骸COST</th>
+                    <th>主属性与固定属性</th>
+                </tr>
+                <tr>
+                    <td>4C</td>
+                    <td>暴击率22%、暴击伤害44%、攻击/生命百分比33%、防御百分比41.8%、治疗效果26.4%、固定攻击150</td>
+                </tr>
+                <tr>
+                    <td>3C</td>
+                    <td>属性加成/攻击百分比30%、防御百分比38%、共鸣效率32%、固定攻击100</td>
+                </tr>
+                <tr>
+                    <td>1C</td>
+                    <td>攻击百分比18%、防御百分比18%、生命百分比22.8%、固定生命2280</td>
+                </tr>
+            </table>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 平滑滚动
+ document.querySelectorAll('.wiki-nav a').forEach(anchor => {
+    anchor.addEventListener('click', function(e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // 更新活动状态
+            document.querySelectorAll('.wiki-nav a').forEach(a => a.classList.remove('active'));
+            this.classList.add('active');
+        }
+    });
+});
+</script>
+{% endblock %}

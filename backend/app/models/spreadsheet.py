@@ -2,7 +2,6 @@
 表格模型
 """
 from sqlalchemy import Column, String, Text, Boolean, Integer, BigInteger, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import relationship
 import uuid
 from .base import Base, TimestampMixin
@@ -12,13 +11,14 @@ class Spreadsheet(Base, TimestampMixin):
     """表格表"""
     __tablename__ = "spreadsheets"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    sheet_number = Column(Integer, unique=True, nullable=True, index=True)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String(200), nullable=False)
     description = Column(Text)
     category = Column(String(50), index=True)
-    tags = Column(ARRAY(Text))
-    character_tags = Column(ARRAY(Text))
+    tags = Column(Text)
+    character_tags = Column(Text)
     area = Column(String(50), index=True)
     is_draft = Column(Boolean, default=False, index=True)
     is_banned = Column(Boolean, default=False, index=True)
@@ -30,6 +30,6 @@ class Spreadsheet(Base, TimestampMixin):
     file_url = Column(String(500), nullable=False)
     file_size = Column(BigInteger)
     thumbnail_url = Column(String(500))
-    metadata = Column(JSONB)
+    extra_metadata = Column(Text)
     
     user = relationship("User", backref="spreadsheets")

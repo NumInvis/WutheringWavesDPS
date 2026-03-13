@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+
+{% block title %}DPS计算器 - 鸣潮DPS计算器{% endblock %}
+
+{% block extra_css %}
+<style>
+.calculator-container {
+    display: grid;
+    grid-template-columns: 350px 1fr 350px;
+    gap: 20px;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+.panel {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    padding: 20px;
+}
+
+.panel-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* 角色选择区 */
+.character-select {
+    text-align: center;
+    padding: 20px;
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.character-select:hover {
+    border-color: var(--accent);
+}
+
+.character-select.empty {
+    color: var(--text-secondary);
+}
+
+.selected-char h3 {
+    font-size: 20px;
+    color: var(--accent);
+    margin-bottom: 4px;
+}
+
+.selected-char span {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+/* 配置表单 */
+.config-section {
+    margin-bottom: 20px;
+}
+
+.config-section h4 {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.config-section h4::before {
+    content: '';
+    width: 4px;
+    height: 16px;
+    background: var(--accent);
+    border-radius: 2px;
+}
+
+.form-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.form-row label {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.form-row input,
+.form-row select {
+    width: 100px;
+    padding: 6px 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-size: 13px;
+    text-align: right;
+}
+
+.form-row input:focus,
+.form-row select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+/* 技能列表 */
+.skill-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.skill-item {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: 12px;
+    margin-bottom: 10px;
+}
+
+.skill-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.skill-code {
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.skill-name {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.skill-type {
+    font-size: 12px;
+    padding: 2px 8px;
+    background: var(--bg-hover);
+    border-radius: 4px;
+    color: var(--text-muted);
+}
+
+.skill-config {
+    display: flex;
+    gap: 16px;
+}
+
+.skill-config label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.skill-config input {
+    width: 60px;
+    padding: 4px 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 12px;
+}
+
+/* 结果面板 */
+.results-panel {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: 16px;
+}
+
+.result-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.result-item {
+    background: var(--bg-secondary);
+    padding: 12px;
+    border-radius: var(--radius);
+    text-align: center;
+}
+
+.result-item.highlight {
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+}
+
+.result-item .label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.result-item.highlight .label {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.result-item .value {
+    display: block;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.result-item.highlight .value {
+    color: white;
+}
+
+/* 技能结果 */
+.skill-results h4 {
+    font-size: 14px;
+    margin-bottom: 12px;
+    color: var(--text-secondary);
+}
+
+.skill-result {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+}
+
+.skill-result:last-child {
+    border-bottom: none;
+}
+
+/* 空状态 */
+.empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+
+/* 工具栏 */
+.toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+/* 响应式 */
+@media (max-width: 1200px) {
+    .calculator-container {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="calculator-container">
+    <!-- 左侧面板：角色和配置 -->
+    <div class="panel">
+        <div class="panel-title">
+            <span>角色配置</span>
+        </div>
+        
+        <!-- 角色选择 -->
+        <div class="character-select" onclick="showCharacterList()">
+            <div id="selected-character">
+                <div class="empty">
+                    <div style="font-size: 32px; margin-bottom: 8px;">👤</div>
+                    <div>点击选择角色</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 声骸配置 -->
+        <div class="config-section">
+            <h4>声骸配置</h4>
+            <div class="form-row">
+                <label>3C属伤数量</label>
+                <input type="number" id="echo-c3-count" value="2" min="0" max="3">
+            </div>
+            <div class="form-row">
+                <label>3C属伤百分比</label>
+                <input type="number" id="echo-c3-dmg" value="60" step="0.1">
+            </div>
+            <div class="form-row">
+                <label>套装加成</label>
+                <input type="number" id="echo-set-bonus" value="20" step="0.1">
+            </div>
+        </div>
+        
+        <!-- 拐力配置 -->
+        <div class="config-section">
+            <h4>拐力配置</h4>
+            <div class="form-row">
+                <label>攻击拐 (%)</label>
+                <input type="number" id="support-atk" value="61.5" step="0.1">
+            </div>
+            <div class="form-row">
+                <label>属伤拐 (%)</label>
+                <input type="number" id="support-element" value="12" step="0.1">
+            </div>
+            <div class="form-row">
+                <label>全加深 (%)</label>
+                <input type="number" id="support-all-amp" value="35" step="0.1">
+            </div>
+            <div class="form-row">
+                <label>E加深 (%)</label>
+                <input type="number" id="support-e-amp" value="25" step="0.1">
+            </div>
+            <div class="form-row">
+                <label>Q加深 (%)</label>
+                <input type="number" id="support-q-amp" value="32" step="0.1">
+            </div>
+            <div class="form-row">
+                <label>暴击拐 (%)</label>
+                <input type="number" id="support-crit-rate" value="12.5" step="0.1">
+            </div>
+            <div class="form-row">
+                <label>爆伤拐 (%)</label>
+                <input type="number" id="support-crit-dmg" value="25" step="0.1">
+            </div>
+        </div>
+        
+        <!-- 时间配置 -->
+        <div class="config-section">
+            <h4>战斗配置</h4>
+            <div class="form-row">
+                <label>战斗时长 (秒)</label>
+                <input type="number" id="time-seconds" value="25" step="0.5">
+            </div>
+        </div>
+    </div>
+    
+    <!-- 中间面板：技能列表 -->
+    <div class="panel">
+        <div class="panel-title">
+            <span>技能循环</span>
+            <div class="toolbar">
+                <button class="btn btn-primary" onclick="addCustomSkill()">添加技能</button>
+                <button class="btn btn-secondary" onclick="importLalabiao()">导入拉表</button>
+            </div>
+        </div>
+        
+        <div class="skill-list" id="skill-list">
+            <div class="empty">
+                <div style="font-size: 48px; margin-bottom: 16px;">⚔️</div>
+                <div>选择角色或添加技能开始计算</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 右侧面板：计算结果 -->
+    <div class="panel">
+        <div class="panel-title">
+            <span>计算结果</span>
+            <button class="btn btn-primary" onclick="calculateDPS()">计算</button>
+        </div>
+        
+        <div id="calculation-results">
+            <div class="empty">
+                <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+                <div>点击计算按钮查看结果</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

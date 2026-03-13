@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}鸣潮DPS计算器 - 首页{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="hero-content">
+        <h1 class="hero-title">鸣潮DPS计算器</h1>
+        <p class="hero-subtitle">专业的鸣潮伤害计算工具，支持角色面板配置、声骸搭配、DPS模拟</p>
+        <div class="hero-actions">
+            <a href="/calculator" class="btn btn-large btn-primary">开始计算</a>
+            <button class="btn btn-large btn-secondary" onclick="showCharacterList()">查看角色</button>
+        </div>
+    </div>
+    <div class="hero-stats">
+        <div class="stat-card">
+            <div class="stat-number" id="char-count">-</div>
+            <div class="stat-label">角色</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="echo-count">-</div>
+            <div class="stat-label">声骸</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="weapon-count">-</div>
+            <div class="stat-label">武器</div>
+        </div>
+    </div>
+</div>
+
+<div class="features-section">
+    <h2 class="section-title">功能特性</h2>
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3>精准计算</h3>
+            <p>基于游戏内公式的完整伤害计算，包含所有乘区</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🎮</div>
+            <h3>角色配置</h3>
+            <p>完整的角色面板配置，支持声骸、武器、拐力设置</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📈</div>
+            <h3>DPS模拟</h3>
+            <p>模拟实战循环，计算团队DPS和伤害占比</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">💾</div>
+            <h3>数据导入</h3>
+            <p>支持从Excel拉表文件导入角色配置和技能数据</p>
+        </div>
+    </div>
+</div>
+
+<div class="quick-start-section">
+    <h2 class="section-title">快速开始</h2>
+    <div class="steps">
+        <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+                <h4>选择角色</h4>
+                <p>从角色列表中选择你要计算的角色</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+                <h4>配置面板</h4>
+                <p>设置声骸、武器、拐力等面板属性</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+                <h4>添加技能</h4>
+                <p>添加角色技能循环，设置倍率和次数</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-number">4</div>
+            <div class="step-content">
+                <h4>计算DPS</h4>
+                <p>点击计算按钮，查看DPS和伤害详情</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 加载统计数据
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        // 获取角色数量
+        const charRes = await fetch('/api/characters');
+        const charData = await charRes.json();
+        if (charData.success) {
+            document.getElementById('char-count').textContent = charData.data.length;
+        }
+        
+        // 获取声骸数量
+        const echoRes = await fetch('/api/echoes');
+        const echoData = await echoRes.json();
+        if (echoData.success) {
+            document.getElementById('echo-count').textContent = echoData.data.length;
+        }
+        
+        // 获取武器数量
+        const weaponRes = await fetch('/api/weapons');
+        const weaponData = await weaponRes.json();
+        if (weaponData.success) {
+            document.getElementById('weapon-count').textContent = weaponData.data.length;
+        }
+    } catch (e) {
+        console.error('加载统计数据失败:', e);
+    }
+});
+
+// 导入数据
+async function importData() {
+    try {
+        const res = await fetch('/api/import-data', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            alert(`导入成功！\n角色: ${data.characters}\n声骸: ${data.echoes}`);
+            location.reload();
+        } else {
+            alert('导入失败: ' + data.error);
+        }
+    } catch (e) {
+        alert('导入错误: ' + e.message);
+    }
+}
+</script>
+{% endblock %}

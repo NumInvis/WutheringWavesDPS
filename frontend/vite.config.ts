@@ -10,12 +10,21 @@ export default defineConfig({
     }
   },
   server: {
-    port: 5173,
+    port: 14877,
+    host: '0.0.0.0',
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:14876',
+        changeOrigin: true
+      },
+      '/uploads': {
+        target: 'http://localhost:14876',
         changeOrigin: true
       }
     }
+  },
+  preview: {
+    port: 14876,
+    host: '0.0.0.0'
   }
 })

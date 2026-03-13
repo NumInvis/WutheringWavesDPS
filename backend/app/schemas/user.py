@@ -4,13 +4,13 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime
-from uuid import UUID
 
 
 class UserBase(BaseModel):
     """用户基础模式"""
     username: str = Field(..., min_length=3, max_length=50)
-    email: EmailStr
+    # 不做邮箱绑定：允许不传；后端会自动生成占位邮箱
+    email: Optional[EmailStr] = None
     display_name: Optional[str] = None
     avatar_url: Optional[str] = None
     bio: Optional[str] = None
@@ -36,7 +36,7 @@ class UserUpdate(BaseModel):
 
 class UserResponse(UserBase):
     """用户响应模式"""
-    id: UUID
+    id: str
     is_active: bool
     is_verified: bool
     is_admin: bool

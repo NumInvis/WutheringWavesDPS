@@ -1,25 +1,28 @@
 """
-FastAPI主应用入口
+FastAPI application entry.
+WutheringWavesDPS - Beta1.0
+Port: 14876
 """
+import os
+import uvicorn
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+
 from app.core.config import get_settings
 from app.models.base import Base
 from app.core.database import engine, SessionLocal
-import os
 
 settings = get_settings()
 
 app = FastAPI(
     title=settings.app_name,
-    description="鸣潮排轴DPS计算器 - 面向多用户的开源协作平台",
-    version="3.0.0",
+    version=settings.app_version,
     docs_url="/docs",
     redoc_url="/redoc"
 )
 
-# 配置CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -28,17 +31,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 确保上传目录存在
+# Ensure upload directory exists
 os.makedirs(settings.upload_dir, exist_ok=True)
 
-# 挂载静态文件服务（用于访问上传的文件
+# Static files for uploads
 app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
 
-# 创建数据库表
+# Import models to register
+from app.models import user, spreadsheet, star, category  # noqa: F401
+
+# Create tables (SQLite/dev)
 Base.metadata.create_all(bind=engine)
 
-# 注册API路由
-from app.api import auth, spreadsheets, stars, categories, uploads
+# Routers
+from app.api import auth, spreadsheets, stars, categories, uploads  # noqa: E402
 
 app.include_router(auth.router)
 app.include_router(spreadsheets.router)
@@ -49,28 +55,38 @@ app.include_router(uploads.router)
 
 @app.on_event("startup")
 async def startup_event():
-    """应用启动事件"""
+    """Startup hook."""
     db = SessionLocal()
     try:
         from app.api.categories import init_categories
         from app.api.auth import init_admin_user
+        from app.api.spreadsheets import init_template_spreadsheet
         init_categories(db)
         init_admin_user(db)
+        init_template_spreadsheet(db)
     finally:
         db.close()
 
 
 @app.get("/")
 async def root():
-    """根路径"""
     return {
-        "message": "欢迎使用鸣潮排轴DPS计算器 API",
-        "version": "3.0.0",
+        "message": "Welcome to WutheringWavesDPS API",
+        "name": settings.app_name,
+        "version": settings.app_version,
         "docs": "/docs"
     }
 
 
 @app.get("/health")
 async def health_check():
-    """健康检查"""
-    return {"status": "healthy"}
+    return {"status": "healthy", "version": settings.app_version}
+
+
+if __name__ == "__main__":
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=settings.app_port,
+        reload=settings.app_debug
+    )

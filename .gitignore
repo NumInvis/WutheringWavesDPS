@@ -1,128 +1,59 @@
-# Python
+# Dependencies
+node_modules/
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-.env
-.env.local
-.env.*.local
-.venv
 env/
 venv/
+.venv/
 ENV/
-env.bak/
-venv.bak/
 
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+# Build
 dist/
-dist-ssr/
-*.local
-.pnpm-debug.log*
-lerna-debug.log*
+build/
+*.egg-info/
 
 # Database
 *.db
 *.sqlite
 *.sqlite3
-instance/
 
-# Uploads
-uploads/
-*.xlsx
-*.xls
-测试输出.xlsx
+# Environment
+.env
+.env.local
+.env.*.local
 
 # IDE
-.vscode/
 .idea/
+.vscode/
 *.swp
 *.swo
 *~
-*.iml
-*.ipr
-*.iws
 
 # OS
 .DS_Store
 Thumbs.db
-desktop.ini
-
-# Docker
-docker-compose.override.yml
-docker-compose.prod.yml
 
 # Logs
 *.log
 logs/
 
-# Temporary files
+# Uploads (keep template)
+uploads/*
+!uploads/.gitkeep
+excel_storage/*
+!excel_storage/.gitkeep
+
+# Cache
+.cache/
+.pytest_cache/
+.mypy_cache/
+
+# Temp
 *.tmp
 *.temp
-*.cache
 
-# Security
-*.pem
-*.key
-*.crt
-*.p12
-*.pfx
-id_rsa
-id_ed25519
-*.pub
-
-# Build artifacts
-*.exe
-*.dll
-*.so
-*.dylib
-*.dmg
-*.apk
-*.deb
-*.rpm
-
-# Archive files
-*.zip
-*.tar.gz
-*.rar
-*.7z
-
-# Old web app (keeping only the new frontend/backend)
-web_app/
-gui/
-core/
-dataio/
-templates/
-*.pyc
-app.py
-calculator.py
-excel_engine.py
-gui.py
-main_pro.py
-__init__.py
-analyze_*.py
-check_*.py
-debug_*.py
-study_*.py
-test_*.py
-*.bat
+# Keep template
+!backend/拉表模板.xlsx

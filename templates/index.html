@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鸣潮DPS计算器 v3.0</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #334155;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --border: #475569;
+            --echo-gold: #fbbf24;
+            --weapon-purple: #a855f7;
+            --set-green: #22c55e;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        /* 导航栏 */
+        .navbar {
+            background: var(--bg-secondary);
+            padding: 0 20px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .logo {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--accent);
+        }
+        
+        .version {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            margin-left: 20px;
+        }
+        
+        .btn {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-small {
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+        
+        /* 角色选择 */
+        .char-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: auto;
+        }
+        
+        .char-tabs {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .char-tab {
+            padding: 6px 16px;
+            background: var(--bg-card);
+            border: none;
+            border-radius: 4px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 13px;
+        }
+        
+        .char-tab.active {
+            background: var(--accent);
+            color: white;
+        }
+        
+        .char-tab:hover:not(.active) {
+            background: var(--border);
+        }
+        
+        /* 主内容区 */
+        .main-container {
+            display: flex;
+            padding: 15px;
+            gap: 15px;
+            height: calc(100vh - 50px);
+        }
+        
+        /* 左侧面板 */
+        .left-panel {
+            width: 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+        }
+        
+        .panel-card {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .panel-header {
+            background: var(--bg-card);
+            padding: 10px 15px;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .panel-content {
+            padding: 15px;
+        }
+        
+        .form-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .form-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .form-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        
+        .form-input {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 5px 10px;
+            color: var(--text-primary);
+            font-size: 13px;
+            width: 120px;
+            text-align: right;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        .form-select {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 5px 10px;
+            color: var(--text-primary);
+            font-size: 13px;
+            width: 120px;
+        }
+        
+        /* 统计网格 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .stat-item {
+            background: var(--bg-card);
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+        
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--accent);
+        }
+        
+        /* 标签页 */
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .tab {
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border: none;
+            border-radius: 4px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 13px;
+        }
+        
+        .tab.active {
+            background: var(--accent);
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* 右侧内容 */
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow: hidden;
+        }
+        
+        /* 统计头部 */
+        .stats-header {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .stat-box {
+            text-align: center;
+        }
+        
+        .stat-box-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+        }
+        
+        .stat-box-value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .stat-box-value.damage {
+            color: var(--accent);
+        }
+        
+        .stat-box-value.dps {
+            color: var(--success);
+        }
+        
+        /* 技能表格 */
+        .skills-section {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .skills-toolbar {
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .skills-title {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .skills-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .skills-table-container {
+            flex: 1;
+            overflow: auto;
+        }
+        
+        .skills-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        .skills-table th {
+            background: var(--bg-card);
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .skills-table td {
+            padding: 8px 10px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .skills-table tr:hover {
+            background: var(--bg-card);
+        }
+        
+        .skills-table tr.selected {
+            background: rgba(59, 130, 246, 0.2);
+        }
+        
+        .skill-cell-editable {
+            cursor: pointer;
+            color: var(--accent);
+        }
+        
+        .skill-cell-editable:hover {
+            text-decoration: underline;
+        }
+        
+        /* 模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            padding: 20px;
+            min-width: 300px;
+            max-width: 500px;
+        }
+        
+        .modal-header {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .modal-body {
+            margin-bottom: 20px;
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        /* 文件上传 */
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+        
+        /* 时间设置 */
+        .time-setting {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .time-input {
+            width: 80px;
+            text-align: center;
+        }
+        
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+        
+        /* 滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+        
+        /* 编辑输入框 */
+        .inline-edit {
+            background: var(--bg-primary);
+            border: 1px solid var(--accent);
+            border-radius: 3px;
+            padding: 2px 6px;
+            color: var(--text-primary);
+            font-size: 13px;
+            width: 80px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <span class="logo">◆ 鸣潮DPS计算器</span>
+        <span class="version">v3.0</span>
+        
+        <div class="nav-buttons">
+            <div class="file-input-wrapper">
+                <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">
+                    📂 打开Excel
+                </button>
+                <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFileSelect(event)">
+            </div>
+            <button class="btn btn-secondary" onclick="newFile()">📝 新建</button>
+            <button class="btn btn-success" onclick="recalculate()">⚡ 重新计算</button>
+        </div>
+        
+        <div class="time-setting">
+            <span class="form-label">战斗时长:</span>
+            <input type="number" id="timeInput" class="form-input time-input" value="25" step="0.5" onchange="updateTime()">
+            <span class="form-label">秒</span>
+        </div>
+        
+        <div class="char-selector">
+            <span class="form-label">角色:</span>
+            <div class="char-tabs" id="charTabs"></div>
+            <button class="btn btn-primary btn-small" onclick="addCharacter()">+</button>
+            <button class="btn btn-danger btn-small" onclick="deleteCharacter()">-</button>
+        </div>
+    </nav>
+    
+    <!-- 主内容区 -->
+    <div class="main-container">
+        <!-- 左侧面板 -->
+        <div class="left-panel">
+            <!-- 角色信息 -->
+            <div class="panel-card">
+                <div class="panel-header">👤 角色信息</div>
+                <div class="panel-content">
+                    <div class="form-row">
+                        <span class="form-label">角色名称</span>
+                        <input type="text" id="charName" class="form-input" onchange="updateCharName()">
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">属性</span>
+                        <select id="element" class="form-select" onchange="updatePanel()">
+                            <option value="湮灭">湮灭</option>
+                            <option value="热熔">热熔</option>
+                            <option value="气动">气动</option>
+                            <option value="导电">导电</option>
+                            <option value="冷凝">冷凝</option>
+                            <option value="衍射">衍射</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">主类型</span>
+                        <select id="skillType" class="form-select" onchange="updatePanel()">
+                            <option value="e">e</option>
+                            <option value="q">q</option>
+                            <option value="a">a</option>
+                            <option value="h">h</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">基础白值</span>
+                        <input type="number" id="baseAtk" class="form-input" onchange="updatePanel()">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 面板统计 -->
+            <div class="panel-card">
+                <div class="panel-header">📊 面板统计</div>
+                <div class="panel-content">
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">面板攻击</div>
+                            <div class="stat-value" id="panelAtk">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">属伤加成</div>
+                            <div class="stat-value" id="elementDmg">0%</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">面板暴击</div>
+                            <div class="stat-value" id="panelCritRate">0%</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">面板爆伤</div>
+                            <div class="stat-value" id="panelCritDmg">0%</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">双爆区</div>
+                            <div class="stat-value" id="critZone">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">防御区</div>
+                            <div class="stat-value" id="defenseZone">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 详细配置 -->
+            <div class="panel-card">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('echo')">声骸</button>
+                    <button class="tab" onclick="switchTab('weapon')">武器</button>
+                    <button class="tab" onclick="switchTab('support')">拐力</button>
+                </div>
+                
+                <!-- 声骸配置 -->
+                <div id="echoTab" class="tab-content active" style="padding: 0 15px 15px;">
+                    <div class="form-row">
+                        <span class="form-label">3C属伤%</span>
+                        <input type="number" id="echoC3Dmg" class="form-input" onchange="updatePanel()">
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">3C数量</span>
+                        <input type="number" id="echoC3Count" class="form-input" onchange="updatePanel()">
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">套装加成%</span>
+                        <input type="number" id="echoSetBonus" class="form-input" onchange="updatePanel()">
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">主词条大攻击%</span>
+                        <input type="number" id="echoMainAtk" class="form-input" onchange="updatePanel()">
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">固定攻击</span>
+                        <input type="number" id="echoFixedAtk" class="form-input" onchange="updatePanel()">
+                    </div>
+                </div>
+                
+                <!-- 武器配置 -->
+                <div id="weaponTab" class="tab-content" style="padding: 0 15px 15px;">
+                    <div class="form-row">
+                        <span class="form-label">武器名称</span>
+                        <input type="text" id="weaponName" class="form-input" onchange="updatePanel()">
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">攻击百分比%</span>
+                        <input type="number" id="weaponAtkPct" class="form-input" onchange="updatePanel()">
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">暴击率%</span>
+                        <input type="number" id="weaponCrit" class="form-input" onchange="updatePanel()">
+                    </div>
+                </div>
+                
+                <!-- 拐力配置 -->
+                <div id="supportTab" class="tab-content" style="padding: 0 15px 15px;">
+                    <div class="form-row">
+                        <span class="form-label">攻击拐%</span>
+                        <input type="number" id="supportAtk" class="form-input" onchange="updatePanel()">
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">属伤拐%</span>
+                        <input type="number" id="supportElement" class="form-input" onchange="updatePanel()">
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">全加深%</span>
+                        <input type="number" id="supportAllAmp" class="form-input" onchange="updatePanel()">
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">E加深%</span>
+                        <input type="number" id="supportEAmp" class="form-input" onchange="updatePanel()">
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">Q加深%</span>
+                        <input type="number" id="supportQAmp" class="form-input" onchange="updatePanel()">
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">暴击拐%</span>
+                        <input type="number" id="supportCritRate" class="form-input" onchange="updatePanel()">
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">爆伤拐%</span>
+                        <input type="number" id="supportCritDmg" class="form-input" onchange="updatePanel()">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧内容 -->
+        <div class="right-panel">
+            <!-- 统计头部 -->
+            <div class="stats-header">
+                <div class="stat-box">
+                    <div class="stat-box-label">队伍总伤害</div>
+                    <div class="stat-box-value damage" id="teamDamage">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-box-label">DPS</div>
+                    <div class="stat-box-value dps" id="teamDPS">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-box-label">当前角色伤害</div>
+                    <div class="stat-box-value" style="color: var(--warning);" id="charDamage">0</div>
+                </div>
+            </div>
+            
+            <!-- 技能列表 -->
+            <div class="skills-section">
+                <div class="skills-toolbar">
+                    <span class="skills-title">动作列表</span>
+                    <div class="skills-actions">
+                        <button class="btn btn-primary btn-small" onclick="addSkill()">➕ 添加</button>
+                        <button class="btn btn-danger btn-small" onclick="deleteSkill()">🗑️ 删除</button>
+                    </div>
+                </div>
+                <div class="skills-table-container">
+                    <table class="skills-table">
+                        <thead>
+                            <tr>
+                                <th>次数</th>
+                                <th>动作名称</th>
+                                <th>类型</th>
+                                <th>倍率%</th>
+                                <th>余响</th>
+                                <th>溢出</th>
+                                <th>单次伤害</th>
+                                <th>总伤害</th>
+                            </tr>
+                        </thead>
+                        <tbody id="skillsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sheet选择模态框 -->
+    <div id="sheetModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">选择Sheet</div>
+            <div class="modal-body">
+                <select id="sheetSelect" class="form-select" style="width: 100%;"></select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeSheetModal()">取消</button>
+                <button class="btn btn-primary" onclick="confirmSheetSelect()">确定</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 全局状态
+        let currentTeam = null;
+        let currentCharIdx = 0;
+        let selectedSkillIdx = -1;
+        let tempFilePath = null;
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTeam();
+        });
+        
+        // 加载队伍数据
+        async function loadTeam() {
+            try {
+                const response = await fetch('/api/team');
+                currentTeam = await response.json();
+                updateUI();
+            } catch (error) {
+                console.error('加载失败:', error);
+            }
+        }
+        
+        // 更新UI
+        function updateUI() {
+            if (!currentTeam) return;
+            
+            // 更新时间
+            document.getElementById('timeInput').value = currentTeam.time_seconds;
+            
+            // 更新角色标签
+            updateCharTabs();
+            
+            // 更新统计
+            document.getElementById('teamDamage').textContent = formatNumber(currentTeam.team_damage);
+            document.getElementById('teamDPS').textContent = formatNumber(currentTeam.team_dps);
+            
+            // 获取当前角色
+            const char = currentTeam.characters[currentCharIdx];
+            if (!char) return;
+            
+            // 更新角色信息
+            document.getElementById('charName').value = char.name;
+            document.getElementById('element').value = char.panel.element;
+            document.getElementById('skillType').value = char.panel.skill_type;
+            document.getElementById('baseAtk').value = char.panel.base_atk;
+            
+            // 更新面板统计
+            document.getElementById('panelAtk').textContent = formatNumber(char.panel.panel_atk);
+            document.getElementById('elementDmg').textContent = char.panel.element_dmg.toFixed(1) + '%';
+            document.getElementById('panelCritRate').textContent = char.panel.panel_crit_rate.toFixed(1) + '%';
+            document.getElementById('panelCritDmg').textContent = char.panel.panel_crit_dmg.toFixed(1) + '%';
+            document.getElementById('critZone').textContent = char.panel.crit_zone.toFixed(3);
+            document.getElementById('defenseZone').textContent = char.panel.defense_zone.toFixed(3);
+            
+            // 更新角色伤害
+            document.getElementById('charDamage').textContent = formatNumber(char.total_damage);
+            
+            // 更新声骸配置
+            document.getElementById('echoC3Dmg').value = char.panel.echo.c3_element_dmg;
+            document.getElementById('echoC3Count').value = char.panel.echo.c3_count;
+            document.getElementById('echoSetBonus').value = char.panel.echo.set_bonus;
+            document.getElementById('echoMainAtk').value = char.panel.echo.main_atk_pct;
+            document.getElementById('echoFixedAtk').value = char.panel.echo.fixed_atk;
+            
+            // 更新武器配置
+            document.getElementById('weaponName').value = char.panel.weapon.name;
+            document.getElementById('weaponAtkPct').value = char.panel.weapon.atk_pct;
+            document.getElementById('weaponCrit').value = char.panel.weapon.crit_rate;
+            
+            // 更新拐力配置
+            document.getElementById('supportAtk').value = char.panel.support.support_atk_pct;
+            document.getElementById('supportElement').value = char.panel.support.support_element_dmg;
+            document.getElementById('supportAllAmp').value = char.panel.support.support_all_amplify;
+            document.getElementById('supportEAmp').value = char.panel.support.support_e_amplify;
+            document.getElementById('supportQAmp').value = char.panel.support.support_q_amplify;
+            document.getElementById('supportCritRate').value = char.panel.support.support_crit_rate;
+            document.getElementById('supportCritDmg').value = char.panel.support.support_crit_dmg;
+            
+            // 更新技能表格
+            updateSkillsTable(char.skills);
+        }
+        
+        // 更新角色标签
+        function updateCharTabs() {
+            const tabsContainer = document.getElementById('charTabs');
+            tabsContainer.innerHTML = '';
+            
+            currentTeam.characters.forEach((char, idx) => {
+                const tab = document.createElement('button');
+                tab.className = 'char-tab' + (idx === currentCharIdx ? ' active' : '');
+                tab.textContent = char.name;
+                tab.onclick = () => switchCharacter(idx);
+                tabsContainer.appendChild(tab);
+            });
+        }
+        
+        // 切换角色
+        function switchCharacter(idx) {
+            currentCharIdx = idx;
+            updateUI();
+        }
+        
+        // 更新技能表格
+        function updateSkillsTable(skills) {
+            const tbody = document.getElementById('skillsTableBody');
+            tbody.innerHTML = '';
+            
+            skills.forEach((skill, idx) => {
+                const row = document.createElement('tr');
+                if (idx === selectedSkillIdx) {
+                    row.classList.add('selected');
+                }
+                row.onclick = () => selectSkill(idx);
+                
+                row.innerHTML = `
+                    <td class="skill-cell-editable" onclick="editSkillCell(event, ${idx}, 'count')">${skill.count}</td>
+                    <td class="skill-cell-editable" onclick="editSkillCell(event, ${idx}, 'name')">${skill.name}</td>
+                    <td class="skill-cell-editable" onclick="editSkillCell(event, ${idx}, 'skill_type')">${skill.skill_type}</td>
+                    <td class="skill-cell-editable" onclick="editSkillCell(event, ${idx}, 'multiplier')">${skill.multiplier.toFixed(1)}</td>
+                    <td class="skill-cell-editable" onclick="editSkillCell(event, ${idx}, 'echo')">${skill.echo}</td>
+                    <td class="skill-cell-editable" onclick="editSkillCell(event, ${idx}, 'overflow')">${skill.overflow}</td>
+                    <td>${formatNumber(skill.damage)}</td>
+                    <td>${formatNumber(skill.total_damage)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        // 选择技能
+        function selectSkill(idx) {
+            selectedSkillIdx = idx;
+            updateSkillsTable(currentTeam.characters[currentCharIdx].skills);
+        }
+        
+        // 编辑技能单元格
+        function editSkillCell(event, skillIdx, field) {
+            event.stopPropagation();
+            const skill = currentTeam.characters[currentCharIdx].skills[skillIdx];
+            const currentValue = skill[field];
+            
+            const newValue = prompt(`修改 ${field}:`, currentValue);
+            if (newValue !== null) {
+                updateSkill(skillIdx, field, newValue);
+            }
+        }
+        
+        // 更新技能
+        async function updateSkill(skillIdx, field, value) {
+            try {
+                const response = await fetch(`/api/character/${currentCharIdx}/skills/${skillIdx}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ [field]: value })
+                });
+                
+                if (response.ok) {
+                    loadTeam();
+                }
+            } catch (error) {
+                console.error('更新失败:', error);
+            }
+        }
+        
+        // 添加技能
+        async function addSkill() {
+            try {
+                const response = await fetch(`/api/character/${currentCharIdx}/skills`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    loadTeam();
+                }
+            } catch (error) {
+                console.error('添加失败:', error);
+            }
+        }
+        
+        // 删除技能
+        async function deleteSkill() {
+            if (selectedSkillIdx < 0) {
+                alert('请先选择一个动作');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/character/${currentCharIdx}/skills/${selectedSkillIdx}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    selectedSkillIdx = -1;
+                    loadTeam();
+                }
+            } catch (error) {
+                console.error('删除失败:', error);
+            }
+        }
+        
+        // 添加角色
+        async function addCharacter() {
+            try {
+                const response = await fetch('/api/character', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                
+                if (response.ok) {
+                    currentCharIdx = currentTeam.characters.length;
+                    loadTeam();
+                }
+            } catch (error) {
+                console.error('添加失败:', error);
+            }
+        }
+        
+        // 删除角色
+        async function deleteCharacter() {
+            if (currentTeam.characters.length <= 1) {
+                alert('至少需要保留一个角色');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/character/${currentCharIdx}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    currentCharIdx = Math.max(0, currentCharIdx - 1);
+                    loadTeam();
+                }
+            } catch (error) {
+                console.error('删除失败:', error);
+            }
+        }
+        
+        // 更新角色名
+        async function updateCharName() {
+            const name = document.getElementById('charName').value;
+            await updatePanelData({ name });
+        }
+        
+        // 更新面板
+        async function updatePanel() {
+            const data = {
+                element: document.getElementById('element').value,
+                skill_type: document.getElementById('skillType').value,
+                base_atk: parseFloat(document.getElementById('baseAtk').value),
+                echo: {
+                    c3_element_dmg: parseFloat(document.getElementById('echoC3Dmg').value),
+                    c3_count: parseInt(document.getElementById('echoC3Count').value),
+                    set_bonus: parseFloat(document.getElementById('echoSetBonus').value),
+                    main_atk_pct: parseFloat(document.getElementById('echoMainAtk').value),
+                    fixed_atk: parseFloat(document.getElementById('echoFixedAtk').value)
+                },
+                weapon: {
+                    name: document.getElementById('weaponName').value,
+                    atk_pct: parseFloat(document.getElementById('weaponAtkPct').value),
+                    crit_rate: parseFloat(document.getElementById('weaponCrit').value)
+                },
+                support: {
+                    support_atk_pct: parseFloat(document.getElementById('supportAtk').value),
+                    support_element_dmg: parseFloat(document.getElementById('supportElement').value),
+                    support_all_amplify: parseFloat(document.getElementById('supportAllAmp').value),
+                    support_e_amplify: parseFloat(document.getElementById('supportEAmp').value),
+                    support_q_amplify: parseFloat(document.getElementById('supportQAmp').value),
+                    support_crit_rate: parseFloat(document.getElementById('supportCritRate').value),
+                    support_crit_dmg: parseFloat(document.getElementById('supportCritDmg').value)
+                }
+            };
+            
+            await updatePanelData(data);
+        }
+        
+        // 更新面板数据
+        async function updatePanelData(data) {
+            try {
+                const response = await fetch(`/api/character/${currentCharIdx}/panel`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    const char = await response.json();
+                    currentTeam.characters[currentCharIdx] = char;
+                    updateUI();
+                }
+            } catch (error) {
+                console.error('更新失败:', error);
+            }
+        }
+        
+        // 更新时间
+        async function updateTime() {
+            const time = parseFloat(document.getElementById('timeInput').value);
+            
+            try {
+                const response = await fetch('/api/team/time', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ time_seconds: time })
+                });
+                
+                if (response.ok) {
+                    loadTeam();
+                }
+            } catch (error) {
+                console.error('更新失败:', error);
+            }
+        }
+        
+        // 重新计算
+        async function recalculate() {
+            try {
+                const response = await fetch('/api/recalculate', { method: 'POST' });
+                if (response.ok) {
+                    loadTeam();
+                }
+            } catch (error) {
+                console.error('计算失败:', error);
+            }
+        }
+        
+        // 新建文件
+        function newFile() {
+            if (confirm('确定要新建吗？当前数据将丢失。')) {
+                fetch('/api/team', { method: 'GET' })
+                    .then(() => location.reload());
+            }
+        }
+        
+        // 文件选择处理
+        async function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('/api/excel/sheets', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                if (data.sheets && data.sheets.length > 0) {
+                    tempFilePath = data.temp_path;
+                    showSheetModal(data.sheets);
+                }
+            } catch (error) {
+                console.error('上传失败:', error);
+                alert('文件上传失败');
+            }
+        }
+        
+        // 显示Sheet选择模态框
+        function showSheetModal(sheets) {
+            const select = document.getElementById('sheetSelect');
+            select.innerHTML = '';
+            sheets.forEach(sheet => {
+                const option = document.createElement('option');
+                option.value = sheet;
+                option.textContent = sheet;
+                select.appendChild(option);
+            });
+            
+            document.getElementById('sheetModal').classList.add('active');
+        }
+        
+        // 关闭Sheet模态框
+        function closeSheetModal() {
+            document.getElementById('sheetModal').classList.remove('active');
+            tempFilePath = null;
+        }
+        
+        // 确认Sheet选择
+        async function confirmSheetSelect() {
+            const sheetName = document.getElementById('sheetSelect').value;
+            
+            try {
+                const response = await fetch('/api/excel/load', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        temp_path: tempFilePath,
+                        sheet_name: sheetName
+                    })
+                });
+                
+                if (response.ok) {
+                    closeSheetModal();
+                    loadTeam();
+                } else {
+                    alert('加载失败');
+                }
+            } catch (error) {
+                console.error('加载失败:', error);
+                alert('加载失败');
+            }
+        }
+        
+        // 切换标签页
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+        }
+        
+        // 格式化数字
+        function formatNumber(num) {
+            if (num >= 100000000) {
+                return (num / 100000000).toFixed(2) + '亿';
+            } else if (num >= 10000) {
+                return (num / 10000).toFixed(1) + '万';
+            } else {
+                return num.toLocaleString();
+            }
+        }
+    </script>
+</body>
+</html>

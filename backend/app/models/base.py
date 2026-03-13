@@ -1,7 +1,7 @@
 """
 数据库基类和通用配置
 """
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy import Column, DateTime
 from datetime import datetime
 

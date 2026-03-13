@@ -4,7 +4,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-from uuid import UUID
+import json
 
 
 class SpreadsheetBase(BaseModel):
@@ -17,7 +17,7 @@ class SpreadsheetBase(BaseModel):
     area: Optional[str] = Field(None, pattern="^(pull_table|other)$")
     is_public: bool = False
     is_draft: bool = False
-    metadata: Optional[Dict[str, Any]] = None
+    extra_metadata: Optional[Dict[str, Any]] = None
 
 
 class SpreadsheetCreate(SpreadsheetBase):
@@ -48,8 +48,9 @@ class SpreadsheetAdminUpdate(BaseModel):
 
 class SpreadsheetResponse(SpreadsheetBase):
     """表格响应模式"""
-    id: UUID
-    user_id: UUID
+    id: str
+    sheet_number: Optional[int] = None
+    user_id: str
     owner_username: Optional[str] = None
     owner_display_name: Optional[str] = None
     is_banned: bool

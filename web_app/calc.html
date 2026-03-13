@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>排轴DPS计算器 - 鸣潮动作数据汇总</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #f5f7fa;
+            padding: 10px;
+            font-size: 12px;
+        }
+        .container { max-width: 1920px; margin: 0 auto; }
+        .nav { margin-bottom: 10px; }
+        .nav a { color: #409eff; text-decoration: none; margin-right: 15px; font-size: 13px; }
+        .header { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+        .header h1 { font-size: 22px; margin-bottom: 5px; }
+        .header p { font-size: 12px; opacity: 0.9; }
+        
+        .upload-section {
+            background: white;
+            padding: 20px;
+            border-radius: 6px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+        }
+        .upload-area {
+            border: 2px dashed #dcdfe6;
+            border-radius: 6px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .upload-area:hover { border-color: #409eff; background: #f5f7fa; }
+        .file-input { display: none; }
+        
+        .main-content { display: none; }
+        .main-content.active { display: block; }
+        
+        /* 三角色面板配置 - 表格形式 */
+        .team-panels {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .char-panel {
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .char-panel.char-1 { border: 2px solid #409eff; }
+        .char-panel.char-2 { border: 2px solid #67c23a; }
+        .char-panel.char-3 { border: 2px solid #e6a23c; }
+        
+        .char-header {
+            padding: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            text-align: center;
+            color: white;
+        }
+        .char-1 .char-header { background: #409eff; }
+        .char-2 .char-header { background: #67c23a; }
+        .char-3 .char-header { background: #e6a23c; }
+        
+        /* 详细面板表格 */
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+        }
+        .detail-table th {
+            background: #f5f7fa;
+            padding: 4px 2px;
+            text-align: center;
+            border: 1px solid #dcdfe6;
+            font-weight: bold;
+            color: #606266;
+            font-size: 10px;
+        }
+        .detail-table td {
+            padding: 3px 2px;
+            border: 1px solid #ebeef5;
+            text-align: center;
+        }
+        .detail-table input {
+            width: 100%;
+            padding: 2px;
+            border: 1px solid #dcdfe6;
+            border-radius: 2px;
+            text-align: center;
+            font-size: 10px;
+        }
+        .detail-table input:focus {
+            outline: none;
+            border-color: #409eff;
+            background: #ecf5ff;
+        }
+        .detail-table .label {
+            text-align: left;
+            padding-left: 4px;
+            color: #606266;
+            background: #fafafa;
+            font-size: 9px;
+        }
+        .detail-table .highlight {
+            background: #fff9e6;
+            font-weight: bold;
+        }
+        .detail-table .result-cell {
+            background: #f0f9ff;
+            font-weight: bold;
+            color: #409eff;
+        }
+        
+        /* 环境设置 */
+        .env-section {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+        }
+        .env-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr) 1.5fr;
+            gap: 8px;
+            align-items: end;
+        }
+        .env-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .env-item label {
+            font-size: 10px;
+            color: #606266;
+            margin-bottom: 2px;
+        }
+        .env-item input {
+            padding: 3px;
+            border: 1px solid #dcdfe6;
+            border-radius: 2px;
+            font-size: 11px;
+        }
+        
+        /* Excel式主表格 */
+        .excel-section {
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        .excel-toolbar {
+            padding: 8px 10px;
+            background: #f5f7fa;
+            border-bottom: 1px solid #ebeef5;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .excel-table-container {
+            overflow-x: auto;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .excel-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+        .excel-table th {
+            background: #f5f7fa;
+            padding: 5px 3px;
+            text-align: center;
+            border: 1px solid #dcdfe6;
+            font-weight: bold;
+            color: #606266;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            white-space: nowrap;
+            font-size: 10px;
+        }
+        .excel-table td {
+            padding: 3px;
+            border: 1px solid #ebeef5;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .excel-table tr:hover { background: #f5f7fa; }
+        .excel-table tr.selected { background: #ecf5ff; }
+        .excel-table tr.char1-row { background: rgba(64, 158, 255, 0.05); }
+        .excel-table tr.char2-row { background: rgba(103, 194, 58, 0.05); }
+        .excel-table tr.char3-row { background: rgba(230, 162, 60, 0.05); }
+        .excel-table input {
+            width: 100%;
+            padding: 2px;
+            border: 1px solid transparent;
+            background: transparent;
+            text-align: center;
+            font-size: 11px;
+        }
+        .excel-table input:focus {
+            outline: none;
+            border-color: #409eff;
+            background: white;
+        }
+        .excel-table .col-number {
+            background: #f5f7fa;
+            font-weight: bold;
+            color: #909399;
+            width: 30px;
+        }
+        .excel-table .col-select {
+            width: 40px;
+        }
+        .excel-table .col-damage {
+            font-weight: bold;
+            color: #67c23a;
+            min-width: 70px;
+        }
+        .excel-table .col-special {
+            background: #f0f9ff;
+            min-width: 60px;
+        }
+        
+        /* 环境伤害表格 - 不同颜色 */
+        .env-damage-section {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+            border-left: 4px solid #9c27b0;
+        }
+        .env-damage-section h4 {
+            font-size: 13px;
+            color: #9c27b0;
+            margin-bottom: 8px;
+        }
+        
+        /* 统计面板 */
+        .stats-section {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+        }
+        .stats-section h4 {
+            font-size: 14px;
+            color: #303133;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #ebeef5;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        .stat-card {
+            background: #f5f7fa;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stat-card h5 {
+            font-size: 11px;
+            color: #606266;
+            margin-bottom: 5px;
+        }
+        .stat-card .value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #409eff;
+        }
+        .stat-card .percent {
+            font-size: 12px;
+            color: #67c23a;
+        }
+        
+        /* 结果区域 */
+        .result-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+        }
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr repeat(3, 1fr);
+            gap: 15px;
+            align-items: center;
+        }
+        .result-item { text-align: center; }
+        .result-item h4 { font-size: 12px; opacity: 0.9; margin-bottom: 5px; }
+        .result-item .number { font-size: 24px; font-weight: bold; }
+        .result-item .label { font-size: 11px; opacity: 0.8; }
+        
+        .btn {
+            display: inline-block;
+            padding: 5px 12px;
+            background: #409eff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .btn:hover { background: #66b1ff; }
+        .btn-success { background: #67c23a; }
+        .btn-success:hover { background: #85ce61; }
+        .btn-danger { background: #f56c6c; }
+        .btn-danger:hover { background: #f78989; }
+        .btn-warning { background: #e6a23c; }
+        .btn-warning:hover { background: #ebb563; }
+        
+        .loading { text-align: center; padding: 20px; color: #909399; }
+        .error { color: #f56c6c; padding: 10px; background: #fef0f0; border-radius: 4px; }
+        
+        .sheet-tabs {
+            display: flex;
+            gap: 3px;
+            padding: 6px;
+            background: #f5f7fa;
+            border-bottom: 1px solid #ebeef5;
+        }
+        .sheet-tab {
+            padding: 4px 10px;
+            background: white;
+            border: 1px solid #dcdfe6;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        .sheet-tab:hover { background: #f5f7fa; }
+        .sheet-tab.active {
+            background: #409eff;
+            color: white;
+            border-color: #409eff;
+        }
+        
+        /* 复选框样式 */
+        .row-checkbox {
+            width: 16px !important;
+            height: 16px !important;
+            cursor: pointer;
+        }
+        
+        /* 角色选择下拉框 */
+        .char-select {
+            padding: 2px 5px;
+            border: 1px solid #dcdfe6;
+            border-radius: 3px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .char-select.char1 { background: rgba(64, 158, 255, 0.1); border-color: #409eff; }
+        .char-select.char2 { background: rgba(103, 194, 58, 0.1); border-color: #67c23a; }
+        .char-select.char3 { background: rgba(230, 162, 60, 0.1); border-color: #e6a23c; }
+        
+        /* 公式输入框 */
+        .formula-bar {
+            background: white;
+            padding: 8px 10px;
+            border-bottom: 1px solid #ebeef5;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .formula-bar label {
+            font-size: 11px;
+            color: #606266;
+            font-weight: bold;
+        }
+        .formula-bar input {
+            flex: 1;
+            padding: 5px 10px;
+            border: 1px solid #dcdfe6;
+            border-radius: 3px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+        .cell-reference {
+            background: #f5f7fa;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            color: #409eff;
+            font-weight: bold;
+            min-width: 50px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav">
+            <a href="/">← 返回首页</a>
+        </div>
+        
+        <div class="header">
+            <h1>排轴DPS计算器</h1>
+            <p>类Excel表格系统 | 支持公式计算 | 批量操作 | 本地保存</p>
+        </div>
+        
+        <div class="upload-section" id="uploadSection">
+            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls" onchange="handleFile(event)">
+                <p style="font-size: 16px; margin-bottom: 8px;">点击或拖拽文件到此处上传</p>
+                <p style="color: #909399; font-size: 12px;">支持 .xlsx, .xls 格式（一张拉表包含一个队伍的三个角色）</p>
+            </div>
+            <div id="uploadStatus"></div>
+        </div>
+        
+        <div class="main-content" id="mainContent">
+            <div class="sheet-tabs" id="sheetTabs"></div>
+            
+            <!-- 三角色详细面板配置 - 表格形式 -->
+            <div class="team-panels" id="teamPanels">
+                <!-- 角色1 -->
+                <div class="char-panel char-1">
+                    <div class="char-header">
+                        <span id="char1Name">角色1</span>
+                        <span style="font-size: 10px; font-weight: normal;">3C:<input type="number" id="c1_3cCount" value="2" style="width: 30px; font-size: 10px; padding: 1px;"></span>
+                    </div>
+                    <table class="detail-table" id="c1_table">
+                        <tr>
+                            <th colspan="2">攻击</th>
+                            <th colspan="2">加成区</th>
+                            <th colspan="2">暴击</th>
+                            <th colspan="2">暴击伤害</th>
+                            <th colspan="2">加深区</th>
+                            <th colspan="2">副词条</th>
+                        </tr>
+                        <tr>
+                            <td class="label">白值</td>
+                            <td><input type="text" id="c1_A1" data-cell="A1" value="1024" onchange="updateCell('c1', 'A1', this.value)"></td>
+                            <td class="label">3C声骸</td>
+                            <td><input type="text" id="c1_B1" data-cell="B1" value="60%" onchange="updateCell('c1', 'B1', this.value)"></td>
+                            <td class="label">基础与固有</td>
+                            <td><input type="text" id="c1_C1" data-cell="C1" value="13%" onchange="updateCell('c1', 'C1', this.value)"></td>
+                            <td class="label">基础与固有</td>
+                            <td><input type="text" id="c1_D1" data-cell="D1" value="150%" onchange="updateCell('c1', 'D1', this.value)"></td>
+                            <td class="label">全加深</td>
+                            <td><input type="text" id="c1_E1" data-cell="E1" value="15%" onchange="updateCell('c1', 'E1', this.value)"></td>
+                            <td class="label">大攻击</td>
+                            <td><input type="text" id="c1_F1" data-cell="F1" value="17.2%" onchange="updateCell('c1', 'F1', this.value)"></td>
+                        </tr>
+                        <tr>
+                            <td class="label">固有武器</td>
+                            <td><input type="text" id="c1_A2" data-cell="A2" value="24%" onchange="updateCell('c1', 'A2', this.value)"></td>
+                            <td class="label">套装首位</td>
+                            <td><input type="text" id="c1_B2" data-cell="B2" value="" onchange="updateCell('c1', 'B2', this.value)"></td>
+                            <td class="label">武器</td>
+                            <td><input type="text" id="c1_C2" data-cell="C2" value="24.3%" onchange="updateCell('c1', 'C2', this.value)"></td>
+                            <td class="label">武器</td>
+                            <td><input type="text" id="c1_D2" data-cell="D2" value="0%" onchange="updateCell('c1', 'D2', this.value)"></td>
+                            <td class="label">主类型加深</td>
+                            <td><input type="text" id="c1_E2" data-cell="E2" value="25%" onchange="updateCell('c1', 'E2', this.value)"></td>
+                            <td class="label">共技伤害</td>
+                            <td><input type="text" id="c1_F2" data-cell="F2" value="17.2%" onchange="updateCell('c1', 'F2', this.value)"></td>
+                        </tr>
+                        <tr>
+                            <td class="label">主副词条</td>
+                            <td><input type="text" id="c1_A3" data-cell="A3" value="53%" onchange="updateCell('c1', 'A3', this.value)"></td>
+                            <td class="label">自拐属伤</td>
+                            <td><input type="text" id="c1_B3" data-cell="B3" value="" onchange="updateCell('c1', 'B3', this.value)"></td>
+                            <td class="label">套装</td>
+                            <td><input type="text" id="c1_C3" data-cell="C3" value="20%" onchange="updateCell('c1', 'C3', this.value)"></td>
+                            <td class="label">套装</td>
+                            <td><input type="text" id="c1_D3" data-cell="D3" value="0%" onchange="updateCell('c1', 'D3', this.value)"></td>
+                            <td class="label"></td>
+                            <td></td>
+                            <td class="label">暴击</td>
+                            <td><input type="text" id="c1_F3" data-cell="F3" value="40.5%" onchange="updateCell('c1', 'F3', this.value)"></td>
+                        </tr>
+                        <tr>
+                            <td class="label">自拐攻击</td>
+                            <td><input type="text" id="c1_A4" data-cell="A4" value="" onchange="updateCell('c1', 'A4', this.value)"></td>
+                            <td class="label">被拐属伤</td>
+                            <td><input type="text" id="c1_B4" data-cell="B4" value="" onchange="updateCell('c1', 'B4', this.value)"></td>
+                            <td class="label">主副词条</td>
+                            <td><input type="text" id="c1_C4" data-cell="C4" value="40.5%" onchange="updateCell('c1', 'C4', this.value)"></td>
+                            <td class="label">主副词条</td>
+                            <td><input type="text" id="c1_D4" data-cell="D4" value="125%" onchange="updateCell('c1', 'D4', this.value)"></td>
+                            <td class="label"></td>
+                            <td></td>
+                            <td class="label">爆伤</td>
+                            <td><input type="text" id="c1_F4" data-cell="F4" value="81%" onchange="updateCell('c1', 'F4', this.value)"></td>
+                        </tr>
+                        <tr>
+                            <td class="label">被拐攻击</td>
+                            <td><input type="text" id="c1_A5" data-cell="A5" value="47.5%" onchange="updateCell('c1', 'A5', this.value)"></td>
+                            <td class="label">其他属伤</td>
+                            <td><input type="text" id="c1_B5" data-cell="B5" value="" onchange="updateCell('c1', 'B5', this.value)"></td>
+                            <td class="label">共鸣链</td>
+                            <td><input type="text" id="c1_C5" data-cell="C5" value="0%" onchange="updateCell('c1', 'C5', this.value)"></td>
+                            <td class="label">共鸣链</td>
+                            <td><input type="text" id="c1_D5" data-cell="D5" value="0%" onchange="updateCell('c1', 'D5', this.value)"></td>
+                            <td class="label"></td>
+                            <td></td>
+                            <td class="label"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td class="label">声骸固定</td>
+                            <td><input type="text" id="c1_A6" data-cell="A6" value="350" onchange="updateCell('c1', 'A6', this.value)"></td>
+                            <td class="label">主类型加成</td>
+                            <td><input type="text" id="c1_B6" data-cell="B6" value="30%" onchange="updateCell('c1', 'B6', this.value)"></td>
+                            <td class="label">队友</td>
+                            <td><input type="text" id="c1_C6" data-cell="C6" value="0%" onchange="updateCell('c1', 'C6', this.value)"></td>
+                            <td class="label">队友</td>
+                            <td><input type="text" id="c1_D6" data-cell="D6" value="0%" onchange="updateCell('c1', 'D6', this.value)"></td>
+                            <td class="label"></td>
+                            <td></td>
+                            <td class="label"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td class="label">额外固定</td>
+                            <td><input type="text" id="c1_A7" data-cell="A7" value="" onchange="updateCell('c1', 'A7', this.value)"></td>
+                            <td class="result-cell">攻击区</td>
+                            <td class="result-cell" id="c1_atkZone">2.35</td>
+                            <td colspan="2" class="highlight">面板暴击率</td>
+                            <td colspan="2" class="highlight" id="c1_panelCrit">97.8%</td>
+                            <td colspan="2" class="highlight">面板爆伤</td>
+                            <td colspan="2" class="highlight" id="c1_panelCd">275%</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <!-- 角色2 -->
+                <div class="char-panel char-2">
+                    <div class="char-header">
+                        <span id="char2Name">角色2</span>
+                        <span style="font-size: 10px; font-weight: normal;">3C:<input type="number" id="c2_3cCount" value="2" style="width: 30px; font-size: 10px; padding: 1px;"></span>
+                    </div>
+                    <table class="detail-table" id="c2_table">
+                        <tr>
+                            <th colspan="2">攻击</th>
+                            <th colspan="2">加成区</th>
+                            <th colspan="2">暴击</th>
+                            <th colspan="2">暴击伤害</th>
+                            <th colspan="2">加深区</th>
+                            <th colspan="2">副词条</th>
+                        </tr>
+                        <tr>
+                            <td class="label">白值</td>
+                            <td><input type="text" id="c2_A1" data-cell="A1" value="900" onchange="updateCell('c2', 'A1', this.value)"></td>
+                            <td class="label">3C声骸</td>
+                            <td><input type="text" id="c2_B1" data-cell="B1" value="60%" onchange="updateCell('c2', 'B1', this.value)"></td>
+                            <td class="label">基础与固有</td>
+                            <td><input type="text" id="c2_C1" data-cell="C1" value="13%" onchange="updateCell('c2', 'C1', this.value)"></td>
+                            <td class="label">基础与固有</td>
+                            <td><input type="text" id="c2_D1" data-cell="D1" value="150%" onchange="updateCell('c2', 'D1', this.value)"></td>
+                            <td class="label">全加深</td>
+                            <td><input type="text" id="c2_E1" data-cell="E1" value="15%" onchange="updateCell('c2', 'E1', this.value)"></td>
+                            <td class="label">大攻击</td>
+                            <td><input type="text" id="c2_F1" data-cell="F1" value="" onchange="updateCell('c2', 'F1', this.value)"></td>
+                        </tr>
+                        <tr>
+                            <td class="label">固有武器</td>
+                            <td><input type="text" id="c2_A2" data-cell="A2" value="24%" onchange="updateCell('c2', 'A2', this.value)"></td>
+                            <td class="label">套装首位</td>
+                            <td><input type="text" id="c2_B2" data-cell="B2" value="" onchange="updateCell('c2', 'B2', this.value)"></td>
+                            <td class="label">武器</td>
+                            <td><input type="text" id="c2_C2" data-cell="C2" value="" onchange="updateCell('c2', 'C2', this.value)"></td>
+                            <td class="label">武器</td>
+                            <td><input type="text" id="c2_D2" data-cell="D2" value="72%" onchange="updateCell('c2', 'D2', this.value)"></td>
+                            <td class="label">主类型加深</td>
+                            <td><input type="text" id="c2_E2" data-cell="E2" value="" onchange="updateCell('c2', 'E2', this.value)"></td>
+                            <td class="label">普攻伤害</td>
+                            <td><input type="text" id="c2_F2" data-cell="F2" value="8.6%" onchange="updateCell('c2', 'F2', this.value)"></td>
+                        </tr>
+                        <tr>
+                            <td class="label">主副词条</td>
+                            <td><input type="text" id="c2_A3" data-cell="A3" value="36%" onchange="updateCell('c2', 'A3', this.value)"></td>
+                            <td class="label">自拐属伤</td>
+                            <td><input type="text" id="c2_B3" data-cell="B3" value="12%" onchange="updateCell('c2', 'B3', this.value)"></td>
+                            <td class="label">套装</td>
+                            <td><input type="text" id="c2_C3" data-cell="C3" value="22%" onchange="updateCell('c2', 'C3', this.value)"></td>
+                            <td class="label">套装</td>
+                            <td><input type="text" id="c2_D3" data-cell="D3" value="0%" onchange="updateCell('c2', 'D3', this.value)"></td>
+                            <td class="label"></td>
+                            <td></td>
+                            <td class="label">暴击</td>
+                            <td><input type="text" id="c2_F3" data-cell="F3" value="40.5%" onchange="updateCell('c2', 'F3', this.value)"></td>
+                        </tr>
+                        <tr>
+                            <td class="label">自拐攻击</td>
+                            <td><input type="text" id="c2_A4" data-cell="A4" value="" onchange="updateCell('c2', 'A4', this.value)"></td>
+                            <td class="label">被拐属伤</td>
+                            <td><input type="text" id="c2_B4" data-cell="B4" value="" onchange="updateCell('c2', 'B4', this.value)"></td>
+                            <td class="label">主副词条</td>
+                            <td><input type="text" id="c2_C4" data-cell="C4" value="40.5%" onchange="updateCell('c2', 'C4', this.value)"></td>
+                            <td class="label">主副词条</td>
+                            <td><input type="text" id="c2_D4" data-cell="D4" value="81%" onchange="updateCell('c2', 'D4', this.value)"></td>
+                            <td class="label"></td>
+                            <td></td>
+                            <td class="label">爆伤</td>
+                            <td><input type="text" id="

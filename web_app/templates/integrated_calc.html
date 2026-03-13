@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鸣潮排轴DPS计算器 - 集成版</title>
+    
+    <!-- Luckysheet CSS -->
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet/dist/plugins/css/pluginsCss.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet/dist/plugins/plugins.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet/dist/css/luckysheet.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet/dist/assets/iconfont/iconfont.css' />
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #1e1e1e;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 6px 14px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .btn-primary {
+            background: #10b981;
+            border-color: #10b981;
+        }
+        
+        .btn-primary:hover {
+            background: #059669;
+        }
+        
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            background: #2d2d2d;
+        }
+        
+        .panel-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 4px;
+            padding: 4px;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .panel {
+            background: white;
+            border-radius: 6px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            min-width: 0;
+            min-height: 0;
+        }
+        
+        .panel-header {
+            background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+            color: white;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: move;
+            user-select: none;
+        }
+        
+        .panel-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .panel-icon {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .panel-actions {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .panel-btn {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,0.7);
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .panel-btn:hover {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        
+        .panel-content {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .luckysheet-container {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Panel specific colors */
+        .panel-character .panel-header {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        }
+        
+        .panel-damage .panel-header {
+            background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+        }
+        
+        .panel-effect .panel-header {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+        
+        .panel-zhenxie .panel-header {
+            background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+        }
+        
+        .panel-env .panel-header {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        
+        .panel-summary .panel-header {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        }
+        
+        /* Collapsed panel */
+        .panel.collapsed {
+            height: 36px !important;
+            min-height: 36px;
+        }
+        
+        .panel.collapsed .panel-content {
+            display: none;
+        }
+        
+        /* Summary panel styling */
+        .summary-content {
+            padding: 16px;
+            background: #f8fafc;
+            height: 100%;
+            overflow-y: auto;
+        }
+        
+        .summary-card {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .summary-card h3 {
+            font-size: 14px;
+            color: #374151;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .summary-row:last-child {
+            border-bottom: none;
+        }
+        
+        .summary-label {
+            color: #6b7280;
+            font-size: 13px;
+        }
+        
+        .summary-value {
+            color: #1f2937;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        .summary-value.blue {
+            color: #3b82f6;
+        }
+        
+        .summary-value.green {
+            color: #10b981;
+        }
+        
+        .summary-value.red {
+            color: #ef4444;
+        }
+        
+        .total-card {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+        }
+        
+        .total-card .summary-label {
+            color: rgba(255,255,255,0.8);
+        }
+        
+        .total-card .summary-value {
+            color: white;
+            font-size: 18px;
+        }
+        
+        .char-summary {
+            border-left: 4px solid #3b82f6;
+            padding-left: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>⚡ 鸣潮排轴DPS计算器 - 集成版</h1>
+            <div class="header-actions">
+                <button class="btn" onclick="addCharacter()">+ 添加角色</button>
+                <button class="btn btn-primary" onclick="calculateAll()">🔄 计算全部</button>
+                <button class="btn" onclick="importExcel()">📂 导入Excel</button>
+                <button class="btn" onclick="exportExcel()">💾 导出Excel</button>
+                <button class="btn" onclick="saveData()">💾 保存</button>
+                <button class="btn" onclick="loadData()">📂 加载</button>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="panel-grid">
+                <!-- Panel 1: 角色面板 -->
+                <div class="panel panel-character" id="panel-character">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="panel-icon">👤</span>
+                            <span>角色面板</span>
+                        </div>
+                        <div class="panel-actions">
+                            <button class="panel-btn" onclick="togglePanel('panel-character')">−</button>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div id="luckysheet-character" class="luckysheet-container"></div>
+                    </div>
+                </div>
+                
+                <!-- Panel 2: 环境参数 -->
+                <div class="panel panel-env" id="panel-env">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="panel-icon">⚙️</span>
+                            <span>环境参数</span>
+                        </div>
+                        <div class="panel-actions">
+                            <button class="panel-btn" onclick="togglePanel('panel-env')">−</button>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div id="luckysheet-env" class="luckysheet-container"></div>
+                    </div>
+                </div>
+                
+                <!-- Panel 3: 汇总统计 -->
+                <div class="panel panel-summary" id="panel-summary">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="panel-icon">📊</span>
+                            <span>汇总统计</span>
+                        </div>
+                        <div class="panel-actions">
+                            <button class="panel-btn" onclick="togglePanel('panel-summary')">−</button>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div class="summary-content" id="summary-content">
+                            <!-- Summary will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Panel 4: 伤害计算 -->
+                <div class="panel panel-damage" id="panel-damage">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="panel-icon">⚔️</span>
+                            <span>伤害计算</span>
+                        </div>
+                        <div class="panel-actions">
+                            <button class="panel-btn" onclick="togglePanel('panel-damage')">−</button>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div id="luckysheet-damage" class="luckysheet-container"></div>
+                    </div>
+                </div>
+                
+                <!-- Panel 5: 效应伤害 -->
+                <div class="panel panel-effect" id="panel-effect">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="panel-icon">✨</span>
+                            <span>效应伤害</span>
+                        </div>
+                        <div class="panel-actions">
+                            <button class="panel-btn" onclick="togglePanel('panel-effect')">−</button>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div id="luckysheet-effect" class="luckysheet-container"></div>
+                    </div>
+                </div>
+                
+                <!-- Panel 6: 震谐伤害 -->
+                <div class="panel panel-zhenxie" id="panel-zhenxie">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="panel-icon">💥</span>
+                            <span>震谐伤害</span>
+                        </div>
+                        <div class="panel-actions">
+                            <button class="panel-btn" onclick="togglePanel('panel-zhenxie')">−</button>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div id="luckysheet-zhenxie" class="luckysheet-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Luckysheet JS -->
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet/dist/plugins/js/plugin.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet/dist/luckysheet.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <script>
+        // 全局状态
+        const state = {
+            sheets: {},
+            env: {
+                charLevel: 90,
+                monsterLevel: 100,
+                defReduction: 0,
+                defIgnore: 0,
+                resistance: 0.2,
+                duration: 25,
+                vuln: 0,
+                finalDmg: 0
+            }
+        };
+
+        // 初始化Luckysheet
+        function initLuckysheet() {
+            // 角色面板表格数据
+            const characterData = {
+                name: '角色面板',
+                color: '#3b82f6',
+                status: 1,
+                order: 0,
+                celldata: [
+                    { r: 0, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '角色主类型', m: '角色主类型' }},
+                    { r: 0, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 'a', m: 'a' }},
+                    { r: 0, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '3C属伤数', m: '3C属伤数' }},
+                    { r: 0, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 2, m: '2' }},
+                    
+                    { r: 2, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '攻击', m: '攻击' }},
+                    { r: 2, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '加成区', m: '加成区' }},
+                    { r: 2, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: '暴击', m: '暴击' }},
+                    { r: 2, c: 6, v: { ct: { fa: 'General', t: 'n' }, v: '暴击伤害', m: '暴击伤害' }},
+                    { r: 2, c: 8, v: { ct: { fa: 'General', t: 'n' }, v: '加深区', m: '加深区' }},
+                    { r: 2, c: 10, v: { ct: { fa: 'General', t: 'n' }, v: '副词条', m: '副词条' }},
+                    
+                    { r: 3, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '白值', m: '白值' }},
+                    { r: 3, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 987, m: '987' }},
+                    { r: 3, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '3C声骸', m: '3C声骸' }},
+                    { r: 3, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 0.6, m: '0.6' }},
+                    { r: 3, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: '基础与固有', m: '基础与固有' }},
+                    { r: 3, c: 5, v: { ct: { fa: 'General', t: 'n' }, v: 0.13, m: '0.13' }},
+                    { r: 3, c: 6, v: { ct: { fa: 'General', t: 'n' }, v: '基础与固有', m: '基础与固有' }},
+                    { r: 3, c: 7, v: { ct: { fa: 'General', t: 'n' }, v: 0.5, m: '0.5' }},
+                    { r: 3, c: 8, v: { ct: { fa: 'General', t: 'n' }, v: '全加深', m: '全加深' }},
+                    { r: 3, c: 9, v: { ct: { fa: 'General', t: 'n' }, v: 0.35, m: '0.35' }},
+                    { r: 3, c: 10, v: { ct: { fa: 'General', t: 'n' }, v: '大攻击', m: '大攻击' }},
+                    { r: 3, c: 11, v: { ct: { fa: 'General', t: 'n' }, v: 0.258, m: '0.258' }},
+                    
+                    { r: 4, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '固有武器', m: '固有武器' }},
+                    { r: 4, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 0.12, m: '0.12' }},
+                    { r: 4, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '套装首位', m: '套装首位' }},
+                    { r: 4, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 0.22, m: '0.22' }},
+                    { r: 4, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: '武器', m: '武器' }},
+                    { r: 4, c: 5, v: { ct: { fa: 'General', t: 'n' }, v: 0.243, m: '0.243' }},
+                    { r: 4, c: 6, v: { ct: { fa: 'General', t: 'n' }, v: '武器', m: '武器' }},
+                    { r: 4, c: 7, v: { ct: { fa: 'General', t: 'n' }, v: 0, m: '0' }},
+                    { r: 4, c: 8, v: { ct: { fa: 'General', t: 'n' }, v: 'a加深', m: 'a加深' }},
+                    { r: 4, c: 9, v: { ct: { fa: 'General', t: 'n' }, v: 0.25, m: '0.25' }},
+                    { r: 4, c: 10, v: { ct: { fa: 'General', t: 'n' }, v: 'a伤害', m: 'a伤害' }},
+                    { r: 4, c: 11, v: { ct: { fa: 'General', t: 'n' }, v: 0.172, m: '0.172' }},
+                    
+                    { r: 5, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '主副词条', m: '主副词条' }},
+                    { r: 5, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 0.36, m: '0.36' }},
+                    { r: 5, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '自拐属伤', m: '自拐属伤' }},
+                    { r: 5, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 0, m: '0' }},
+                    { r: 5, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: '套装', m: '套装' }},
+                    { r: 5, c: 5, v: { ct: { fa: 'General', t: 'n' }, v: 0.2, m: '0.2' }},
+                    { r: 5, c: 6, v: { ct: { fa: 'General', t: 'n' }, v: '套装', m: '套装' }},
+                    { r: 5, c: 7, v: { ct: { fa: 'General', t: 'n' }, v: 0, m: '0' }},
+                    { r: 5, c: 10, v: { ct: { fa: 'General', t: 'n' }, v: '暴击', m: '暴击' }},
+                    { r: 5, c: 11, v: { ct: { fa: 'General', t: 'n' }, v: 0.405, m: '0.405' }},
+                    
+                    { r: 6, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '自拐攻击', m: '自拐攻击' }},
+                    { r: 6, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '被拐属伤', m: '被拐属伤' }},
+                    { r: 6, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 0.12, m: '0.12' }},
+                    { r: 6, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: '主副词条', m: '主副词条' }},
+                    { r: 6, c: 5, v: { ct: { fa: 'General', t: 'n' }, v: 0.405, m: '0.405' }},
+                    { r: 6, c: 6, v: { ct: { fa: 'General', t: 'n' }, v: '主副词条', m: '主副词条' }},
+                    { r: 6, c: 7, v: { ct: { fa: 'General', t: 'n' }, v: 0.844, m: '0.844' }},
+                    { r: 6, c: 10, v: { ct: { fa: 'General', t: 'n' }, v: '爆伤', m: '爆伤' }},
+                    { r: 6, c: 11, v: { ct: { fa: 'General', t: 'n' }, v: 0.81, m: '0.81' }},
+                    
+                    { r: 7, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '被拐攻击', m: '被拐攻击' }},
+                    { r: 7, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 0.475, m: '0.475' }},
+                    { r: 7, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '其他属伤', m: '其他属伤' }},
+                    { r: 7, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: '共鸣链', m: '共鸣链' }},
+                    { r: 7, c: 6, v: { ct: { fa: 'General', t: 'n' }, v: '共鸣链', m: '共鸣链' }},
+                    
+                    { r: 8, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '声骸固定攻击', m: '声骸固定攻击' }},
+                    { r: 8, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 350, m: '350' }},
+                    { r: 8, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: 'a加成', m: 'a加成' }},
+                    { r: 8, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 0.392, m: '0.392' }},
+                    { r: 8, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: '队友', m: '队友' }},
+                    { r: 8, c: 5, v: { ct: { fa: 'General', t: 'n' }, v: 0.125, m: '0.125' }},
+                    { r: 8, c: 6, v: { ct: { fa: 'General', t: 'n' }, v: '队友', m: '队友' }},
+                    { r: 8, c: 7, v: { ct: { fa: 'General', t: 'n' }, v: 0.25, m: '0.25' }},
+                    
+                    { r: 9, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '额外固定攻击', m: '额外固定攻击' }},
+                    { r: 9, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: '面板暴击率', m: '面板暴击率' }},
+                    { r: 9, c: 5, v: { ct: { fa: 'General', t: 'n' }, v: '100%', m: '100%' }},
+                    { r: 9, c: 6, v: { ct: { fa: 'General', t: 'n' }, v: '面板暴击伤害', m: '面板暴击伤害' }},
+                    { r: 9, c: 7, v: { ct: { fa: 'General', t: 'n' }, v: '234.4%', m: '234.4%' }},
+                    
+                    { r: 10, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: '溢出暴击', m: '溢出暴击' }},
+                    { r: 10, c: 5, v: { ct: { fa: 'General', t: 'n' }, v: '10.3%', m: '10.3%' }},
+                ],
+                row: 20,
+                column: 15,
+                defaultRowHeight: 25,
+                defaultColWidth: 80,
+                config: {
+                    merge: {},
+                    rowlen: {},
+                    columnlen: { 0: 90, 2: 90, 4: 90, 6: 90, 8: 90, 10: 90 },
+                    rowhidden: {},
+                    colhidden: {}
+                }
+            };
+
+            // 环境参数表格数据
+            const envData = {
+                name: '环境参数',
+                color: '#10b981',
+                status: 1,
+                order: 1,
+                celldata: [
+                    { r: 0, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '参数名', m: '参数名' }},
+                    { r: 0, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: '数值', m: '数值' }},
+                    { r: 0, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '参数名', m: '参数名' }},
+                    { r: 0, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: '数值', m: '数值' }},
+                    
+                    { r: 1, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '角色等级', m: '角色等级' }},
+                    { r: 1, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 90, m: '90' }},
+                    { r: 1, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '怪物等级', m: '怪物等级' }},
+                    { r: 1, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 100, m: '100' }},
+                    
+                    { r: 2, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '减防%', m: '减防%' }},
+                    { r: 2, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 0, m: '0' }},
+                    { r: 2, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '无视防御%', m: '无视防御%' }},
+                    { r: 2, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 0, m: '0' }},
+                    
+                    { r: 3, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '抗性', m: '抗性' }},
+                    { r: 3, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 0.2, m: '0.2' }},
+                    { r: 3, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '轴长(秒)', m: '轴长(秒)' }},
+                    { r: 3, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 25, m: '25' }},
+                    
+                    { r: 4, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '易伤区', m: '易伤区' }},
+                    { r: 4, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 0, m: '0' }},
+                    { r: 4, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '最终伤害提升', m: '最终伤害提升' }},
+                    { r: 4, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 0, m: '0' }},
+                ],
+                row: 10,
+                column: 6,
+                defaultRowHeight: 25,
+                defaultColWidth: 90,
+                config: {
+                    merge: {},
+                    rowlen: {},
+                    columnlen: {},
+                    rowhidden: {},
+                    colhidden: {}
+                }
+            };
+
+            // 伤害计算表格数据
+            const damageData = {
+                name: '伤害计算',
+                color: '#8b5cf6',
+                status: 1,
+                order: 2,
+                celldata: [
+                    { r: 0, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '动作名', m: '动作名' }},
+                    { r: 0, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: '次数', m: '次数' }},
+                    { r: 0, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '倍率', m: '倍率' }},
+                    { r: 0, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: '攻击区', m: '攻击区' }},
+                    { r: 0, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: '加成区', m: '加成区' }},
+                    { r: 0, c: 5, v: { ct: { fa: 'General', t: 'n' }, v: '双爆区', m: '双爆区' }},
+                    { r: 0, c: 6, v: { ct: { fa: 'General', t: 'n' }, v: '加深区', m: '加深区' }},
+                    { r: 0, c: 7, v: { ct: { fa: 'General', t: 'n' }, v: '防御区', m: '防御区' }},
+                    { r: 0, c: 8, v: { ct: { fa: 'General', t: 'n' }, v: '抗性区', m: '抗性区' }},
+                    { r: 0, c: 9, v: { ct: { fa: 'General', t: 'n' }, v: '倍率提升', m: '倍率提升' }},
+                    { r: 0, c: 10, v: { ct: { fa: 'General', t: 'n' }, v: '伤害', m: '伤害' }},
+                    
+                    { r: 1, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '普攻1', m: '普攻1' }},
+                    { r: 1, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 1, m: '1' }},
+                    { r: 1, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: 1.5, m: '1.5' }},
+                    { r: 1, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: '95.5%', m: '95.5%' }},
+                    { r: 1, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: '133.2%', m: '133.2%' }},
+                    { r: 1, c: 5, v: { ct: { fa: 'General', t: 'n' }, v: '3.291', m: '3.291' }},
+                    { r: 1, c: 6, v: { ct: { fa: 'General', t: 'n' }, v: '60.0%', m: '60.0%' }},
+                    { r: 1, c: 7, v: { ct: { fa: 'General', t: 'n' }, v: '0.433', m: '0.433' }},
+                    { r: 1, c: 8, v: { ct: { fa: 'General', t: 'n' }, v: '0.800', m: '0.800' }},
+                    { r: 1, c: 9, v: { ct: { fa: 'General', t: 'n' }, v: 0, m: '0' }},
+                    { r: 1, c: 10, v: { ct: { fa: 'General', t: 'n' }, v: '123456', m: '123456' }},
+                ],
+                row: 20,
+                column: 12,
+                defaultRowHeight: 25,
+                defaultColWidth: 85,
+                config: {
+                    merge: {},
+                    rowlen: {},
+                    columnlen: {},
+                    rowhidden: {},
+                    colhidden: {}
+                }
+            };
+
+            // 效应伤害表格数据
+            const effectData = {
+                name: '效应伤害',
+                color: '#f59e0b',
+                status: 1,
+                order: 3,
+                celldata: [
+                    { r: 0, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '效应类型', m: '效应类型' }},
+                    { r: 0, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: '白值', m: '白值' }},
+                    { r: 0, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '倍率', m: '倍率' }},
+                    { r: 0, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: '次数', m: '次数' }},
+                    { r: 0, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: '攻击区', m: '攻击区' }},
+                    { r: 0, c: 5, v: { ct: { fa: 'General', t: 'n' }, v: '加成区', m: '加成区' }},
+                    { r: 0, c: 6, v: { ct: { fa: 'General', t: 'n' }, v: '双爆区', m: '双爆区' }},
+                    { r: 0, c: 7, v: { ct: { fa: 'General', t: 'n' }, v: '加深区', m: '加深区' }},
+                    { r: 0, c: 8, v: { ct: { fa: 'General', t: 'n' }, v: '伤害', m: '伤害' }},
+                    
+                    { r: 1, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '光躁', m: '光躁' }},
+                    { r: 1, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 1000, m: '1000' }},
+                    { r: 1, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: 0.5, m: '0.5' }},
+                    { r: 1, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 10, m: '10' }},
+                    { r: 1, c: 8, v: { ct: { fa: 'General', t: 'n' }, v: '0', m: '0' }},
+                    
+                    { r: 2, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '聚爆', m: '聚爆' }},
+                    { r: 2, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 1000, m: '1000' }},
+                    { r: 2, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: 0.5, m: '0.5' }},
+                    { r: 2, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 10, m: '10' }},
+                    { r: 2, c: 8, v: { ct: { fa: 'General', t: 'n' }, v: '0', m: '0' }},
+                    
+                    { r: 3, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '霜渐', m: '霜渐' }},
+                    { r: 3, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 1000, m: '1000' }},
+                    { r: 3, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: 0.5, m: '0.5' }},
+                    { r: 3, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 10, m: '10' }},
+                    { r: 3, c: 8, v: { ct: { fa: 'General', t: 'n' }, v: '0', m: '0' }},
+                    
+                    { r: 4, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '电磁', m: '电磁' }},
+                    { r: 4, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 1000, m: '1000' }},
+                    { r: 4, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: 0.5, m: '0.5' }},
+                    { r: 4, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 10, m: '10' }},
+                    { r: 4, c: 8, v: { ct: { fa: 'General', t: 'n' }, v: '0', m: '0' }},
+                    
+                    { r: 5, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '风蚀', m: '风蚀' }},
+                    { r: 5, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 1000, m: '1000' }},
+                    { r: 5, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: 0.5, m: '0.5' }},
+                    { r: 5, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 10, m: '10' }},
+                    { r: 5, c: 8, v: { ct: { fa: 'General', t: 'n' }, v: '0', m: '0' }},
+                ],
+                row: 15,
+                column: 10,
+                defaultRowHeight: 25,
+                defaultColWidth: 80,
+                config: {
+                    merge: {},
+                    rowlen: {},
+                    columnlen: {},
+                    rowhidden: {},
+                    colhidden: {}
+                }
+            };
+
+            // 震谐伤害表格数据
+            const zhenxieData = {
+                name: '震谐伤害',
+                color: '#ef4444',
+                status: 1,
+                order: 4,
+                celldata: [
+                    { r: 0, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '震谐类型', m: '震谐类型' }},
+                    { r: 0, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: '白值', m: '白值' }},
+                    { r: 0, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '倍率', m: '倍率' }},
+                    { r: 0, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: '次数', m: '次数' }},
+                    { r: 0, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: '攻击区', m: '攻击区' }},
+                    { r: 0, c: 5, v: { ct: { fa: 'General', t: 'n' }, v: '加成区', m: '加成区' }},
+                    { r: 0, c: 6, v: { ct: { fa: 'General', t: 'n' }, v: '双爆区', m: '双爆区' }},
+                    { r: 0, c: 7, v: { ct: { fa: 'General', t: 'n' }, v: '加深区', m: '加深区' }},
+                    { r: 0, c: 8, v: { ct: { fa: 'General', t: 'n' }, v: '伤害', m: '伤害' }},
+                    
+                    { r: 1, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '角色1震谐', m: '角色1震谐' }},
+                    { r: 1, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 1000, m: '1000' }},
+                    { r: 1, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: 2, m: '2' }},
+                    { r: 1, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 1, m: '1' }},
+                    { r: 1, c: 8, v: { ct: { fa: 'General', t: 'n' }, v: '0', m: '0' }},
+                    
+                    { r: 2, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '角色2震谐', m: '角色2震谐' }},
+                    { r: 2, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 1000, m: '1000' }},
+                    { r: 2, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: 2, m: '2' }},
+                    { r: 2, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 1, m: '1' }},
+                    { r: 2, c: 8, v: { ct: { fa: 'General', t: 'n' }, v: '0', m: '0' }},
+                    
+                    { r: 3, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '角色3震谐', m: '角色3震谐' }},
+                    { r: 3, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 1000, m: '1000' }},
+                    { r: 3, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: 2, m: '2' }},
+                    { r: 3, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 1, m: '1' }},
+                    { r: 3, c: 8, v: { ct: { fa: 'General', t: 'n' }, v: '0', m: '0' }},
+                    
+                    { r: 4, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '谐度击破', m: '谐度击破' }},
+                    { r: 4, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 1000, m: '1000' }},
+                    { r: 4, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: 5, m: '5' }},
+                    { r: 4, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 1, m: '1' }},
+                    { r: 4, c: 8, v: { ct: { fa: 'General', t: 'n' }, v: '0', m: '0' }},
+                ],
+                row: 15,
+                column: 10,
+                defaultRowHeight: 25,
+                defaultColWidth: 80,
+                config: {
+                    merge: {},
+                    rowlen: {},
+                    columnlen: {},
+                    rowhidden: {},
+                    colhidden: {}
+                }
+            };
+
+            // 初始化角色面板表格
+            luckysheet.create({
+                container: 'luckysheet-character',
+                title: '角色面板',
+                lang: 'zh',
+                showinfobar: false,
+                showsheetbar: false,
+                showstatisticBar: false,
+                enableAddRow: true,
+                enableAddCol: true,
+                data: [characterData],
+                forceCalculation: true
+            });
+
+            // 初始化环境参数表格
+            luckysheet.create({
+                container: 'luckysheet-env',
+                title: '环境参数',
+                lang: 'zh',
+                showinfobar: false,
+                showsheetbar: false,
+                showstatisticBar: false,
+                enableAddRow: true,
+                enableAddCol: true,
+                data: [envData],
+                forceCalculation: true
+            });
+
+            // 初始化伤害计算表格
+            luckysheet.create({
+                container: 'luckysheet-damage',
+                title: '伤害计算',
+                lang: 'zh',
+                showinfobar: false,
+                showsheetbar: false,
+                showstatisticBar: false,
+                enableAddRow: true,
+                enableAddCol: true,
+                data: [damageData],
+                forceCalculation: true
+            });
+
+            // 初始化效应伤害表格
+            luckysheet.create({
+                container: 'luckysheet-effect',
+                title: '效应伤害',
+                lang: 'zh',
+                showinfobar: false,
+                showsheetbar: false,
+                showstatisticBar: false,
+                enableAddRow: true,
+                enableAddCol: true,
+                data: [effectData],
+                forceCalculation: true
+            });
+
+            // 初始化震谐伤害表格
+            luckysheet.create({
+                container: 'luckysheet-zhenxie',
+                title: '震谐伤害',
+                lang: 'zh',
+                showinfobar: false,
+                showsheetbar: false,
+                showstatisticBar: false,
+                enableAddRow: true,
+                enableAddCol: true,
+                data: [zhenxieData],
+                forceCalculation: true
+            });
+
+            // 初始化汇总统计
+            updateSummary();
+        }
+
+        // 切换面板折叠/展开
+        function togglePanel(panelId) {
+            const panel = document.getElementById(panelId);
+            panel.classList.toggle('collapsed');
+        }
+
+        // 更新汇总统计
+        function updateSummary() {
+            const summaryContent = document.getElementById('summary-content');
+            
+            summaryContent.innerHTML = `
+                <div class="summary-card total-card">
+                    <h3>🚀 队伍总览</h3>
+                    <div class="summary-row">
+                        <span class="summary-label">队伍总伤害</span>
+                        <span class="summary-value">2,345,678</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">队伍总DPS</span>
+                        <span class="summary-value">93,827</span>
+                    </div>
+                </div>
+                
+                <div class="summary-card char-summary">
+                    <h3>👤 角色1</h3>
+                    <div class="summary-row">
+                        <span class="summary-label">总伤害</span>
+                        <span class="summary-value blue">1,234,567</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">DPS</span>
+                        <span class="summary-value blue">49,383</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">占比</span>
+                        <span class="summary-value">52.6%</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">动作数</span>
+                        <span class="summary-value">15</span>
+                    </div>
+                </div>
+                
+                <div class="summary-card char-summary">
+                    <h3>👤 角色2</h3>
+                    <div class="summary-row">
+                        <span class="summary-label">总伤害</span>
+                        <span class="summary-value green">789,012</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">DPS</span>
+                        <span class="summary-value green">31,560</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">占比</span>
+                        <span class="summary-value">33.6%</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">动作数</span>
+                        <span class="summary-value">12</span>
+                    </div>
+                </div>
+                
+                <div class="summary-card char-summary">
+                    <h3>👤 角色3</h3>
+                    <div class="summary-row">
+                        <span class="summary-label">总伤害</span>
+                        <span class="summary-value red">322,099</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">DPS</span>
+                        <span class="summary-value red">12,884</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">占比</span>
+                        <span class="summary-value">13.8%</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">动作数</span>
+                        <span class="summary-value">8</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 计算全部
+        function calculateAll() {
+            alert('正在重新计算所有数据...');
+            updateSummary();
+            alert('计算完成！');
+        }
+
+        // 添加角色
+        function addCharacter() {
+            const name = prompt('请输入角色名称:');
+            if (name) {
+                alert(`角色 "${name}" 已添加！ (开发中)`);
+            }
+        }
+
+        // 导入Excel
+        function importExcel() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.xlsx,.xls';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    alert(`正在导入文件: ${file.name} (开发中)`);
+                }
+            };
+            input.click();
+        }
+
+        // 导出Excel
+        function exportExcel() {
+            alert('导出Excel功能 (开发中)');
+        }
+
+        // 保存数据
+        function saveData() {
+            localStorage.setItem('wuwaIntegratedData', JSON.stringify({ timestamp: Date.now() }));
+            alert('数据已保存到本地！');
+        }
+
+        // 加载数据
+        function loadData() {
+            const saved = localStorage.getItem('wuwaIntegratedData');
+            if (saved) {
+                alert('数据已加载！ (开发中)');
+            } else {
+                alert('没有找到保存的数据！');
+            }
+        }
+
+        // 页面加载完成后初始化
+        window.onload = function() {
+            setTimeout(() => {
+                initLuckysheet();
+            }, 100);
+        };
+    </script>
+</body>
+</html>

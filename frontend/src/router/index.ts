@@ -36,10 +36,12 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   const userStore = useUserStore()
   
-  if (to.meta.guest && userStore.isAuthenticated) {
+  if (to.meta.requiresAuth && !userStore.isAuthenticated) {
+    next({ path: '/login', query: { redirect: to.fullPath } })
+  } else if (to.meta.guest && userStore.isAuthenticated) {
     next('/')
   } else {
     next()

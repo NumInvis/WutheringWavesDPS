@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鸣潮排轴DPS计算器 - 单一大表版</title>
+    
+    <!-- Luckysheet CSS -->
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet/dist/plugins/css/pluginsCss.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet/dist/plugins/plugins.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet/dist/css/luckysheet.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet/dist/assets/iconfont/iconfont.css' />
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1e1e1e; overflow: hidden; height: 100vh; }
+        .app-container { display: flex; flex-direction: column; height: 100vh; }
+        
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #0f3460;
+            flex-shrink: 0;
+        }
+        .header h1 { font-size: 18px; font-weight: 600; color: #00d4ff; }
+        .header-actions { display: flex; gap: 10px; }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .btn-primary { background: linear-gradient(135deg, #00d4ff, #0099cc); color: #000; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,212,255,0.4); }
+        .btn-secondary { background: #2a2a3e; color: #e0e0e0; border: 1px solid #3a3a4e; }
+        .btn-secondary:hover { background: #3a3a4e; }
+        
+        .main-content { flex: 1; overflow: hidden; }
+        #luckysheet-container { width: 100%; height: 100%; }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .loading-content {
+            text-align: center;
+            color: #fff;
+        }
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        #fileInput { display: none; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>⚡ 鸣潮排轴DPS计算器 - 单一大表版</h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="importExcel()">📥 导入Excel</button>
+                <button class="btn btn-secondary" onclick="exportExcel()">📤 导出Excel</button>
+                <button class="btn btn-secondary" onclick="saveData()">💾 保存</button>
+                <button class="btn btn-secondary" onclick="loadData()">📂 加载</button>
+                <button class="btn btn-primary" onclick="calculateAll()">🔄 重新计算</button>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <div id="luckysheet-container"></div>
+        </div>
+    </div>
+    
+    <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(event)">
+    
+    <div class="loading-overlay" id="loading">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>正在加载...</p>
+        </div>
+    </div>
+
+    <!-- Luckysheet JS -->
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet/dist/plugins/js/plugin.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet/dist/luckysheet.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <script>
+        let luckysheetInstance = null;
+        
+        // 创建单一大表的数据
+        function createSingleSheetData() {
+            const celldata = [];
+            let row = 0;
+            
+            // ========== 环境参数区域 (第1-10行) ==========
+            celldata.push({ r: row++, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '===== 环境参数 =====', m: '===== 环境参数 =====' }});
+            row++;
+            
+            celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '参数名', m: '参数名' }});
+            celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: '数值', m: '数值' }});
+            celldata.push({ r: row, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '说明', m: '说明' }});
+            row++;
+            
+            celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '角色等级', m: '角色等级' }});
+            celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 90, m: '90' }});
+            celldata.push({ r: row, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '影响防御区计算', m: '影响防御区计算' }});
+            row++;
+            
+            celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '怪物等级', m: '怪物等级' }});
+            celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 100, m: '100' }});
+            celldata.push({ r: row, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '影响防御区计算', m: '影响防御区计算' }});
+            row++;
+            
+            celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '减防%', m: '减防%' }});
+            celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 0, m: '0' }});
+            celldata.push({ r: row, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '减防效果百分比', m: '减防效果百分比' }});
+            row++;
+            
+            celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '无视防御%', m: '无视防御%' }});
+            celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 0, m: '0' }});
+            celldata.push({ r: row, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '无视防御效果百分比', m: '无视防御效果百分比' }});
+            row++;
+            
+            celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '抗性', m: '抗性' }});
+            celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 0.2, m: '0.2' }});
+            celldata.push({ r: row, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '怪物抗性(0-1)', m: '怪物抗性(0-1)' }});
+            row++;
+            
+            celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '轴长(秒)', m: '轴长(秒)' }});
+            celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 25, m: '25' }});
+            celldata.push({ r: row, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '战斗总时长', m: '战斗总时长' }});
+            row++;
+            
+            celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '易伤区', m: '易伤区' }});
+            celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 0, m: '0' }});
+            row++;
+            
+            celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '最终伤害提升', m: '最终伤害提升' }});
+            celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 0, m: '0' }});
+            row += 3;
+            
+            // ========== 角色1面板区域 ==========
+            celldata.push({ r: row++, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '===== 角色1面板 =====', m: '===== 角色1面板 =====' }});
+            row++;
+            
+            celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '属性', m: '属性' }});
+            celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: '基础值', m: '基础值' }});
+            celldata.push({ r: row, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '武器', m: '武器' }});
+            celldata.push({ r: row, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: '声骸主', m: '声骸主' }});
+            celldata.push({ r: row, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: '声骸副', m: '声骸副' }});
+            celldata.push({ r: row, c: 5, v: { ct: { fa: 'General', t: 'n' }, v: '技能', m: '技能' }});
+            celldata.push({ r: row, c: 6, v: { ct: { fa: 'General', t: 'n' }, v: '共鸣链', m: '共鸣链' }});
+            celldata.push({ r: row, c: 7, v: { ct: { fa: 'General', t: 'n' }, v: '队友', m: '队友' }});
+            celldata.push({ r: row, c: 8, v: { ct: { fa: 'General', t: 'n' }, v: '面板值', m: '面板值' }});
+            row++;
+            
+            celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '攻击', m: '攻击' }});
+            celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 987, m: '987' }});
+            celldata.push({ r: row, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: 0.12, m: '0.12' }});
+            celldata.push({ r: row, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 0.6, m: '0.6' }});
+            celldata.push({ r: row, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: 0.36, m: '0.36' }});
+            celldata.push({ r: row, c: 5, v: { ct: { fa: 'General', t: 'n' }, v: 0, m: '0' }});
+            celldata.push({ r: row, c: 6, v: { ct: { fa: 'General', t: 'n' }, v: 0, m: '0' }});
+            celldata.push({ r: row, c: 7, v: { ct: { fa: 'General', t: 'n' }, v: 0.475, m: '0.475' }});
+            row++;
+            
+            celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '暴击', m: '暴击' }});
+            celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 0.13, m: '0.13' }});
+            celldata.push({ r: row, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: 0.243, m: '0.243' }});
+            celldata.push({ r: row, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: 0.405, m: '0.405' }});
+            celldata.push({ r: row, c: 5, v: { ct: { fa: 'General', t: 'n' }, v: 0.2, m: '0.2' }});
+            celldata.push({ r: row, c: 7, v: { ct: { fa: 'General', t: 'n' }, v: 0.125, m: '0.125' }});
+            row++;
+            
+            celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '暴击伤害', m: '暴击伤害' }});
+            celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 0.5, m: '0.5' }});
+            celldata.push({ r: row, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: 0.844, m: '0.844' }});
+            celldata.push({ r: row, c: 7, v: { ct: { fa: 'General', t: 'n' }, v: 0.25, m: '0.25' }});
+            row++;
+            
+            celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '加深区', m: '加深区' }});
+            celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 0.35, m: '0.35' }});
+            celldata.push({ r: row, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: 0.25, m: '0.25' }});
+            row += 3;
+            
+            // ========== 伤害计算区域 ==========
+            celldata.push({ r: row++, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '===== 伤害计算 =====', m: '===== 伤害计算 =====' }});
+            row++;
+            
+            celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '角色', m: '角色' }});
+            celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: '动作名', m: '动作名' }});
+            celldata.push({ r: row, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '次数', m: '次数' }});
+            celldata.push({ r: row, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: '倍率', m: '倍率' }});
+            celldata.push({ r: row, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: '攻击区', m: '攻击区' }});
+            celldata.push({ r: row, c: 5, v: { ct: { fa: 'General', t: 'n' }, v: '加成区', m: '加成区' }});
+            celldata.push({ r: row, c: 6, v: { ct: { fa: 'General', t: 'n' }, v: '双爆区', m: '双爆区' }});
+            celldata.push({ r: row, c: 7, v: { ct: { fa: 'General', t: 'n' }, v: '加深区', m: '加深区' }});
+            celldata.push({ r: row, c: 8, v: { ct: { fa: 'General', t: 'n' }, v: '防御区', m: '防御区' }});
+            celldata.push({ r: row, c: 9, v: { ct: { fa: 'General', t: 'n' }, v: '抗性区', m: '抗性区' }});
+            celldata.push({ r: row, c: 10, v: { ct: { fa: 'General', t: 'n' }, v: '单次伤害', m: '单次伤害' }});
+            celldata.push({ r: row, c: 11, v: { ct: { fa: 'General', t: 'n' }, v: '总伤害', m: '总伤害' }});
+            row++;
+            
+            celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '角色1', m: '角色1' }});
+            celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: '普攻1', m: '普攻1' }});
+            celldata.push({ r: row, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: 1, m: '1' }});
+            celldata.push({ r: row, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 1.5, m: '1.5' }});
+            celldata.push({ r: row, c: 10, v: { ct: { fa: 'General', t: 'n' }, v: 0, m: '0' }});
+            celldata.push({ r: row, c: 11, v: { ct: { fa: 'General', t: 'n' }, v: 0, m: '0' }});
+            row++;
+            
+            celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '角色1', m: '角色1' }});
+            celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: '重击1', m: '重击1' }});
+            celldata.push({ r: row, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: 1, m: '1' }});
+            celldata.push({ r: row, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 2.0, m: '2.0' }});
+            celldata.push({ r: row, c: 10, v: { ct: { fa: 'General', t: 'n' }, v: 0, m: '0' }});
+            celldata.push({ r: row, c: 11, v: { ct: { fa: 'General', t: 'n' }, v: 0, m: '0' }});
+            row += 3;
+            
+            // ========== 效应伤害区域 ==========
+            celldata.push({ r: row++, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '===== 效应伤害 =====', m: '===== 效应伤害 =====' }});
+            row++;
+            
+            celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '效应类型', m: '效应类型' }});
+            celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: '白值', m: '白值' }});
+            celldata.push({ r: row, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '倍率', m: '倍率' }});
+            celldata.push({ r: row, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: '次数', m: '次数' }});
+            celldata.push({ r: row, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: '伤害', m: '伤害' }});
+            row++;
+            
+            const effects = ['光躁', '聚爆', '霜渐', '电磁', '风蚀'];
+            effects.forEach(effect => {
+                celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: effect, m: effect }});
+                celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 1000, m: '1000' }});
+                celldata.push({ r: row, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: 0.5, m: '0.5' }});
+                celldata.push({ r: row, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 10, m: '10' }});
+                celldata.push({ r: row, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: 0, m: '0' }});
+                row++;
+            });
+            row += 2;
+            
+            // ========== 震谐伤害区域 ==========
+            celldata.push({ r: row++, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '===== 震谐伤害 =====', m: '===== 震谐伤害 =====' }});
+            row++;
+            
+            celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: '震谐类型', m: '震谐类型' }});
+            celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: '白值', m: '白值' }});
+            celldata.push({ r: row, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: '倍率', m: '倍率' }});
+            celldata.push({ r: row, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: '次数', m: '次数' }});
+            celldata.push({ r: row, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: '伤害', m: '伤害' }});
+            row++;
+            
+            const zhenxie = ['角色1震谐', '角色2震谐', '角色3震谐', '谐度击破'];
+            zhenxie.forEach(type => {
+                celldata.push({ r: row, c: 0, v: { ct: { fa: 'General', t: 'n' }, v: type, m: type }});
+                celldata.push({ r: row, c: 1, v: { ct: { fa: 'General', t: 'n' }, v: 1000, m: '1000' }});
+                celldata.push({ r: row, c: 2, v: { ct: { fa: 'General', t: 'n' }, v: 2, m: '2' }});
+                celldata.push({ r: row, c: 3, v: { ct: { fa: 'General', t: 'n' }, v: 1, m: '1' }});
+                celldata.push({ r: row, c: 4, v: { ct: { fa: 'General', t: 'n' }, v: 0, m: '0' }});
+                row++;
+            });
+            
+            return {
+                name: '鸣潮DPS计算',
+                color: '#00d4ff',
+                status: 1,
+                order: 0,
+                celldata: celldata,
+                row: 100,
+                column: 20,
+                defaultRowHeight: 25,
+                defaultColWidth: 90,
+                config: {
+                    merge: {},
+                    rowlen: {},
+                    columnlen: { 0: 120, 1: 100, 2: 80, 3: 80, 4: 80, 5: 80, 6: 80, 7: 80, 8: 80, 9: 80, 10: 100, 11: 100 },
+                    rowhidden: {},
+                    colhidden: {}
+                }
+            };
+        }
+        
+        // 初始化Luckysheet
+        function initLuckysheet() {
+            const sheetData = createSingleSheetData();
+            
+            luckysheet.create({
+                container: 'luckysheet-container',
+                title: '鸣潮DPS计算器 - 单一大表',
+                lang: 'zh',
+                showinfobar: true,
+                showsheetbar: false,
+                showstatisticBar: true,
+                enableAddRow: true,
+                enableAddCol: true,
+                data: [sheetData],
+                forceCalculation: true
+            });
+        }
+        
+        // 导入Excel
+        function importExcel() {
+            document.getElementById('fileInput').click();
+        }
+        
+        function handleFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            showLoading();
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                    
+                    const celldata = [];
+                    jsonData.forEach((row, r) => {
+                        row.forEach((cell, c) => {
+                            if (cell !== undefined && cell !== null) {
+                                celldata.push({
+                                    r: r,
+                                    c: c,
+                                    v: { ct: { fa: 'General', t: 'n' }, v: String(cell), m: String(cell) }
+                                });
+                            }
+                        });
+                    });
+                    
+                    luckysheet.destroy();
+                    luckysheet.create({
+                        container: 'luckysheet-container',
+                        title: file.name,
+                        lang: 'zh',
+                        showinfobar: true,
+                        showsheetbar: false,
+                        showstatisticBar: true,
+                        enableAddRow: true,
+                        enableAddCol: true,
+                        data: [{
+                            name: workbook.SheetNames[0],
+                            color: '#00d4ff',
+                            status: 1,
+                            order: 0,
+                            celldata: celldata,
+                            row: jsonData.length + 50,
+                            column: 30,
+                            defaultRowHeight: 25,
+                            defaultColWidth: 90,
+                            config: {
+                                merge: {},
+                                rowlen: {},
+                                columnlen: {},
+                                rowhidden: {},
+                                colhidden: {}
+                            }
+                        }],
+                        forceCalculation: true
+                    });
+                    
+                    hideLoading();
+                    alert('导入成功！');
+                } catch (error) {
+                    hideLoading();
+                    alert('导入失败: ' + error.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+        
+        // 导出Excel
+        function exportExcel() {
+            try {
+                const sheetData = luckysheet.getSheetData();
+                const wsData = [];
+                
+                for (let r = 0; r < sheetData[0].row; r++) {
+                    const row = [];
+                    for (let c = 0; c < sheetData[0].column; c++) {
+                        const cell = sheetData[0].celldata.find(cd => cd.r === r && cd.c === c);
+                        row.push(cell ? cell.v.v : '');
+                    }
+                    wsData.push(row);
+                }
+                
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, '鸣潮DPS计算');
+                XLSX.writeFile(wb, '鸣潮DPS计算_单一大表.xlsx');
+            } catch (error) {
+                alert('导出失败: ' + error.message);
+            }
+        }
+        
+        // 保存数据
+        function saveData() {
+            try {
+                const sheetData = luckysheet.getSheetData();
+                localStorage.setItem('wuwaSingleSheetData', JSON.stringify({
+                    sheetData: sheetData,
+                    timestamp: new Date().toISOString()
+                }));
+                alert('数据已保存到本地！');
+            } catch (error) {
+                alert('保存失败: ' + error.message);
+            }
+        }
+        
+        // 加载数据
+        function loadData() {
+            try {
+                const saved = localStorage.getItem('wuwaSingleSheetData');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    luckysheet.destroy();
+                    luckysheet.create({
+                        container: 'luckysheet-container',
+                        title: '鸣潮DPS计算器 - 单一大表',
+                        lang: 'zh',
+                        showinfobar: true,
+                        showsheetbar: false,
+                        showstatisticBar: true,
+                        enableAddRow: true,
+                        enableAddCol: true,
+                        data: data.sheetData,
+                        forceCalculation: true
+                    });
+                    alert('数据加载成功！');
+                } else {
+                    alert('没有找到保存的数据！');
+                }
+            } catch (error) {
+                alert('加载失败: ' + error.message);
+            }
+        }
+        
+        // 重新计算
+        function calculateAll() {
+            luckysheet.refresh();
+            alert('计算完成！');
+        }
+        
+        function showLoading() {
+            document.getElementById('loading').style.display = 'flex';
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+        
+        // 页面加载完成后初始化
+        window.onload = function() {
+            setTimeout(() => {
+                initLuckysheet();
+            }, 100);
+        };
+    </script>
+</body>
+</html>

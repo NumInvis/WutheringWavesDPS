@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鸣潮排轴DPS计算器 - 完整拉表版</title>
+    
+    <!-- Luckysheet CSS -->
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/css/pluginsCss.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/plugins.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/css/luckysheet.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/assets/iconfont/iconfont.css' />
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 { font-size: 18px; font-weight: 600; }
+        
+        .header-actions { display: flex; gap: 10px; }
+        
+        .btn {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        
+        .btn-primary:hover { background: rgba(255,255,255,0.3); }
+        
+        .main-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        
+        .sheet-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        #luckysheet {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .right-panel {
+            width: 320px;
+            background: white;
+            border-left: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .panel-section {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .panel-title::before {
+            content: '';
+            width: 4px;
+            height: 16px;
+            background: #667eea;
+            border-radius: 2px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .stat-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        
+        .stat-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .formula-help {
+            font-size: 11px;
+            color: #666;
+            line-height: 1.6;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .formula-help code {
+            background: #f5f5f5;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-family: 'Consolas', monospace;
+            color: #d73a49;
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎮 鸣潮排轴DPS计算器 - 完整拉表版</h1>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="importCharacterData()">📥 导入角色数据</button>
+            <button class="btn btn-primary" onclick="exportExcel()">📤 导出Excel</button>
+            <button class="btn btn-primary" onclick="saveSheet()">💾 保存</button>
+            <button class="btn btn-primary" onclick="loadSheet()">📂 加载</button>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div class="sheet-container">
+            <div id="luckysheet"></div>
+        </div>
+        
+        <div class="right-panel">
+            <div class="panel-section">
+                <div class="panel-title">DPS统计</div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">一号位伤害</div>
+                        <div class="stat-value" id="char1Dmg">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">二号位伤害</div>
+                        <div class="stat-value" id="char2Dmg">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">三号位伤害</div>
+                        <div class="stat-value" id="char3Dmg">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">效应伤害</div>
+                        <div class="stat-value" id="effectDmg">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">震谐伤害</div>
+                        <div class="stat-value" id="zhenxieDmg">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">谐度破坏</div>
+                        <div class="stat-value" id="breakDmg">-</div>
+                    </div>
+                    <div class="stat-item" style="grid-column: 1 / -1; background: #E3F2FD;">
+                        <div class="stat-label">总伤害</div>
+                        <div class="stat-value" id="totalDmg" style="color: #1976D2;">-</div>
+                    </div>
+                    <div class="stat-item" style="grid-column: 1 / -1; background: #E8F5E9;">
+                        <div class="stat-label">总DPS</div>
+                        <div class="stat-value" id="totalDPS" style="color: #388E3C;">-</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <div class="panel-title">环境参数</div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div>
+                        <label style="font-size: 12px; color: #666;">怪物等级 (AI2)</label>
+                        <input type="number" id="monsterLevel" value="100" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;" onchange="updateEnvParams()">
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; color: #666;">轴长/秒 (E39)</label>
+                        <input type="number" id="rotationTime" value="25" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;" onchange="updateEnvParams()">
+                    </div>
+                </div>
+                <div style="margin-top: 10px; font-size: 11px; color: #999;">
+                    减防(AG2)和无视防御(AF2)请在表格中直接编辑
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <div class="panel-title">公式参考</div>
+                <div class="formula-help">
+                    <p><strong>面板暴击率:</strong></p>
+                    <p><code>=MIN(100%,SUM(G4:G9))</code></p>
+                    <p style="margin-top: 6px;"><strong>双爆区:</strong></p>
+                    <p><code>=1+$G$10*($I$10-1)</code></p>
+                    <p style="margin-top: 6px;"><strong>防御区:</strong></p>
+                    <p><code>=1520/(1520+(792+8*AI3)*(1-AG3/100))</code></p>
+                    <p style="margin-top: 6px;"><strong>伤害:</strong></p>
+                    <p><code>=Q*C4*(1+T)*(1+U)*V*(1+W)*X*Y*(1+Z)*(1+AA)*(1+AB)*O</code></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Luckysheet JS -->
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/js/plugin.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/luckysheet.umd.js"></script>
+    
+    <script>
+        let luckysheet;
+        
+        function initLuckysheet() {
+            const options = {
+                container: 'luckysheet',
+                title: '鸣潮DPS计算器-完整版',
+                lang: 'zh',
+                data: generateCompleteData(),
+                showtoolbar: true,
+                showinfobar: true,
+                showsheetbar: true,
+                showstatisticBar: true,
+                enableAddRow: true,
+                enableAddCol: true,
+                showRowBar: true,
+                showColumnBar: true,
+                sheetFormulaBar: true,
+                allowEdit: true,
+                rowHeaderWidth: 46,
+                columnHeaderHeight: 20,
+                defaultRowHeight: 23,
+                defaultColWidth: 80,
+            };
+            
+            luckysheet = window.luckysheet.create(options);
+            
+            // 监听单元格变化，更新统计
+            luckysheet.on('cellUpdated', function(r, c, oldValue, newValue) {
+                updateStats();
+            });
+        }
+        
+        function generateCompleteData() {
+            const celldata = [];
+            
+            // ==================== 角色1面板 (行1-11) ====================
+            // 行1: 角色主类型 + 环境参数列标题
+            celldata.push(
+                {r: 0, c: 1, v: {v: "角色主类型", fc: "#000000", bg: "#E8F4FD", bl: 1}},
+                {r: 0, c: 2, v: {v: "a", fc: "#000000", bg: "#FFFFFF"}},
+                {r: 0, c: 3, v: {v: "3C属伤数", fc: "#000000", bg: "#E8F4FD", bl: 1}},
+                {r: 0, c: 4, v: {v: 2, fc: "#000000", bg: "#FFFFFF"}},
+                // 环境参数 (AF2, AG2, AI2)
+                {r: 0, c: 31, v: {v: "无视防御", fc: "#000000", bg: "#FFF3E0", bl: 1}},
+                {r: 0, c: 32, v: {v: "减防", fc: "#000000", bg: "#FFF3E0", bl: 1}},
+                {r: 0, c: 34, v: {v: "怪物等级", fc: "#000000", bg: "#FFF3E0", bl: 1}}
+            );
+            
+            // 行2: 角色名称 + 伤害计算表头 + 环境参数值
+            celldata.push(
+                {r: 1, c: 1, v: {v: "一号位", fc: "#000000", bg: "#FFF3E0", bl: 1, fs: 12}},
+                // 伤害计算表头 (O-AC列)
+                {r: 1, c: 14, v: {v: "次数", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 1, c: 15, v: {v: "动作", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 1, c: 16, v: {v: "倍率", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 1, c: 17, v: {v: "类型", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 1, c: 18, v: {v: "面板攻击", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 1, c: 19, v: {v: "攻击区", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 1, c: 20, v: {v: "加成区", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 1, c: 21, v: {v: "双爆区", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 1, c: 22, v: {v: "加深区", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 1, c: 23, v: {v: "防御区", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 1, c: 24, v: {v: "抗性区", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 1, c: 25, v: {v: "倍率提升", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 1, c: 26, v: {v: "易伤区", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 1, c: 27, v: {v: "独立乘区", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 1, c: 28, v: {v: "伤害", fc: "#000000", bg: "#FFEBEE", bl: 1}},
+                // 防御区列 (AH列)
+                {r: 1, c: 33, v: {v: "防御区", fc: "#000000", bg: "#E8F5E9", bl: 1}},
+                // 环境参数值
+                {r: 1, c: 31, v: {v: 0, fc: "#000000", bg: "#FFFFFF"}},
+                {r: 1, c: 32, v: {v: 0, fc: "#000000", bg: "#FFFFFF"}},
+                {r: 1, c: 34, v: {v: 100, fc: "#000000", bg: "#FFFFFF"}}
+            );
+            
+            // 行3: 列标题
+            celldata.push(
+                {r: 2, c: 1, v: {v: "攻击", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 2, c: 3, v: {v: "加成区", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 2, c: 5, v: {v: "暴击", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 2, c: 7, v: {v: "暴击伤害", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 2, c: 9, v: {v: "加深区", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 2, c: 11, v: {v: "副词条", fc: "#000000", bg: "#F5F5F5", bl: 1}}
+            );
+            
+            // 行4-11: 角色1面板数据
+            const char1Data = [
+                ["白值", "=437+587", "3C声骸", "=E1*30%", "基础与固有", 0.13, "基础与固有", 1.5, "全加深", 0.15, "大攻击"],
+                ["固有武器", "=12%+12%", "套装首位", "", "武器", 0.243, "武器", 0, "主类型加深", 0.25, "共技伤害"],
+                ["主副词条", "=18%+18%+M4+(2-E1)*30%", "自拐属伤", "", "套装", 0.2, "套装", 0, "", "", "暴击"],
+                ["自拐攻击", "", "被拐属伤", "", "主副词条", "=M6", "主副词条", "=M7+44%", "", "", "爆伤"],
+                ["被拐攻击", "=22.5%+25%", "其他属伤", "", "共鸣链", 0, "共鸣链", 0],
+                ["声骸固定攻击", 350, "主类型加成", 0.3, "队友", 0, "队友", 0],
+                ["额外固定攻击", "", "", "", "面板暴击率", "=MIN(100%,SUM(G4:G9))", "面板暴击伤害", "=SUM(I4:I9)"],
+                ["", "", "", "", "溢出暴击", "=MAX(0,SUM(G4:G9)-1)"]
+            ];
+            
+            char1Data.forEach((row, idx) => {
+                const r = 3 + idx;
+                if (row[0]) celldata.push({r: r, c: 1, v: {v: row[0], fc: "#000000", bg: "#FFFFFF"}});
+                if (row[1]) celldata.push({r: r, c: 2, v: createCellValue(row[1])});
+                if (row[2]) celldata.push({r: r, c: 3, v: {v: row[2], fc: "#000000", bg: "#FFFFFF"}});
+                if (row[3]) celldata.push({r: r, c: 4, v: createCellValue(row[3])});
+                if (row[4]) celldata.push({r: r, c: 5, v: {v: row[4], fc: "#000000", bg: "#FFFFFF"}});
+                if (row[5] !== undefined) celldata.push({r: r, c: 6, v: createCellValue(row[5])});
+                if (row[6]) celldata.push({r: r, c: 7, v: {v: row[6], fc: "#000000", bg: "#FFFFFF"}});
+                if (row[7] !== undefined) celldata.push({r: r, c: 8, v: createCellValue(row[7])});
+                if (row[8]) celldata.push({r: r, c: 9, v: {v: row[8], fc: "#000000", bg: "#FFFFFF"}});
+                if (row[9] !== undefined) celldata.push({r: r, c: 10, v: createCellValue(row[9])});
+                if (row[10]) celldata.push({r: r, c: 11, v: {v: row[10], fc: "#000000", bg: "#FFFFFF"}});
+            });
+            
+            // 行10-11特殊样式
+            celldata.push(
+                {r: 9, c: 5, v: {v: "面板暴击率", fc: "#000000", bg: "#E3F2FD", bl: 1}},
+                {r: 9, c: 6, v: {v: "=MIN(100%,SUM(G4:G9))", fc: "#0066CC", bg: "#E3F2FD"}},
+                {r: 9, c: 7, v: {v: "面板暴击伤害", fc: "#000000", bg: "#E3F2FD", bl: 1}},
+                {r: 9, c: 8, v: {v: "=SUM(I4:I9)", fc: "#0066CC", bg: "#E3F2FD"}},
+                {r: 10, c: 5, v: {v: "溢出暴击", fc: "#000000", bg: "#FFFFFF"}},
+                {r: 10, c: 6, v: {v: "=MAX(0,SUM(G4:G9)-1)", fc: "#0066CC", bg: "#FFFFFF"}}
+            );
+            
+            // ==================== 伤害计算行 (行3-15) ====================
+            for (let row = 3; row <= 15; row++) {
+                // 防御区公式 (AH列=33)
+                const defFormula = row === 4 
+                    ? "=1520/(1520+(792+8*AI4)*(1-AG4/100)*(1-AF4/100))"
+                    : "=1520/(1520+(792+8*AI3)*(1-AG3/100))";
+                
+                celldata.push(
+                    {r: row-1, c: 14, v: {v: 1, fc: "#000000", bg: "#FFFFFF"}},  // O:次数
+                    {r: row-1, c: 15, v: {v: `动作${row-2}`, fc: "#000000", bg: "#FFFFFF"}},  // P:动作
+                    {r: row-1, c: 16, v: {v: 0.5, fc: "#000000", bg: "#FFFFFF"}},  // Q:倍率
+                    {r: row-1, c: 17, v: {v: "a", fc: "#000000", bg: "#FFFFFF"}},  // R:类型
+                    {r: row-1, c: 18, v: {v: "=$C$4*(1+$C$5+$C$6+$C$7+$C$8)+$C$9", fc: "#0066CC", bg: "#FFFFFF"}},  // S:面板攻击
+                    {r: row-1, c: 19, v: {v: "=($C$5+$C$6+$C$7+$C$8)+($C$9+$C$10)/$C$4", fc: "#0066CC", bg: "#FFFFFF"}},  // T:攻击区
+                    {r: row-1, c: 20, v: {v: "=IF(R"+row+"=$C$1,SUM($E$4:$E$9),SUM($E$4:$E$8))", fc: "#0066CC", bg: "#FFFFFF"}},  // U:加成区
+                    {r: row-1, c: 21, v: {v: "=1+$G$10*($I$10-1)", fc: "#0066CC", bg: "#FFFFFF"}},  // V:双爆区
+                    {r: row-1, c: 22, v: {v: "=IF(R"+row+"=$C$1,$K$4+$K$5,$K$4)", fc: "#0066CC", bg: "#FFFFFF"}},  // W:加深区
+                    {r: row-1, c: 23, v: {v: defFormula, fc: "#0066CC", bg: "#FFFFFF"}},  // X:防御区
+                    {r: row-1, c: 24, v: {v: 0.8, fc: "#000000", bg: "#FFFFFF"}},  // Y:抗性区
+                    {r: row-1, c: 25, v: {v: 0, fc: "#000000", bg: "#FFFFFF"}},  // Z:倍率提升
+                    {r: row-1, c: 26, v: {v: 0, fc: "#000000", bg: "#FFFFFF"}},  // AA:易伤区
+                    {r: row-1, c: 27, v: {v: 0, fc: "#000000", bg: "#FFFFFF"}},  // AB:独立乘区
+                    {r: row-1, c: 28, v: {v: "=Q"+row+"*$C$4*(1+T"+row+")*(1+U"+row+")*V"+row+"*(1+W"+row+")*X"+row+"*Y"+row+"*(1+Z"+row+")*(1+AA"+row+")*(1+AB"+row+")*O"+row, fc: "#D32F2F", bg: "#FFEBEE", bl: 1}},  // AC:伤害
+                    {r: row-1, c: 33, v: {v: defFormula, fc: "#0066CC", bg: "#E8F5E9"}}  // AH:防御区
+                );
+            }
+            
+            // ==================== 角色2面板 (行14-24) ====================
+            celldata.push(
+                {r: 13, c: 1, v: {v: "角色主类型", fc: "#000000", bg: "#E8F4FD", bl: 1}},
+                {r: 13, c: 2, v: {v: "a", fc: "#000000", bg: "#FFFFFF"}},
+                {r: 13, c: 3, v: {v: "3C属伤数", fc: "#000000", bg: "#E8F4FD", bl: 1}},
+                {r: 13, c: 4, v: {v: 2, fc: "#000000", bg: "#FFFFFF"}},
+                {r: 14, c: 1, v: {v: "二号位", fc: "#000000", bg: "#FFF3E0", bl: 1, fs: 12}}
+            );
+            
+            // 角色2列标题和数据（简化）
+            celldata.push(
+                {r: 15, c: 1, v: {v: "攻击", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 15, c: 3, v: {v: "加成区", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 15, c: 5, v: {v: "暴击", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 15, c: 7, v: {v: "暴击伤害", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 16, c: 1, v: {v: "白值", fc: "#000000", bg: "#FFFFFF"}},
+                {r: 16, c: 2, v: {v: 900, fc: "#000000", bg: "#FFFFFF"}},
+                {r: 21, c: 5, v: {v: "面板暴击率", fc: "#000000", bg: "#E3F2FD", bl: 1}},
+                {r: 21, c: 6, v: {v: "=MIN(100%,SUM(G17:G21))", fc: "#0066CC", bg: "#E3F2FD"}},
+                {r: 21, c: 7, v: {v: "面板暴击伤害", fc: "#000000", bg: "#E3F2FD", bl: 1}},
+                {r: 21, c: 8, v: {v: "=SUM(I17:I21)", fc: "#0066CC", bg: "#E3F2FD"}}
+            );
+            
+            // 角色2伤害计算行 (行16-23)
+            for (let row = 16; row <= 23; row++) {
+                celldata.push(
+                    {r: row-1, c: 14, v: {v: 1, fc: "#000000", bg: "#FFFFFF"}},
+                    {r: row-1, c: 15, v: {v: `动作${row-15}`, fc: "#000000", bg: "#FFFFFF"}},
+                    {r: row-1, c: 16, v: {v: 0.6, fc: "#000000", bg: "#FFFFFF"}},
+                    {r: row-1, c: 17, v: {v: "a", fc: "#000000", bg: "#FFFFFF"}},
+                    {r: row-1, c: 28, v: {v: "=Q"+row+"*$C$16*(1+T"+row+")*(1+U"+row+")*V"+row+"*(1+W"+row+")*X"+row+"*Y"+row+"*(1+Z"+row+")*(1+AA"+row+")*(1+AB"+row+")*O"+row, fc: "#D32F2F", bg: "#FFEBEE", bl: 1}}
+                );
+            }
+            
+            // ==================== 角色3面板 (行26-36) ====================
+            celldata.push(
+                {r: 25, c: 1, v: {v: "角色主类型", fc: "#000000", bg: "#E8F4FD", bl: 1}},
+                {r: 25, c: 2, v: {v: "a", fc: "#000000", bg: "#FFFFFF"}},
+                {r: 25, c: 3, v: {v: "3C属伤数", fc: "#000000", bg: "#E8F4FD", bl: 1}},
+                {r: 25, c: 4, v: {v: 2, fc: "#000000", bg: "#FFFFFF"}},
+                {r: 26, c: 1, v: {v: "三号位", fc: "#000000", bg: "#FFF3E0", bl: 1, fs: 12}}
+            );
+            
+            // 角色3列标题和数据（简化）
+            celldata.push(
+                {r: 27, c: 1, v: {v: "攻击", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 27, c: 3, v: {v: "加成区", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 27, c: 5, v: {v: "暴击", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 27, c: 7, v: {v: "暴击伤害", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 28, c: 1, v: {v: "白值", fc: "#000000", bg: "#FFFFFF"}},
+                {r: 28, c: 2, v: {v: 850, fc: "#000000", bg: "#FFFFFF"}},
+                {r: 33, c: 5, v: {v: "面板暴击率", fc: "#000000", bg: "#E3F2FD", bl: 1}},
+                {r: 33, c: 6, v: {v: "=MIN(100%,SUM(G29:G33))", fc: "#0066CC", bg: "#E3F2FD"}},
+                {r: 33, c: 7, v: {v: "面板暴击伤害", fc: "#000000", bg: "#E3F2FD", bl: 1}},
+                {r: 33, c: 8, v: {v: "=SUM(I29:I33)", fc: "#0066CC", bg: "#E3F2FD"}}
+            );
+            
+            // 角色3伤害计算行 (行24-33)
+            for (let row = 24; row <= 33; row++) {
+                celldata.push(
+                    {r: row-1, c: 14, v: {v: 1, fc: "#000000", bg: "#FFFFFF"}},
+                    {r: row-1, c: 15, v: {v: `动作${row-23}`, fc: "#000000", bg: "#FFFFFF"}},
+                    {r: row-1, c: 16, v: {v: 0.7, fc: "#000000", bg: "#FFFFFF"}},
+                    {r: row-1, c: 17, v: {v: "a", fc: "#000000", bg: "#FFFFFF"}},
+                    {r: row-1, c: 28, v: {v: "=Q"+row+"*$C$28*(1+T"+row+")*(1+U"+row+")*V"+row+"*(1+W"+row+")*X"+row+"*Y"+row+"*(1+Z"+row+")*(1+AA"+row+")*(1+AB"+row+")*O"+row, fc: "#D32F2F", bg: "#FFEBEE", bl: 1}}
+                );
+            }
+            
+            // ==================== 震谐伤害区域 (行35-38) ====================
+            celldata.push(
+                {r: 34, c: 1, v: {v: "震谐", fc: "#000000", bg: "#E8F4FD", bl: 1, fs: 14}},
+                {r: 34, c: 15, v: {v: "次数", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 34, c: 16, v: {v: "动作", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 34, c: 17, v: {v: "倍率", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 34, c: 28, v: {v: "伤害", fc: "#000000", bg: "#FFEBEE", bl: 1}}
+            );
+            
+            const zhenxieTypes = ['角色1震谐', '角色2震谐', '角色3震谐'];
+            zhenxieTypes.forEach((type, idx) => {
+                const row = 35 + idx;
+                celldata.push(
+                    {r: row-1, c: 15, v: {v: type, fc: "#000000", bg: "#FFF3E0", bl: 1}},
+                    {r: row-1, c: 16, v: {v: 1, fc: "#000000", bg: "#FFFFFF"}},
+                    {r: row-1, c: 17, v: {v: 1.0, fc: "#000000", bg: "#FFFFFF"}},
+                    {r: row-1, c: 28, v: {v: "=Q"+row+"*S"+row+"*(1+T"+row+")*(1+U"+row+")*V"+row+"*(1+W"+row+")*X"+row+"*Y"+row+"*(1+Z"+row+")*(1+AA"+row+")*(1+AB"+row+")*O"+row, fc: "#D32F2F", bg: "#FFEBEE", bl: 1}}
+                );
+            });
+            
+            // 谐度破坏
+            celldata.push(
+                {r: 37, c: 15, v: {v: "谐度破坏", fc: "#000000", bg: "#FFF3E0", bl: 1}},
+                {r: 37, c: 16, v: {v: 1, fc: "#000000", bg: "#FFFFFF"}},
+                {r: 37, c: 17, v: {v: 1.2, fc: "#000000", bg: "#FFFFFF"}},
+                {r: 37, c: 28, v: {v: "=Q38*S38*(1+T38)*(1+U38)*V38*(1+W38)*X38*Y38*(1+Z38)*(1+AA38)*(1+AB38)*O38", fc: "#D32F2F", bg: "#FFEBEE", bl: 1}}
+            );
+            
+            // ==================== 效应伤害区域 (行41-44) ====================
+            celldata.push(
+                {r: 40, c: 1, v: {v: "效应", fc: "#000000", bg: "#E8F4FD", bl: 1, fs: 14}},
+                {r: 40, c: 15, v: {v: "次数", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 40, c: 16, v: {v: "动作", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 40, c: 17, v: {v: "倍率", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 40, c: 18, v: {v: "类型", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 40, c: 28, v: {v: "伤害", fc: "#000000", bg: "#FFEBEE", bl: 1}}
+            );
+            
+            const effects = ['光躁', '聚爆', '霜渐', '电磁', '风蚀'];
+            effects.forEach((effect, idx) => {
+                const row = 41 + idx;
+                celldata.push(
+                    {r: row-1, c: 15, v: {v: effect, fc: "#000000", bg: "#FFFFFF", bl: 1}},
+                    {r: row-1, c: 16, v: {v: 1, fc: "#000000", bg: "#FFFFFF"}},
+                    {r: row-1, c: 17, v: {v: 0.3, fc: "#000000", bg: "#FFFFFF"}},
+                    {r: row-1, c: 18, v: {v: effect, fc: "#000000", bg: "#FFFFFF"}},
+                    {r: row-1, c: 28, v: {v: "=Q"+row+"*S"+row+"*(1+T"+row+")*(1+U"+row+")*V"+row+"*(1+W"+row+")*X"+row+"*Y"+row+"*(1+Z"+row+")*(1+AA"+row+")*(1+AB"+row+")*O"+row, fc: "#D32F2F", bg: "#FFEBEE", bl: 1}}
+                );
+            });
+            
+            // ==================== DPS统计区域 (行39-45) ====================
+            celldata.push(
+                {r: 36, c: 1, v: {v: "20抗100级怪", fc: "#000000", bg: "#E8F4FD", bl: 1}},
+                {r: 38, c: 1, v: {v: "一号位", fc: "#000000", bg: "#FFFFFF"}},
+                {r: 38, c: 2, v: {v: "=SUM(AC3:AC15)", fc: "#0066CC", bg: "#FFFFFF", bl: 1}},
+                {r: 39, c: 1, v: {v: "二号位", fc: "#000000", bg: "#FFFFFF"}},
+                {r: 39, c: 2, v: {v: "=SUM(AC16:AC23)", fc: "#0066CC", bg: "#FFFFFF", bl: 1}},
+                {r: 40, c: 1, v: {v: "三号位", fc: "#000000", bg: "#FFFFFF"}},
+                {r: 40, c: 2, v: {v: "=SUM(AC24:AC33)", fc: "#0066CC", bg: "#FFFFFF", bl: 1}},
+                {r: 41, c: 1, v: {v: "效应", fc: "#000000", bg: "#FFFFFF"}},
+                {r: 41, c: 2, v: {v: "=SUM(AC41:AC44)", fc: "#0066CC", bg: "#FFFFFF", bl: 1}},
+                {r: 42, c: 1, v: {v: "震谐", fc: "#000000", bg: "#FFFFFF"}},
+                {r: 42, c: 2, v: {v: "=SUM(AC35:AC37)", fc: "#0066CC", bg: "#FFFFFF", bl: 1}},
+                {r: 43, c: 1, v: {v: "谐度破坏", fc: "#000000", bg: "#FFFFFF"}},
+                {r: 43, c: 2, v: {v: "=AC38", fc: "#0066CC", bg: "#FFFFFF", bl: 1}},
+                {r: 44, c: 1, v: {v: "合计", fc: "#000000", bg: "#E8F5E9", bl: 1}},
+                {r: 44, c: 2, v: {v: "=SUM(C39:C44)", fc: "#0066CC", bg: "#E8F5E9", bl: 1}},
+                {r: 44, c: 3, v: {v: "=C45/E39", fc: "#0066CC", bg: "#E8F5E9", bl: 1}},  // DPS
+                {r: 38, c: 4, v: {v: "秒数", fc: "#000000", bg: "#F5F5F5", bl: 1}},
+                {r: 38, c: 5, v: {v: 25, fc: "#000000", bg: "#FFFFFF"}}  // 轴长25秒
+            );
+            
+            return [{
+                "name": "完整拉表",
+                "color": "",
+                "status": 1,
+                "order": 0,
+                "celldata": celldata,
+                "config": {
+                    "columnlen": {
+                        "0": 10, "1": 80, "2": 100, "3": 80, "4": 80, "5": 80, 
+                        "6": 80, "7": 80, "8": 80, "9": 80, "10": 80, "11": 80,
+                        "12": 80, "13": 80, "14": 60, "15": 100, "16": 80, "17": 80,
+                        "18": 80, "19": 80, "20": 80, "21": 80, "22": 80, "23": 100,
+                        "24": 80, "25": 80, "26": 80, "27": 80, "28": 100, "29": 80,
+                        "30": 80, "31": 80, "32": 80, "33": 100, "34": 80
+                    },
+                    "rowlen": {},
+                    "merge": {}
+                }
+            }];
+        }
+        
+        function createCellValue(value) {
+            if (typeof value === 'string' && value.startsWith('=')) {
+                return {v: value, fc: "#0066CC", bg: "#FFFFFF"};
+            } else if (typeof value === 'number') {
+                return {v: value, fc: "#000000", bg: "#FFFFFF"};
+            } else {
+                return {v: value, fc: "#000000", bg: "#FFFFFF"};
+            }
+        }
+        
+        function updateStats() {
+            if (!luckysheet) return;
+            
+            try {
+                // 获取统计数据
+                const char1Dmg = luckysheet.getCellValue(38, 2);
+                const char2Dmg = luckysheet.getCellValue(39, 2);
+                const char3Dmg = luckysheet.getCellValue(40, 2);
+                const effectDmg = luckysheet.getCellValue(41, 2);
+                const zhenxieDmg = luckysheet.getCellValue(42, 2);
+                const breakDmg = luckysheet.getCellValue(43, 2);
+                const totalDmg = luckysheet.getCellValue(44, 2);
+                const totalDPS = luckysheet.getCellValue(44, 3);
+                
+                // 更新显示
+                document.getElementById('char1Dmg').textContent = formatNumber(char1Dmg);
+                document.getElementById('char2Dmg').textContent = formatNumber(char2Dmg);
+                document.getElementById('char3Dmg').textContent = formatNumber(char3Dmg);
+                document.getElementById('effectDmg').textContent = formatNumber(effectDmg);
+                document.getElementById('zhenxieDmg').textContent = formatNumber(zhenxieDmg);
+                document.getElementById('breakDmg').textContent = formatNumber(breakDmg);
+                document.getElementById('totalDmg').textContent = formatNumber(totalDmg);
+                document.getElementById('totalDPS').textContent = formatNumber(totalDPS);
+            } catch (e) {
+                console.error('更新统计失败:', e);
+            }
+        }
+        
+        function formatNumber(num) {
+            if (num === null || num === undefined || isNaN(num)) return '-';
+            if (num >= 10000) {
+                return (num / 10000).toFixed(2) + '万';
+            }
+            return Math.round(num).toLocaleString();
+        }
+        
+        function updateEnvParams() {
+            const monsterLevel = document.getElementById('monsterLevel').value;
+            const rotationTime = document.getElementById('rotationTime').value;
+            
+            if (luckysheet) {
+                luckysheet.setCellValue(1, 34, parseInt(monsterLevel));  // AI2
+                luckysheet.setCellValue(38, 5, parseInt(rotationTime));  // E39
+            }
+            
+            console.log('环境参数已更新:', {monsterLevel, rotationTime});
+        }
+        
+        function importCharacterData() {
+            alert('导入功能：将从鸣潮动作数据汇总.xlsx读取角色技能数据');
+        }
+        
+        function exportExcel() {
+            if (luckysheet) {
+                luckysheet.exportXls();
+            }
+        }
+        
+        function saveSheet() {
+            if (luckysheet) {
+                const data = luckysheet.getAllSheets();
+                localStorage.setItem('wuwa_calc_complete', JSON.stringify(data));
+                alert('已保存到本地存储');
+            }
+        }
+        
+        function loadSheet() {
+            const saved = localStorage.getItem('wuwa_calc_complete');
+            if (saved) {
+                const data = JSON.parse(saved);
+                luckysheet.destroy();
+                luckysheet = window.luckysheet.create({
+                    container: 'luckysheet',
+                    title: '鸣潮DPS计算器-完整版',
+                    lang: 'zh',
+                    data: data,
+                    showtoolbar: true,
+                    showinfobar: true,
+                    showsheetbar: true,
+                    showstatisticBar: true,
+                    enableAddRow: true,
+                    enableAddCol: true,
+                    showRowBar: true,
+                    showColumnBar: true,
+                    sheetFormulaBar: true,
+                    allowEdit: true,
+                });
+                alert('已加载保存的数据');
+            } else {
+                alert('没有找到保存的数据');
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            initLuckysheet();
+            // 定期更新统计
+            setInterval(updateStats, 1000);
+        });
+    </script>
+</body>
+</html>

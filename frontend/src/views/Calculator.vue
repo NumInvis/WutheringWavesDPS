@@ -304,6 +304,9 @@ async function loadAllScripts() {
     isReady.value = true
     await nextTick()
     
+    // 初始化空表格
+    initEmptySheet()
+    
     if (isPreviewMode.value) {
       loadPreviewSheet()
     }

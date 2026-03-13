@@ -22,10 +22,10 @@ export const useUserStore = defineStore('user', () => {
   const user = ref<User | null>(null)
   const loading = ref(false)
 
+  const token = computed(() => localStorage.getItem('token') || '')
   const isAuthenticated = computed(() => !!user.value || !!token.value)
   const username = computed(() => user.value?.username || '')
   const displayName = computed(() => user.value?.display_name || '')
-  const token = computed(() => localStorage.getItem('token') || '')
 
   async function fetchCurrentUser() {
     if (!api.isAuthenticated()) return

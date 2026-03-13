@@ -47,6 +47,7 @@ async def upload_excel(
     上传Excel文件
     - 原始文件二进制保存，不做任何转换
     - 公式、格式、数据完全保留
+    - 使用流式读取防止内存溢出
     """
     filename = file.filename or "unknown.xlsx"
     ext = os.path.splitext(filename)[1].lower()
@@ -57,14 +58,25 @@ async def upload_excel(
             detail=f"仅支持Excel文件: .xlsx, .xlsm, .xls"
         )
     
-    content = await file.read()
-    file_size = len(content)
+    # 流式读取文件内容，防止内存溢出
+    content = b""
+    file_size = 0
+    chunk_size = 1024 * 1024  # 1MB chunks
     
-    if file_size > settings.max_upload_size:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"文件大小超过限制（最大 {settings.max_upload_size / 1024 / 1024:.1f}MB）"
-        )
+    while True:
+        chunk = await file.read(chunk_size)
+        if not chunk:
+            break
+        file_size += len(chunk)
+        
+        # 检查文件大小限制（在读取过程中检查，防止大文件攻击）
+        if file_size > settings.max_upload_size:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"文件大小超过限制（最大 {settings.max_upload_size / 1024 / 1024:.1f}MB）"
+            )
+        
+        content += chunk
     
     file_id = _generate_file_id()
     file_hash = _get_file_hash(content)

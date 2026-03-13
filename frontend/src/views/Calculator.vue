@@ -168,15 +168,6 @@ function waitForLuckysheet(): Promise<void> {
 }
 
 onMounted(() => {
-  const originalAlert = window.alert
-  window.alert = function(msg) {
-    if (typeof msg === 'string' && (msg.includes('公式') || msg.includes('error') || msg.includes('错误'))) {
-      console.log('Suppressed formula error:', msg)
-      return
-    }
-    return originalAlert.apply(window, arguments)
-  }
-  
   checkPreviewMode()
   checkTemplateLoad()
   loadAllScripts()
@@ -288,7 +279,7 @@ async function loadAllScripts() {
   }
 
   const loadScript = (src: string): Promise<void> => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       if (document.querySelector(`script[src="${src}"]`)) {
         console.log('[Script Load] Script already exists:', src)
         resolve()
@@ -296,13 +287,14 @@ async function loadAllScripts() {
       }
       const script = document.createElement('script')
       script.src = src
+      script.async = true
       script.onload = () => {
         console.log('[Script Load] Script loaded:', src)
         resolve()
       }
       script.onerror = () => {
         console.error('[Script Load] Script failed:', src)
-        resolve()
+        reject(new Error(`Failed to load script: ${src}`))
       }
       document.head.appendChild(script)
     })

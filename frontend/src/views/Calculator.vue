@@ -150,15 +150,24 @@ function formatFileSize(bytes: number): string {
 function waitForLuckysheet(): Promise<void> {
   return new Promise((resolve, reject) => {
     let attempts = 0
-    const maxAttempts = 50
+    const maxAttempts = 100  // 增加到100次尝试，总共10秒
+    
+    console.log('[waitForLuckysheet] Starting to check...')
     
     const check = () => {
       attempts++
       const luckysheet = (window as any).luckysheet
+      
+      if (attempts % 10 === 0) {
+        console.log(`[waitForLuckysheet] Check attempt ${attempts}, luckysheet:`, typeof luckysheet)
+      }
+      
       if (luckysheet && typeof luckysheet.create === 'function') {
+        console.log('[waitForLuckysheet] Success! luckysheet.create is available')
         resolve()
       } else if (attempts >= maxAttempts) {
-        reject(new Error('Luckysheet加载超时'))
+        console.error(`[waitForLuckysheet] Timeout after ${maxAttempts} attempts`)
+        reject(new Error(`Luckysheet加载超时，已尝试${maxAttempts}次`))
       } else {
         setTimeout(check, 100)
       }

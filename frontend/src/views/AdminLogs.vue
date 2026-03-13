@@ -50,8 +50,8 @@
           >
             <div class="log-header">
               <span class="log-time">{{ formatTime(log.timestamp) }}</span>
-              <el-tag :type="getLogType(log.level)" size="small">
-                {{ log.level.toUpperCase() }}
+              <el-tag :type="getLogType(log.level || 'info')" size="small">
+                {{ (log.level || 'info').toUpperCase() }}
               </el-tag>
             </div>
             <div class="log-message">{{ log.message }}</div>

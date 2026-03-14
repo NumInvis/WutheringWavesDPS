@@ -61,7 +61,8 @@
         </div>
       </div>
       
-      <div class="sheet-wrapper" v-loading="!isReady && !loadError" element-loading-text="正在加载表格组件...">
+      <div class="sheet-wrapper">
+        <div v-if="!isReady && !loadError" class="loading-text">正在加载表格组件...</div>
         <div ref="sheetContainer" id="luckysheet" class="sheet-container"></div>
       </div>
     </el-card>
@@ -756,6 +757,16 @@ watch(() => route.query.sheet, (newSheet) => {
   background: #fff;
   border-radius: 4px;
   overflow: hidden;
+  position: relative;
+}
+
+.loading-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #909399;
+  font-size: 14px;
 }
 
 .sheet-container {

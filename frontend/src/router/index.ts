@@ -34,6 +34,11 @@ const routes: RouteRecordRaw[] = [
     name: 'AdminLogs',
     component: () => import('@/views/AdminLogs.vue'),
     meta: { requiresAdmin: true }
+  },
+  {
+    path: '/test-sheet',
+    name: 'TestSheet',
+    component: () => import('@/views/Calculator-simple.vue')
   }
 ]
 

@@ -52,16 +52,24 @@
                 <span><el-icon><User /></el-icon> {{ sheet.owner_display_name || sheet.owner_username }}</span>
                 <span class="view-count"><el-icon><View /></el-icon> {{ sheet.view_count || 0 }}</span>
               </div>
+              <div class="description" v-if="sheet.description">
+                <el-icon><Document /></el-icon>
+                <span>{{ sheet.description }}</span>
+              </div>
             </div>
             
             <div class="star-section">
-              <span class="star-number">★ {{ sheet.star_count || 0 }}</span>
+              <span class="star-number" :class="{ 'star-number-active': sheet.has_starred }">
+                {{ sheet.has_starred ? '★' : '☆' }} {{ sheet.star_count || 0 }}
+              </span>
               <el-button 
+                class="star-button"
                 size="small"
                 :type="sheet.has_starred ? 'warning' : 'default'"
                 @click="toggleStar(sheet)"
               >
-                <el-icon><Star /></el-icon>
+                <el-icon v-if="sheet.has_starred"><StarFilled /></el-icon>
+                <el-icon v-else><Star /></el-icon>
               </el-button>
             </div>
             
@@ -72,7 +80,15 @@
               <el-button size="small" type="primary" @click="downloadSheet(sheet)">
                 下载
               </el-button>
-              <template v-if="isAdmin">
+              <template v-if="canEdit(sheet)">
+                <el-button size="small" type="primary" @click="openEditDialog(sheet)">
+                  编辑
+                </el-button>
+                <el-button size="small" type="danger" @click="confirmDelete(sheet)">
+                  删除
+                </el-button>
+              </template>
+              <template v-else-if="isAdmin">
                 <el-button size="small" :type="sheet.is_featured ? 'warning' : 'default'" @click="toggleFeature(sheet)">
                   {{ sheet.is_featured ? '取消置顶' : '置顶' }}
                 </el-button>
@@ -99,17 +115,63 @@
     </div>
 
     <UploadDialog v-model="uploadDialogVisible" @success="handleUploadSuccess" />
+    
+    <el-dialog v-model="editDialogVisible" title="编辑表格信息" width="500px">
+      <el-form :model="editForm" :rules="editRules" ref="editFormRef" label-width="100px">
+        <el-form-item label="表格标题" prop="title">
+          <el-input v-model="editForm.title" placeholder="请输入表格标题（不超过 15 字）" maxlength="15" show-word-limit />
+        </el-form-item>
+        <el-form-item label="表格介绍" prop="description">
+          <el-input
+            v-model="editForm.description"
+            type="textarea"
+            :rows="4"
+            placeholder="简单介绍一下这个表格（不超过 100 字）"
+            maxlength="100"
+            show-word-limit
+          />
+        </el-form-item>
+        <el-form-item label="更换文件">
+          <el-upload
+            class="file-uploader"
+            drag
+            :auto-upload="false"
+            :show-file-list="false"
+            :on-change="handleEditFileChange"
+            :before-upload="beforeUpload"
+            accept=".xlsx,.xls,.xlsm"
+          >
+            <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+            <div class="el-upload__text">
+              将文件拖到此处，或 <em>点击上传</em>
+            </div>
+            <template #tip>
+              <div class="el-upload__tip">
+                支持 .xlsx, .xls, .xlsm 格式，文件不超过 5MB
+              </div>
+            </template>
+          </el-upload>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="editing" @click="submitEdit">
+          保存
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search, Star, View, User, Upload } from '@element-plus/icons-vue'
+import { Search, Star, StarFilled, View, User, Upload, Document, UploadFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import UploadDialog from '../components/UploadDialog.vue'
 import { useUserStore } from '../stores/user'
 import api from '../api'
+import type { FormInstance, FormRules } from 'element-plus'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -129,6 +191,33 @@ const pageSize = ref(12)
 const total = ref(0)
 
 const uploadDialogVisible = ref(false)
+
+// 编辑相关
+const editDialogVisible = ref(false)
+const editFormRef = ref<FormInstance>()
+const editing = ref(false)
+const currentEditingSheet = ref<any>(null)
+const editFile = ref<File | null>(null)
+
+const editForm = ref({
+  title: '',
+  description: ''
+})
+
+const editRules: FormRules = {
+  title: [
+    { required: true, message: '请输入表格标题', trigger: 'blur' },
+    { min: 2, max: 15, message: '标题长度在 2 到 15 个字符', trigger: 'blur' }
+  ],
+  description: [
+    { max: 100, message: '介绍不能超过 100 字', trigger: 'blur' }
+  ]
+}
+
+function canEdit(sheet: any): boolean {
+  if (!userStore.user) return false
+  return sheet.owner_username === userStore.user.username
+}
 
 async function fetchSpreadsheets() {
   loading.value = true
@@ -229,39 +318,100 @@ async function toggleFeature(sheet: any) {
     ElMessage.warning('需要管理员权限')
     return
   }
-  
+
   try {
-    await api.put(`/spreadsheets/${sheet.id}/admin`, { 
-      is_featured: !sheet.is_featured 
-    })
-    ElMessage.success(sheet.is_featured ? '已取消置顶' : '已置顶')
-    fetchSpreadsheets()
+    await api.post(`/spreadsheets/${sheet.id}/toggle-feature`)
+    sheet.is_featured = !sheet.is_featured
+    ElMessage.success('操作成功')
   } catch (error) {
     ElMessage.error('操作失败')
   }
 }
 
-async function confirmDelete(sheet: any) {
-  if (!isAdmin.value) {
-    ElMessage.warning('需要管理员权限')
+function openEditDialog(sheet: any) {
+  if (!canEdit(sheet)) {
+    ElMessage.warning('无权限编辑')
     return
   }
+  currentEditingSheet.value = sheet
+  editForm.value = {
+    title: sheet.title,
+    description: sheet.description || ''
+  }
+  editFile.value = null
+  editDialogVisible.value = true
+}
+
+function handleEditFileChange(file: any) {
+  editFile.value = file.raw
+}
+
+function beforeUpload(file: File) {
+  const maxSize = 5 * 1024 * 1024
+  if (file.size > maxSize) {
+    ElMessage.error('文件大小不能超过 5MB')
+    return false
+  }
+  return true
+}
+
+async function submitEdit() {
+  if (!editFormRef.value) return
+  
+  await editFormRef.value.validate(async (valid) => {
+    if (!valid) return
+    
+    if (!currentEditingSheet.value) {
+      ElMessage.error('编辑信息无效')
+      return
+    }
+    
+    editing.value = true
+    try {
+      const formData = new FormData()
+      formData.append('title', editForm.value.title)
+      if (editForm.value.description) {
+        formData.append('description', editForm.value.description)
+      }
+      if (editFile.value) {
+        formData.append('file', editFile.value)
+      }
+      
+      await api.put(`/spreadsheets/${currentEditingSheet.value.id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      
+      ElMessage.success('编辑成功')
+      editDialogVisible.value = false
+      await fetchSpreadsheets()
+    } catch (error: any) {
+      console.error('[Community] 编辑失败:', error)
+      ElMessage.error(error.response?.data?.detail || '编辑失败')
+    } finally {
+      editing.value = false
+    }
+  })
+}
+
+async function confirmDelete(sheet: any) {
+  const isOwner = canEdit(sheet)
+  const confirmText = isOwner 
+    ? `确定要删除表格"${sheet.title}"吗？此操作不可恢复`
+    : `确定要删除表格"${sheet.title}"吗？（管理员操作）`
   
   try {
-    await ElMessageBox.confirm(
-      `确定要删除表格"${sheet.title}"吗？此操作不可恢复。`,
-      '删除确认',
-      {
-        confirmButtonText: '删除',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
+    await ElMessageBox.confirm(confirmText, '确认删除', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
     
     await api.delete(`/spreadsheets/${sheet.id}`)
-    ElMessage.success('已删除')
-    fetchSpreadsheets()
-  } catch (error) {
+    ElMessage.success('删除成功')
+    await fetchSpreadsheets()
+  } catch (error: any) {
     if (error !== 'cancel') {
       ElMessage.error('删除失败')
     }
@@ -349,13 +499,46 @@ onMounted(() => {
 }
 
 .star-number {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
+  color: #888;
+  transition: color 0.3s;
+}
+
+.star-number-active {
   color: #f7ba2a;
+  text-shadow: 0 0 8px rgba(247, 186, 42, 0.5);
 }
 
 .star-button {
-  min-width: 100px;
+  transform: scale(1.17);
+}
+
+.description {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 8px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #666;
+  line-height: 1.5;
+  max-height: 60px;
+  overflow: hidden;
+}
+
+.description .el-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.description span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .card-actions {

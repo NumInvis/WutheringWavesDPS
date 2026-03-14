@@ -2,9 +2,10 @@
 Spreadsheet-related APIs.
 """
 import json
+import shutil
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
@@ -288,11 +289,17 @@ def create_spreadsheet(
 @router.put("/{spreadsheet_id}", response_model=SpreadsheetResponse)
 def update_spreadsheet(
     spreadsheet_id: str,
-    spreadsheet_data: SpreadsheetUpdate,
+    title: Optional[str] = None,
+    description: Optional[str] = None,
+    file: Optional[UploadFile] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Update spreadsheet (owner only)."""
+    from app.core.config import get_settings
+    import os
+    import uuid
+    
     spreadsheet = db.query(Spreadsheet).filter(Spreadsheet.id == spreadsheet_id).first()
     if not spreadsheet:
         raise HTTPException(
@@ -305,12 +312,29 @@ def update_spreadsheet(
             detail="无权修改此表格"
         )
 
-    update_data = spreadsheet_data.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        if field in ["tags", "character_tags", "extra_metadata"]:
-            setattr(spreadsheet, field, json.dumps(value) if value else None)
-        else:
-            setattr(spreadsheet, field, value)
+    if title:
+        spreadsheet.title = title
+    if description is not None:
+        spreadsheet.description = description
+    
+    if file:
+        settings = get_settings()
+        upload_dir = settings.upload_dir
+        if not os.path.isabs(upload_dir):
+            backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            upload_dir = os.path.join(backend_dir, upload_dir)
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        file_id = str(uuid.uuid4())
+        ext = os.path.splitext(file.filename or ".xlsx")[1]
+        dest_path = os.path.join(upload_dir, f"{file_id}{ext}")
+        
+        with open(dest_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        file_size = os.path.getsize(dest_path)
+        spreadsheet.file_url = f"/uploads/{file_id}{ext}"
+        spreadsheet.file_size = file_size
 
     db.commit()
     db.refresh(spreadsheet)

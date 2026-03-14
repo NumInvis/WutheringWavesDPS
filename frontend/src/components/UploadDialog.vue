@@ -13,6 +13,7 @@
           :auto-upload="false"
           :show-file-list="false"
           :on-change="handleFileChange"
+          :before-upload="beforeUpload"
           accept=".xlsx,.xls,.xlsm"
         >
           <el-icon class="el-icon--upload"><upload-filled /></el-icon>
@@ -21,7 +22,7 @@
           </div>
           <template #tip>
             <div class="el-upload__tip">
-              支持 .xlsx, .xls, .xlsm 格式
+              支持 .xlsx, .xls, .xlsm 格式，文件不超过 5MB
             </div>
           </template>
         </el-upload>
@@ -34,7 +35,7 @@
       </el-form-item>
 
       <el-form-item label="表格标题" prop="title">
-        <el-input v-model="form.title" placeholder="请输入表格标题" maxlength="200" show-word-limit />
+        <el-input v-model="form.title" placeholder="请输入表格标题（不超过15字）" maxlength="15" show-word-limit />
       </el-form-item>
 
       <el-form-item label="上传区域" prop="area">
@@ -44,12 +45,14 @@
         </el-radio-group>
       </el-form-item>
 
-      <el-form-item label="表格介绍">
+      <el-form-item label="表格介绍" prop="description">
         <el-input
           v-model="form.description"
           type="textarea"
           :rows="4"
-          placeholder="简单介绍一下这个表格（可选）"
+          placeholder="简单介绍一下这个表格（不超过100字）"
+          maxlength="100"
+          show-word-limit
         />
       </el-form-item>
     </el-form>
@@ -100,11 +103,20 @@ const rules: FormRules = {
   ],
   title: [
     { required: true, message: '请输入表格标题', trigger: 'blur' },
-    { min: 2, max: 200, message: '标题长度在 2 到 200 个字符', trigger: 'blur' }
+    { min: 2, max: 15, message: '标题长度在 2 到 15 个字符', trigger: 'blur' }
   ],
   area: [
     { required: true, message: '请选择上传区域', trigger: 'change' }
   ]
+}
+
+function beforeUpload(file: File) {
+  const maxSize = 5 * 1024 * 1024
+  if (file.size > maxSize) {
+    ElMessage.error('文件大小不能超过 5MB')
+    return false
+  }
+  return true
 }
 
 function handleFileChange(file: any) {

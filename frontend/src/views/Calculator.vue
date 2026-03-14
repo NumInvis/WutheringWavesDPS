@@ -25,7 +25,6 @@
         </div>
       </template>
       
-      <!-- 加载错误提示 -->
       <el-alert
         v-if="loadError"
         :title="loadError"
@@ -62,7 +61,6 @@
       </div>
       
       <div class="sheet-wrapper" style="height: 600px;">
-        <div v-if="!isReady && !loadError" class="loading-text">正在加载表格组件...</div>
         <div id="luckysheet" style="width: 100%; height: 100%;"></div>
       </div>
     </el-card>
@@ -100,10 +98,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted, watch, nextTick, computed } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '../stores/user'
+import api from '../api'
 
 interface UploadedFile {
   id: string
@@ -118,7 +117,6 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const fileInput = ref<HTMLInputElement>()
-const isReady = ref(false)
 const loadError = ref('')
 const importing = ref(false)
 const publishing = ref(false)
@@ -128,6 +126,7 @@ const previewFile = ref<UploadedFile | null>(null)
 const isPreviewMode = ref(false)
 const previewSheetId = ref('')
 const isEditable = ref(true)
+const shouldLoadTemplate = ref(false)
 
 const publishDialogVisible = ref(false)
 const publishFormRef = ref()
@@ -151,54 +150,9 @@ const currentFileName = computed(() => {
   return ''
 })
 
-// 等待Luckysheet加载
-function waitForLuckysheet(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    let attempts = 0
-    const maxAttempts = 50
-    
-    const check = () => {
-      attempts++
-      const luckysheet = (window as any).luckysheet
-      
-      if (luckysheet && typeof luckysheet.create === 'function') {
-        resolve()
-      } else if (attempts >= maxAttempts) {
-        reject(new Error('Luckysheet加载超时'))
-      } else {
-        setTimeout(check, 100)
-      }
-    }
-    check()
-  })
-}
-
-async function loadAllScripts() {
-  console.log('[loadAllScripts] Starting...')
-  loadError.value = ''
-  
-  try {
-    // 等待Luckysheet可用
-    await waitForLuckysheet()
-    
-    isReady.value = true
-    await nextTick()
-    initEmptySheet()
-    
-    if (isPreviewMode.value) {
-      loadPreviewSheet()
-    }
-    
-    console.log('[loadAllScripts] Complete!')
-  } catch (error) {
-    console.error('[loadAllScripts] Failed:', error)
-    loadError.value = '表格组件加载失败，请刷新页面重试'
-  }
-}
-
 function retryLoad() {
   loadError.value = ''
-  loadAllScripts()
+  init()
 }
 
 function destroySheet() {
@@ -208,16 +162,16 @@ function destroySheet() {
       luckysheet.destroy()
     }
   } catch (e) {
-    // 忽略
   }
 }
 
 function initEmptySheet() {
-  console.log('[initEmptySheet] Starting...')
+  console.log('[Calculator] 初始化空表格...')
   
   const luckysheet = (window as any).luckysheet
   if (!luckysheet || typeof luckysheet.create !== 'function') {
-    console.error('[initEmptySheet] luckysheet not available')
+    console.error('[Calculator] Luckysheet不可用')
+    loadError.value = '表格组件未加载，请刷新页面'
     return
   }
   
@@ -234,10 +188,6 @@ function initEmptySheet() {
       enableAddRow: true,
       enableAddCol: true,
       allowEdit: true,
-      showtoolbarConfig: {
-        check: false,
-        print: false
-      },
       data: [{
         name: 'Sheet1',
         color: '#409eff',
@@ -245,14 +195,13 @@ function initEmptySheet() {
         order: 0,
         celldata: [],
         row: 84,
-        column: 60,
-        defaultRowHeight: 19,
-        defaultColWidth: 73
+        column: 60
       }]
     })
-    console.log('[initEmptySheet] Success!')
+    console.log('[Calculator] 空表格初始化成功')
   } catch (e) {
-    console.error('[initEmptySheet] Error:', e)
+    console.error('[Calculator] 初始化失败:', e)
+    loadError.value = '表格初始化失败'
   }
 }
 
@@ -277,19 +226,22 @@ async function loadExcelParser() {
 }
 
 async function parseAndShowExcel(file: File, readOnly: boolean = false): Promise<void> {
+  console.log('[Calculator] 开始加载Excel:', file.name)
+  
   const LuckyExcel = (window as any).LuckyExcel
+  const luckysheet = (window as any).luckysheet
   
   if (!LuckyExcel) {
     throw new Error('Excel解析器未加载')
   }
-
-  console.log('[Excel Load] Starting:', file.name)
+  
+  if (!luckysheet?.create) {
+    throw new Error('表格组件未正确加载')
+  }
 
   const exportJson = await new Promise<any>((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error('Excel解析超时（10秒）'))
-    }, 10000)
-
+    const timeout = setTimeout(() => reject(new Error('Excel解析超时')), 10000)
+    
     try {
       LuckyExcel.transformExcelToLucky(file, (data: any) => {
         clearTimeout(timeout)
@@ -305,16 +257,10 @@ async function parseAndShowExcel(file: File, readOnly: boolean = false): Promise
     throw new Error('Excel文件为空或无法解析')
   }
 
-  console.log('[Excel Load] Sheets:', exportJson.sheets.length)
+  console.log('[Calculator] 解析到', exportJson.sheets.length, '个工作表')
 
   destroySheet()
 
-  const luckysheet = (window as any).luckysheet
-  if (!luckysheet?.create) {
-    throw new Error('表格组件未正确加载')
-  }
-
-  // 限制数据量
   const MAX_ROWS = 100
   const MAX_COLS = 100
   
@@ -336,9 +282,7 @@ async function parseAndShowExcel(file: File, readOnly: boolean = false): Promise
       celldata,
       row: Math.min(sheet.row || 84, MAX_ROWS),
       column: Math.min(sheet.column || 60, MAX_COLS),
-      config: sheet.config || {},
-      pivotTable: sheet.pivotTable || null,
-      isPivotTable: sheet.isPivotTable || false
+      config: sheet.config || {}
     }
   })
 
@@ -352,63 +296,63 @@ async function parseAndShowExcel(file: File, readOnly: boolean = false): Promise
     enableAddRow: !readOnly,
     enableAddCol: !readOnly,
     allowEdit: !readOnly,
-    showtoolbarConfig: {
-      check: false,
-      print: false
-    },
     data: sheetsData
   })
 
-  console.log('[Excel Load] Success!')
+  console.log('[Calculator] Excel加载成功')
 }
 
 function checkPreviewMode() {
-  const sheetId = route.query.sheet as string
+  const sheetId = route.query.preview as string
   if (sheetId) {
     isPreviewMode.value = true
     previewSheetId.value = sheetId
-    isEditable.value = route.query.edit !== 'false'
+    isEditable.value = route.query.editable === 'true'
+  }
+  
+  const loadTemplate = route.query.loadTemplate as string
+  if (loadTemplate === 'true') {
+    shouldLoadTemplate.value = true
   }
 }
 
-function checkTemplateLoad() {
-  const template = route.query.template as string
-  if (template === '1') {
-    loadTemplate()
-  }
-}
-
-async function loadTemplate() {
+async function loadTemplateSheet() {
+  console.log('[Calculator] 加载模板表格 #00000000')
+  
   try {
-    const response = await fetch('/api/spreadsheets/template')
-    if (response.ok) {
-      const data = await response.json()
-      if (data.file_url) {
-        const fileResponse = await fetch(data.file_url)
+    const templateResponse = await fetch('/api/spreadsheets/template')
+    if (templateResponse.ok) {
+      const templateData = await templateResponse.json()
+      if (templateData.id && templateData.file_url) {
+        const fileResponse = await fetch(templateData.file_url)
         const blob = await fileResponse.blob()
         const arrayBuffer = await blob.arrayBuffer()
-        const file = new File([blob], '拉表模板.xlsx', { type: blob.type })
-        
-        await loadExcelParser()
-        await parseAndShowExcel(file, false)
+        const file = new File([blob], templateData.title + '.xlsx', { type: blob.type })
         
         uploadedFiles.value.push({
           id: 'template-' + Date.now(),
-          name: '拉表模板.xlsx',
+          name: file.name,
           size: blob.size,
           content: arrayBuffer,
           file: file
         })
         currentFileIndex.value = uploadedFiles.value.length - 1
+        
+        await loadExcelParser()
+        await parseAndShowExcel(file, false)
+        console.log('[Calculator] 模板加载成功')
       }
     }
   } catch (error) {
-    console.error('加载模板失败:', error)
+    console.error('[Calculator] 加载模板失败:', error)
+    ElMessage.error('加载模板失败')
   }
 }
 
 async function loadPreviewSheet() {
   if (!previewSheetId.value) return
+  
+  console.log('[Calculator] 加载预览表格:', previewSheetId.value)
   
   try {
     const response = await fetch(`/api/spreadsheets/${previewSheetId.value}/download`, {
@@ -425,13 +369,58 @@ async function loadPreviewSheet() {
         const arrayBuffer = await blob.arrayBuffer()
         const file = new File([blob], data.filename || 'preview.xlsx', { type: blob.type })
         
+        previewFile.value = {
+          id: 'preview-' + Date.now(),
+          name: file.name,
+          size: blob.size,
+          content: arrayBuffer,
+          file: file
+        }
+        
         await loadExcelParser()
         await parseAndShowExcel(file, !isEditable.value)
       }
     }
   } catch (error) {
-    console.error('加载预览失败:', error)
+    console.error('[Calculator] 加载预览失败:', error)
     ElMessage.error('加载预览失败')
+  }
+}
+
+async function init() {
+  console.log('[Calculator] 开始初始化...')
+  loadError.value = ''
+  
+  try {
+    await new Promise<void>((resolve) => {
+      let attempts = 0
+      const check = () => {
+        attempts++
+        if ((window as any).luckysheet && typeof (window as any).luckysheet.create === 'function') {
+          resolve()
+        } else if (attempts < 50) {
+          setTimeout(check, 100)
+        } else {
+          resolve()
+        }
+      }
+      check()
+    })
+    
+    if (shouldLoadTemplate.value) {
+      await loadTemplateSheet()
+    } else {
+      initEmptySheet()
+      
+      if (isPreviewMode.value) {
+        loadPreviewSheet()
+      }
+    }
+    
+    console.log('[Calculator] 初始化完成')
+  } catch (error) {
+    console.error('[Calculator] 初始化失败:', error)
+    loadError.value = '初始化失败: ' + (error as Error).message
   }
 }
 
@@ -461,7 +450,7 @@ async function handleFile(event: Event) {
     
     ElMessage.success('导入成功')
   } catch (error) {
-    console.error('导入失败:', error)
+    console.error('[Calculator] 导入失败:', error)
     ElMessage.error('导入失败: ' + (error as Error).message)
   } finally {
     importing.value = false
@@ -492,7 +481,9 @@ function downloadFile(file: UploadedFile) {
 }
 
 function downloadCurrentSheet() {
-  if (currentFileIndex.value >= 0) {
+  if (isPreviewMode.value && previewFile.value) {
+    downloadFile(previewFile.value)
+  } else if (currentFileIndex.value >= 0) {
     downloadFile(uploadedFiles.value[currentFileIndex.value])
   }
 }
@@ -545,25 +536,18 @@ async function publishCurrentSheet() {
       formData.append('description', publishForm.description)
       formData.append('area', publishForm.area)
 
-      const response = await fetch('/api/spreadsheets', {
-        method: 'POST',
+      await api.post('/spreadsheets', formData, {
         headers: {
-          'Authorization': userStore.token ? `Bearer ${userStore.token}` : ''
-        },
-        body: formData
+          'Content-Type': 'multipart/form-data'
+        }
       })
-
-      if (response.ok) {
-        ElMessage.success('发布成功')
-        publishDialogVisible.value = false
-        router.push('/community')
-      } else {
-        const error = await response.json()
-        ElMessage.error(error.detail || '发布失败')
-      }
-    } catch (error) {
-      console.error('发布失败:', error)
-      ElMessage.error('发布失败')
+      
+      ElMessage.success('发布成功')
+      publishDialogVisible.value = false
+      router.push('/community')
+    } catch (error: any) {
+      console.error('[Calculator] 发布失败:', error)
+      ElMessage.error(error.response?.data?.detail || '发布失败')
     } finally {
       publishing.value = false
     }
@@ -578,22 +562,11 @@ function formatFileSize(size: number): string {
 
 onMounted(() => {
   checkPreviewMode()
-  checkTemplateLoad()
-  loadAllScripts()
+  init()
 })
 
 onUnmounted(() => {
   destroySheet()
-})
-
-watch(() => route.query.sheet, (newSheet) => {
-  if (newSheet) {
-    isPreviewMode.value = true
-    previewSheetId.value = newSheet as string
-    if (isReady.value) {
-      loadPreviewSheet()
-    }
-  }
 })
 </script>
 
@@ -660,20 +633,5 @@ watch(() => route.query.sheet, (newSheet) => {
   background: #fff;
   border-radius: 4px;
   overflow: hidden;
-  position: relative;
-}
-
-.loading-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #909399;
-  font-size: 14px;
-}
-
-.sheet-container {
-  width: 100%;
-  height: 600px;
 }
 </style>

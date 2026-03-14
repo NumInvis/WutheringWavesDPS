@@ -46,7 +46,12 @@
           </div>
         </el-header>
         <el-main class="app-main">
-          <router-view />
+          <router-view v-slot="{ Component, route }">
+            <keep-alive :include="['Calculator']">
+              <component :is="Component" :key="route.fullPath" v-if="route.meta.keepAlive !== false" />
+            </keep-alive>
+            <component :is="Component" v-if="route.meta.keepAlive === false" :key="route.fullPath" />
+          </router-view>
         </el-main>
         <el-footer class="app-footer">
           <p>WutheringWavesDPS Beta1.0</p>

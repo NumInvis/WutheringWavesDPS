@@ -233,34 +233,26 @@ async function loadAllScripts() {
   console.log('[loadAllScripts] Starting...')
   loadError.value = ''
   
-  // 检查是否已加载
-  if (scriptLoadState.luckysheet.loaded && (window as any).luckysheet?.create) {
-    console.log('[loadAllScripts] Already loaded')
+  // 脚本已在 index.html 中静态加载，直接检查是否可用
+  const luckysheet = (window as any).luckysheet
+  
+  if (luckysheet && typeof luckysheet.create === 'function') {
+    console.log('[loadAllScripts] Luckysheet already available')
     isReady.value = true
     await nextTick()
     initEmptySheet()
+    
+    if (isPreviewMode.value) {
+      loadPreviewSheet()
+    }
     return
   }
-
+  
+  // 如果不可用，等待一段时间再检查
+  console.log('[loadAllScripts] Waiting for luckysheet...')
   try {
-    // 并行加载CSS
-    await Promise.all([
-      loadCSS('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/css/pluginsCss.css'),
-      loadCSS('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/plugins.css'),
-      loadCSS('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/css/luckysheet.css'),
-      loadCSS('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/assets/iconfont/iconfont.css')
-    ])
-    
-    // 串行加载JS（保持依赖顺序）
-    await loadScriptWithRetry('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js')
-    await loadScriptWithRetry('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.js')
-    
-    // 等待初始化
     await waitForLuckysheet()
-    
-    scriptLoadState.luckysheet.loaded = true
     isReady.value = true
-    
     await nextTick()
     initEmptySheet()
     
@@ -271,8 +263,7 @@ async function loadAllScripts() {
     console.log('[loadAllScripts] Complete!')
   } catch (error) {
     console.error('[loadAllScripts] Failed:', error)
-    scriptLoadState.luckysheet.error = error as Error
-    loadError.value = '表格组件加载失败，请检查网络连接后点击"重新加载"'
+    loadError.value = '表格组件加载失败，请检查网络连接后刷新页面'
     ElMessage.error('表格组件加载失败')
   }
 }

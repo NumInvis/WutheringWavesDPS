@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luckysheet 加载测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.warning { background: #fff3cd; color: #856404; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+        #log {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .log-entry { margin: 2px 0; }
+        .log-time { color: #858585; }
+        .log-info { color: #4fc1ff; }
+        .log-error { color: #f48771; }
+        .log-success { color: #4ec9b0; }
+        .log-warn { color: #dcdcaa; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        #luckysheet {
+            width: 100%;
+            height: 400px;
+            border: 1px solid #ddd;
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Luckysheet 加载诊断测试</h1>
+
+    <div class="test-section">
+        <h2>1. 浏览器环境检测</h2>
+        <div id="browser-info"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. 网络连接测试</h2>
+        <button class="btn-primary" onclick="testNetwork()">测试CDN连接</button>
+        <div id="network-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. 脚本加载测试</h2>
+        <button class="btn-primary" onclick="testScriptLoading()">测试脚本加载</button>
+        <button class="btn-secondary" onclick="testWithRetry()">测试带重试加载</button>
+        <div id="script-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Luckysheet 初始化测试</h2>
+        <button class="btn-primary" onclick="testLuckysheetInit()">测试初始化</button>
+        <button class="btn-danger" onclick="destroySheet()">销毁表格</button>
+        <div id="init-result"></div>
+        <div id="luckysheet"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. Excel 解析测试</h2>
+        <input type="file" id="excelFile" accept=".xlsx,.xls,.xlsm" style="display:none">
+        <button class="btn-primary" onclick="document.getElementById('excelFile').click()">选择Excel文件</button>
+        <div id="excel-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>6. 日志输出</h2>
+        <button class="btn-secondary" onclick="clearLog()">清空日志</button>
+        <div id="log"></div>
+    </div>
+
+    <!-- Luckysheet CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/css/pluginsCss.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/plugins.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/css/luckysheet.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/assets/iconfont/iconfont.css">
+
+    <!-- Luckysheet JS -->
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luckyexcel@1.0.1/dist/luckyexcel.umd.js"></script>
+
+    <script>
+        // 日志系统
+        function log(message, type = 'info') {
+            const logEl = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            const className = `log-${type}`;
+            logEl.innerHTML += `<div class="log-entry"><span class="log-time">[${time}]</span> <span class="${className}">${message}</span></div>`;
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // 1. 浏览器环境检测
+        function checkBrowser() {
+            const info = {
+                'User Agent': navigator.userAgent,
+                'Platform': navigator.platform,
+                'Language': navigator.language,
+                'Online': navigator.onLine,
+                'Viewport': `${window.innerWidth}x${window.innerHeight}`,
+                'Screen': `${screen.width}x${screen.height}`,
+                'Cookie Enabled': navigator.cookieEnabled,
+                'JavaScript Enabled': true
+            };
+
+            let html = '<table>';
+            for (const [key, value] of Object.entries(info)) {
+                html += `<tr><th>${key}</th><td>${value}</td></tr>`;
+            }
+            html += '</table>';
+            document.getElementById('browser-info').innerHTML = html;
+            
+            log('浏览器环境检测完成', 'success');
+        }
+
+        // 2. 网络连接测试
+        async function testNetwork() {
+            const resultEl = document.getElementById('network-result');
+            resultEl.innerHTML = '<div class="status info">正在测试...</div>';
+            
+            const urls = [
+                'https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.js',
+                'https://cdn.jsdelivr.net/npm/luckyexcel@1.0.1/dist/luckyexcel.umd.js'
+            ];
+            
+            let html = '<table><tr><th>URL</th><th>状态</th><th>耗时</th></tr>';
+            
+            for (const url of urls) {
+                const start = performance.now();
+                try {
+                    const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
+                    const duration = (performance.now() - start).toFixed(2);
+                    html += `<tr><td>${url}</td><td class="status success">✓ 可访问</td><td>${duration}ms</td></tr>`;
+                    log(`网络测试通过: ${url}`, 'success');
+                } catch (e) {
+                    const duration = (performance.now() - start).toFixed(2);
+                    html += `<tr><td>${url}</td><td class="status error">✗ 失败</td><td>${duration}ms</td></tr>`;
+                    log(`网络测试失败: ${url} - ${e.message}`, 'error');
+                }
+            }
+            
+            html += '</table>';
+            resultEl.innerHTML = html;
+        }
+
+        // 3. 脚本加载测试
+        async function testScriptLoading() {
+            const resultEl = document.getElementById('script-result');
+            resultEl.innerHTML = '<div class="status info">正在测试...</div>';
+            
+            log('开始脚本加载测试...', 'info');
+            
+            const checks = [
+                { name: 'plugin.js', check: () => typeof window.plugin !== 'undefined' },
+                { name: 'luckysheet', check: () => typeof window.luckysheet !== 'undefined' },
+                { name: 'luckysheet.create', check: () => typeof window.luckysheet?.create === 'function' },
+                { name: 'luckysheet.destroy', check: () => typeof window.luckysheet?.destroy === 'function' },
+                { name: 'LuckyExcel', check: () => typeof window.LuckyExcel !== 'undefined' },
+                { name: 'LuckyExcel.transformExcelToLucky', check: () => typeof window.LuckyExcel?.transformExcelToLucky === 'function' }
+            ];
+            
+            let html = '<table><tr><th>组件</th><th>状态</th></tr>';
+            
+            for (const item of checks) {
+                const available = item.check();
+                const status = available ? 
+                    '<span class="status success">✓ 已加载</span>' : 
+                    '<span class="status error">✗ 未加载</span>';
+                html += `<tr><td>${item.name}</td><td>${status}</td></tr>`;
+                log(`${item.name}: ${available ? '已加载' : '未加载'}`, available ? 'success' : 'error');
+            }
+            
+            html += '</table>';
+            resultEl.innerHTML = html;
+        }
+
+        // 带重试的脚本加载测试
+        async function testWithRetry() {
+            log('测试带重试的脚本加载...', 'info');
+            
+            const maxRetries = 3;
+            for (let i = 0; i < maxRetries; i++) {
+                log(`尝试 ${i + 1}/${maxRetries}...`, 'info');
+                
+                if (window.luckysheet?.create) {
+                    log('脚本已加载！', 'success');
+                    return;
+                }
+                
+                if (i < maxRetries - 1) {
+                    const delay = 1000 * (i + 1);
+                    log(`等待 ${delay}ms 后重试...`, 'warn');
+                    await new Promise(r => setTimeout(r, delay));
+                }
+            }
+            
+            log('所有重试都失败了', 'error');
+        }
+
+        // 4. Luckysheet 初始化测试
+        function testLuckysheetInit() {
+            const resultEl = document.getElementById('init-result');
+            log('开始初始化 Luckysheet...', 'info');
+            
+            try {
+                // 检查容器
+                const container = document.getElementById('luckysheet');
+                if (!container) {
+                    throw new Error('找不到容器元素 #luckysheet');
+                }
+                
+                const rect = container.getBoundingClientRect();
+                log(`容器尺寸: ${rect.width}x${rect.height}`, 'info');
+                
+                if (rect.width === 0 || rect.height === 0) {
+                    throw new Error('容器尺寸为0，无法初始化');
+                }
+                
+                // 检查 luckysheet
+                if (!window.luckysheet) {
+                    throw new Error('luckysheet 对象不存在');
+                }
+                
+                if (typeof window.luckysheet.create !== 'function') {
+                    throw new Error('luckysheet.create 不是函数');
+                }
+                
+                // 销毁旧实例
+                if (window.luckysheet.destroy) {
+                    try {
+                        window.luckysheet.destroy();
+                        log('已销毁旧实例', 'info');
+                    } catch (e) {
+                        log('销毁旧实例时出错（可忽略）', 'warn');
+                    }
+                }
+                
+                // 创建新实例
+                log('调用 luckysheet.create()...', 'info');
+                window.luckysheet.create({
+                    container: 'luckysheet',
+                    title: '测试表格',
+                    lang: 'zh',
+                    showinfobar: false,
+                    showsheetbar: true,
+                    showstatisticBar: true,
+                    data: [{
+                        name: 'Sheet1',
+                        status: 1,
+                        order: 0,
+                        celldata: [
+                            { r: 0, c: 0, v: { v: 'Hello' } },
+                            { r: 0, c: 1, v: { v: 'World' } },
+                            { r: 1, c: 0, v: { v: '测试' } },
+                            { r: 1, c: 1, v: { v: '成功' } }
+                        ],
+                        row: 10,
+                        column: 10
+                    }]
+                });
+                
+                log('Luckysheet 初始化成功！', 'success');
+                resultEl.innerHTML = '<div class="status success">✓ 初始化成功</div>';
+                
+            } catch (error) {
+                log(`初始化失败: ${error.message}`, 'error');
+                resultEl.innerHTML = `<div class="status error">✗ 初始化失败: ${error.message}</div>`;
+            }
+        }
+
+        function destroySheet() {
+            try {
+                if (window.luckysheet?.destroy) {
+                    window.luckysheet.destroy();
+                    log('表格已销毁', 'info');
+                }
+            } catch (e) {
+                log(`销毁出错: ${e.message}`, 'error');
+            }
+        }
+
+        // 5. Excel 解析测试
+        document.getElementById('excelFile').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const resultEl = document.getElementById('excel-result');
+            log(`开始解析文件: ${file.name}`, 'info');
+            
+            try {
+                if (!window.LuckyExcel) {
+                    throw new Error('LuckyExcel 未加载');
+                }
+                
+                log('调用 LuckyExcel.transformExcelToLucky...', 'info');
+                
+                const exportJson = await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        reject(new Error('解析超时（10秒）'));
+                    }, 10000);
+                    
+                    try {
+                        window.LuckyExcel.transformExcelToLucky(file, function(data) {
+                            clearTimeout(timeout);
+                            resolve(data);
+                        });
+                    } catch (err) {
+                        clearTimeout(timeout);
+                        reject(err);
+                    }
+                });
+                
+                log(`解析完成！Sheets: ${exportJson.sheets?.length || 0}`, 'success');
+                
+                // 显示表格
+                if (exportJson.sheets && exportJson.sheets.length > 0) {
+                    destroySheet();
+                    
+                    setTimeout(() => {
+                        window.luckysheet.create({
+                            container: 'luckysheet',
+                            title: file.name,
+                            lang: 'zh',
+                            data: exportJson.sheets
+                        });
+                        log('Excel 已显示在表格中', 'success');
+                    }, 100);
+                }
+                
+                resultEl.innerHTML = `<div class="status success">✓ 解析成功: ${file.name}</div>`;
+                
+            } catch (error) {
+                log(`解析失败: ${error.message}`, 'error');
+                resultEl.innerHTML = `<div class="status error">✗ 解析失败: ${error.message}</div>`;
+            }
+        });
+
+        // 页面加载完成后自动检测
+        window.onload = function() {
+            log('页面加载完成', 'info');
+            checkBrowser();
+            
+            // 延迟检查脚本加载状态
+            setTimeout(() => {
+                testScriptLoading();
+            }, 1000);
+        };
+
+        // 错误捕获
+        window.onerror = function(msg, url, line, col, error) {
+            log(`全局错误: ${msg} (行 ${line})`, 'error');
+            return false;
+        };
+
+        window.addEventListener('unhandledrejection', function(event) {
+            log(`未处理的Promise错误: ${event.reason}`, 'error');
+        });
+    </script>
+</body>
+</html>

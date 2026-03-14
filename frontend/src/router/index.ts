@@ -39,6 +39,11 @@ const routes: RouteRecordRaw[] = [
     path: '/test-sheet',
     name: 'TestSheet',
     component: () => import('@/views/Calculator-simple.vue')
+  },
+  {
+    path: '/test',
+    name: 'Test',
+    component: () => import('@/views/Test.vue')
   }
 ]
 

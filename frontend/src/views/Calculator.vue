@@ -18,7 +18,7 @@
                 </el-button>
               </template>
             </template>
-            <el-button v-else type="primary" @click="importExcel" :loading="importing" :disabled="!isReady">
+            <el-button v-else type="primary" @click="importExcel" :loading="importing">
               导入Excel
             </el-button>
           </div>
@@ -63,7 +63,7 @@
       
       <div class="sheet-wrapper">
         <div v-if="!isReady && !loadError" class="loading-text">正在加载表格组件...</div>
-        <div ref="sheetContainer" id="luckysheet" class="sheet-container"></div>
+        <div id="luckysheet" class="sheet-container"></div>
       </div>
     </el-card>
 
@@ -104,7 +104,6 @@ import { ref, reactive, onMounted, onUnmounted, watch, nextTick, computed } from
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '../stores/user'
-import * as XLSX from 'xlsx'
 
 interface UploadedFile {
   id: string
@@ -119,7 +118,6 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const fileInput = ref<HTMLInputElement>()
-const sheetContainer = ref<HTMLElement>()
 const isReady = ref(false)
 const loadError = ref('')
 const importing = ref(false)
@@ -153,75 +151,20 @@ const currentFileName = computed(() => {
   return ''
 })
 
-// 脚本加载状态跟踪
-const scriptLoadState = {
-  luckysheet: { loaded: false, error: null as Error | null },
-  luckyexcel: { loaded: false, error: null as Error | null }
-}
-
-// 带重试的脚本加载
-async function loadScriptWithRetry(src: string, maxRetries = 3): Promise<void> {
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      await loadScript(src)
-      console.log(`[Script Load] Success: ${src}`)
-      return
-    } catch (e) {
-      console.error(`[Script Load] Attempt ${i + 1} failed: ${src}`, e)
-      if (i === maxRetries - 1) throw e
-      await new Promise(r => setTimeout(r, 1000 * (i + 1)))
-    }
-  }
-}
-
-async function loadScript(src: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) {
-      console.log(`[Script Load] Already exists: ${src}`)
-      resolve()
-      return
-    }
-    const script = document.createElement('script')
-    script.src = src
-    script.async = false  // 保持顺序执行
-    script.onload = () => resolve()
-    script.onerror = () => reject(new Error(`Failed to load: ${src}`))
-    document.head.appendChild(script)
-  })
-}
-
-async function loadCSS(href: string): Promise<void> {
-  return new Promise((resolve) => {
-    if (document.querySelector(`link[href="${href}"]`)) {
-      resolve()
-      return
-    }
-    const link = document.createElement('link')
-    link.rel = 'stylesheet'
-    link.href = href
-    link.onload = () => resolve()
-    link.onerror = () => {
-      console.warn(`[CSS Load] Failed: ${href}`)
-      resolve() // CSS失败不阻止执行
-    }
-    document.head.appendChild(link)
-  })
-}
-
+// 等待Luckysheet加载
 function waitForLuckysheet(): Promise<void> {
   return new Promise((resolve, reject) => {
     let attempts = 0
-    const maxAttempts = 100
+    const maxAttempts = 50
     
     const check = () => {
       attempts++
       const luckysheet = (window as any).luckysheet
       
       if (luckysheet && typeof luckysheet.create === 'function') {
-        console.log('[waitForLuckysheet] Success!')
         resolve()
       } else if (attempts >= maxAttempts) {
-        reject(new Error(`Luckysheet加载超时，已尝试${maxAttempts}次`))
+        reject(new Error('Luckysheet加载超时'))
       } else {
         setTimeout(check, 100)
       }
@@ -234,25 +177,10 @@ async function loadAllScripts() {
   console.log('[loadAllScripts] Starting...')
   loadError.value = ''
   
-  // 脚本已在 index.html 中静态加载，直接检查是否可用
-  const luckysheet = (window as any).luckysheet
-  
-  if (luckysheet && typeof luckysheet.create === 'function') {
-    console.log('[loadAllScripts] Luckysheet already available')
-    isReady.value = true
-    await nextTick()
-    initEmptySheet()
-    
-    if (isPreviewMode.value) {
-      loadPreviewSheet()
-    }
-    return
-  }
-  
-  // 如果不可用，等待一段时间再检查
-  console.log('[loadAllScripts] Waiting for luckysheet...')
   try {
+    // 等待Luckysheet可用
     await waitForLuckysheet()
+    
     isReady.value = true
     await nextTick()
     initEmptySheet()
@@ -264,14 +192,12 @@ async function loadAllScripts() {
     console.log('[loadAllScripts] Complete!')
   } catch (error) {
     console.error('[loadAllScripts] Failed:', error)
-    loadError.value = '表格组件加载失败，请检查网络连接后刷新页面'
-    ElMessage.error('表格组件加载失败')
+    loadError.value = '表格组件加载失败，请刷新页面重试'
   }
 }
 
 function retryLoad() {
-  scriptLoadState.luckysheet.loaded = false
-  scriptLoadState.luckysheet.error = null
+  loadError.value = ''
   loadAllScripts()
 }
 
@@ -282,7 +208,7 @@ function destroySheet() {
       luckysheet.destroy()
     }
   } catch (e) {
-    // 忽略销毁错误
+    // 忽略
   }
 }
 
@@ -295,7 +221,6 @@ function initEmptySheet() {
     return
   }
   
-  // 确保DOM已准备好
   nextTick(() => {
     const container = document.getElementById('luckysheet')
     if (!container) {
@@ -303,7 +228,6 @@ function initEmptySheet() {
       return
     }
     
-    // 检查容器尺寸
     const rect = container.getBoundingClientRect()
     console.log('[initEmptySheet] Container size:', rect.width, 'x', rect.height)
     
@@ -313,10 +237,8 @@ function initEmptySheet() {
       return
     }
     
-    // 销毁旧实例
     destroySheet()
     
-    // 创建新实例
     try {
       luckysheet.create({
         container: 'luckysheet',
@@ -358,7 +280,6 @@ async function loadExcelParser() {
     const script = document.createElement('script')
     script.src = 'https://cdn.jsdelivr.net/npm/luckyexcel@1.0.1/dist/luckyexcel.umd.js'
     script.onload = () => {
-      // 等待LuckyExcel初始化
       setTimeout(() => {
         if ((window as any).LuckyExcel) {
           resolve()
@@ -458,7 +379,6 @@ async function parseAndShowExcel(file: File, readOnly: boolean = false): Promise
   console.log('[Excel Load] Success!')
 }
 
-// 其他函数保持不变...
 function checkPreviewMode() {
   const sheetId = route.query.sheet as string
   if (sheetId) {

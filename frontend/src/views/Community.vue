@@ -50,12 +50,21 @@
             <div class="card-body">
               <div class="meta">
                 <span><el-icon><User /></el-icon> {{ sheet.owner_display_name || sheet.owner_username }}</span>
-                <span class="star-count" @click="toggleStar(sheet)">
-                  <el-icon :color="sheet.has_starred ? '#f7ba2a' : '#888'"><Star /></el-icon> 
-                  {{ sheet.star_count || 0 }}
-                </span>
-                <span><el-icon><View /></el-icon> {{ sheet.view_count || 0 }}</span>
+                <span class="view-count"><el-icon><View /></el-icon> {{ sheet.view_count || 0 }}</span>
               </div>
+            </div>
+            
+            <div class="star-section">
+              <span class="star-number">{{ sheet.star_count || 0 }} 赞</span>
+              <el-button 
+                size="large" 
+                :type="sheet.has_starred ? 'warning' : 'default'"
+                @click="toggleStar(sheet)"
+                class="star-button"
+              >
+                <el-icon><Star /></el-icon>
+                {{ sheet.has_starred ? '已赞' : '点赞' }}
+              </el-button>
             </div>
             
             <div class="card-actions">
@@ -327,8 +336,28 @@ onMounted(() => {
   cursor: pointer;
 }
 
-.meta .star-count:hover {
+.meta .view-count:hover {
+  color: #409eff;
+}
+
+.star-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  margin-bottom: 12px;
+  border-top: 1px solid #2a2a3e;
+  border-bottom: 1px solid #2a2a3e;
+}
+
+.star-number {
+  font-size: 18px;
+  font-weight: 600;
   color: #f7ba2a;
+}
+
+.star-button {
+  min-width: 100px;
 }
 
 .card-actions {

@@ -57,3 +57,9 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     """令牌数据模式"""
     user_id: Optional[str] = None
+
+
+class PasswordChange(BaseModel):
+    """密码修改模式"""
+    old_password: str = Field(..., min_length=6, max_length=100)
+    new_password: str = Field(..., min_length=6, max_length=100)

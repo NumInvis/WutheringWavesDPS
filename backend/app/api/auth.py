@@ -25,7 +25,8 @@ from app.schemas.user import (
     UserUpdate,
     UserResponse,
     Token,
-    TokenData
+    TokenData,
+    PasswordChange
 )
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
@@ -298,3 +299,22 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 def get_me(current_user: User = Depends(get_current_active_user)):
     """获取当前用户信息。"""
     return current_user
+
+
+@router.post("/change-password")
+def change_password(
+    password_data: PasswordChange,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """修改当前用户密码。"""
+    if not verify_password(password_data.old_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="原密码错误"
+        )
+    
+    current_user.password_hash = get_password_hash(password_data.new_password)
+    db.commit()
+    
+    return {"message": "密码已修改"}

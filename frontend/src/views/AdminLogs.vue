@@ -49,10 +49,12 @@
             :class="log.level"
           >
             <div class="log-header">
-              <span class="log-time">{{ formatTime(log.timestamp) }}</span>
+              <span class="log-time">{{ log.datetime || formatTime(log.timestamp) }}</span>
               <el-tag :type="getLogType(log.level || 'info')" size="small">
                 {{ (log.level || 'info').toUpperCase() }}
               </el-tag>
+              <span v-if="log.user" class="log-user">用户：{{ log.user }}</span>
+              <span v-if="log.ip" class="log-ip">IP: {{ log.ip }}</span>
             </div>
             <div class="log-message">{{ log.message }}</div>
             <div v-if="log.details" class="log-details">
@@ -81,12 +83,16 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Delete, Search } from '@element-plus/icons-vue'
 import { useUserStore } from '../stores/user'
+import api from '../api'
 
 interface LogEntry {
   timestamp: number
+  datetime: string
   level: 'info' | 'warn' | 'error' | 'debug'
   message: string
   details?: any
+  user?: string
+  ip?: string
 }
 
 const router = useRouter()
@@ -110,10 +116,10 @@ onMounted(() => {
   
   fetchLogs()
   
-  // 每5秒刷新一次日志（不使用实时订阅避免递归更新）
+  // 每 3 秒刷新一次日志
   refreshInterval.value = window.setInterval(() => {
-    loadLocalLogs()
-  }, 5000)
+    fetchLogs()
+  }, 3000)
 })
 
 onUnmounted(() => {
@@ -125,24 +131,17 @@ onUnmounted(() => {
 async function fetchLogs() {
   loading.value = true
   try {
-    // 从本地存储加载日志
-    loadLocalLogs()
+    const data = await api.get('/admin/logs', {
+      params: {
+        level: logLevel.value !== 'all' ? logLevel.value : undefined,
+        limit: 200
+      }
+    })
+    logs.value = data.logs || []
   } catch (error) {
     console.error('获取日志失败:', error)
   } finally {
     loading.value = false
-  }
-}
-
-function loadLocalLogs() {
-  // 从localStorage加载本地日志
-  const localLogs = localStorage.getItem('app_logs')
-  if (localLogs) {
-    try {
-      logs.value = JSON.parse(localLogs)
-    } catch (e) {
-      logs.value = []
-    }
   }
 }
 
@@ -159,7 +158,9 @@ const filteredLogs = computed(() => {
     const keyword = searchKeyword.value.toLowerCase()
     result = result.filter(log => 
       log.message.toLowerCase().includes(keyword) ||
-      JSON.stringify(log.details).toLowerCase().includes(keyword)
+      JSON.stringify(log.details || {}).toLowerCase().includes(keyword) ||
+      (log.user || '').toLowerCase().includes(keyword) ||
+      (log.ip || '').toLowerCase().includes(keyword)
     )
   }
 

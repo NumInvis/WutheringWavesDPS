@@ -7,6 +7,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import String
 
 from app.core.database import get_db
 from app.models.user import User
@@ -188,7 +189,9 @@ def list_spreadsheets(
     if search:
         query = query.filter(
             Spreadsheet.title.contains(search) |
-            Spreadsheet.description.contains(search)
+            Spreadsheet.description.contains(search) |
+            Spreadsheet.user.has(username=search) |
+            (Spreadsheet.sheet_number != None) & (Spreadsheet.sheet_number.cast(String).contains(search))
         )
 
     if featured is None:

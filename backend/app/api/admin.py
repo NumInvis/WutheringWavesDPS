@@ -16,7 +16,52 @@ router = APIRouter(prefix="/api/admin", tags=["管理员"])
 
 # 内存中存储日志（生产环境应该使用文件或数据库）
 _logs: List[Dict[str, Any]] = []
-_max_logs = 2000
+_max_logs = 5000
+
+
+def add_log(level: str, message: str, details: Any = None, user: Optional[str] = None, ip: Optional[str] = None):
+    """添加日志"""
+    global _logs
+    log_entry = {
+        "timestamp": int(time.time() * 1000),
+        "datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "level": level,
+        "message": message,
+        "details": details,
+        "user": user,
+        "ip": ip
+    }
+    _logs.insert(0, log_entry)  # 新日志插入到开头
+    # 限制日志数量和保存时间（7 天）
+    _cleanup_old_logs()
+    if len(_logs) > _max_logs:
+        _logs = _logs[:_max_logs]
+
+
+def _cleanup_old_logs():
+    """清理超过 7 天的日志"""
+    global _logs
+    seven_days_ago = int((time.time() - 7 * 24 * 60 * 60) * 1000)
+    _logs = [log for log in _logs if log.get("timestamp", 0) > seven_days_ago]
+
+
+# 初始化一些示例日志
+def _init_sample_logs():
+    """初始化示例日志"""
+    if len(_logs) == 0:
+        add_log("INFO", "系统启动", {"version": "Beta1.0"})
+        add_log("INFO", "日志系统初始化完成")
+        add_log("WARN", "检测到网络波动", {"retry_count": 3})
+        add_log("ERROR", "测试错误日志", {"test": True})
+        add_log("INFO", "用户登录成功", {"user": "admin"})
+        add_log("INFO", "表格上传", {"user": "admin", "title": "测试表格"})
+        add_log("WARN", "API 请求超时", {"endpoint": "/api/spreadsheets", "duration": "5s"})
+        add_log("INFO", "密码修改", {"user": "admin"})
+        add_log("ERROR", "数据库连接失败", {"retry": True, "error": "timeout"})
+        add_log("INFO", "系统运行正常")
+
+
+_init_sample_logs()
 
 
 def add_log(level: str, message: str, details: Any = None, user: Optional[str] = None, ip: Optional[str] = None):

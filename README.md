@@ -4,11 +4,15 @@
 
 ## 功能特性
 
-- Excel在线编辑器（基于Luckysheet）
+- Excel 在线编辑器（基于 Luckysheet）
 - 社区分享表格
 - 管理员置顶/删除功能
 - 表格唯一编号
 - 作者可编辑自己的表格
+- 用户修改密码功能
+- 按作者/编号搜索表格
+- 实时日志监控系统
+- 工作区状态保持（keep-alive）
 
 ## 快速开始
 
@@ -30,8 +34,10 @@ npm run dev
 
 ## 默认账号
 
-- 管理员: admin / admin
-- 测试用户: person / person
+- 管理员: admin / admin124
+- 测试用户：person / person
+
+**注意**: 首次登录后请立即修改密码！
 
 ## 技术栈
 

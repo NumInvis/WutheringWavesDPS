@@ -6,7 +6,8 @@ Port: 14876
 import os
 import uvicorn
 
-from fastapi import FastAPI
+import time
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -22,6 +23,26 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """记录所有 HTTP 请求"""
+    from app.api.admin import add_log
+    
+    start_time = time.time()
+    response = await call_next(request)
+    duration = time.time() - start_time
+    
+    # 只记录重要请求
+    if not request.url.path.startswith("/uploads/") and duration > 0.1:
+        add_log(
+            "INFO",
+            f"{request.method} {request.url.path}",
+            {"duration": f"{duration:.2f}s", "status": response.status_code}
+        )
+    
+    return response
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -57,6 +78,10 @@ app.include_router(admin.router)
 @app.on_event("startup")
 async def startup_event():
     """Startup hook."""
+    from app.api.admin import add_log
+    
+    add_log("INFO", "系统启动", {"version": "Beta1.0", "port": settings.app_port})
+    
     db = SessionLocal()
     try:
         from app.api.categories import init_categories
@@ -65,6 +90,9 @@ async def startup_event():
         init_categories(db)
         init_admin_user(db)
         init_template_spreadsheet(db)
+        add_log("INFO", "数据库初始化完成")
+    except Exception as e:
+        add_log("ERROR", "数据库初始化失败", {"error": str(e)})
     finally:
         db.close()
 

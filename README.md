@@ -34,7 +34,7 @@ npm run dev
 
 ## 默认账号
 
-- 管理员: admin / admin124
+- 管理员：admin / admin123
 - 测试用户：person / person
 
 **注意**: 首次登录后请立即修改密码！

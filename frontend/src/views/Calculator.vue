@@ -61,9 +61,9 @@
         </div>
       </div>
       
-      <div class="sheet-wrapper">
+      <div class="sheet-wrapper" style="height: 600px;">
         <div v-if="!isReady && !loadError" class="loading-text">正在加载表格组件...</div>
-        <div id="luckysheet" class="sheet-container"></div>
+        <div id="luckysheet" style="width: 100%; height: 100%;"></div>
       </div>
     </el-card>
 
@@ -221,56 +221,39 @@ function initEmptySheet() {
     return
   }
   
-  nextTick(() => {
-    const container = document.getElementById('luckysheet')
-    if (!container) {
-      console.error('[initEmptySheet] Container not found')
-      return
-    }
-    
-    const rect = container.getBoundingClientRect()
-    console.log('[initEmptySheet] Container size:', rect.width, 'x', rect.height)
-    
-    if (rect.width === 0 || rect.height === 0) {
-      console.warn('[initEmptySheet] Container has zero size, retrying...')
-      setTimeout(initEmptySheet, 200)
-      return
-    }
-    
-    destroySheet()
-    
-    try {
-      luckysheet.create({
-        container: 'luckysheet',
-        title: '工作区',
-        lang: 'zh',
-        showinfobar: false,
-        showsheetbar: true,
-        showstatisticBar: true,
-        enableAddRow: true,
-        enableAddCol: true,
-        allowEdit: true,
-        showtoolbarConfig: {
-          check: false,
-          print: false
-        },
-        data: [{
-          name: 'Sheet1',
-          color: '#409eff',
-          status: 1,
-          order: 0,
-          celldata: [],
-          row: 84,
-          column: 60,
-          defaultRowHeight: 19,
-          defaultColWidth: 73
-        }]
-      })
-      console.log('[initEmptySheet] Success!')
-    } catch (e) {
-      console.error('[initEmptySheet] Error:', e)
-    }
-  })
+  destroySheet()
+  
+  try {
+    luckysheet.create({
+      container: 'luckysheet',
+      title: '工作区',
+      lang: 'zh',
+      showinfobar: false,
+      showsheetbar: true,
+      showstatisticBar: true,
+      enableAddRow: true,
+      enableAddCol: true,
+      allowEdit: true,
+      showtoolbarConfig: {
+        check: false,
+        print: false
+      },
+      data: [{
+        name: 'Sheet1',
+        color: '#409eff',
+        status: 1,
+        order: 0,
+        celldata: [],
+        row: 84,
+        column: 60,
+        defaultRowHeight: 19,
+        defaultColWidth: 73
+      }]
+    })
+    console.log('[initEmptySheet] Success!')
+  } catch (e) {
+    console.error('[initEmptySheet] Error:', e)
+  }
 }
 
 async function loadExcelParser() {

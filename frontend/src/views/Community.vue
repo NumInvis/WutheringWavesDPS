@@ -55,15 +55,13 @@
             </div>
             
             <div class="star-section">
-              <span class="star-number">{{ sheet.star_count || 0 }} 赞</span>
+              <span class="star-number">★ {{ sheet.star_count || 0 }}</span>
               <el-button 
-                size="large" 
+                size="small"
                 :type="sheet.has_starred ? 'warning' : 'default'"
                 @click="toggleStar(sheet)"
-                class="star-button"
               >
                 <el-icon><Star /></el-icon>
-                {{ sheet.has_starred ? '已赞' : '点赞' }}
               </el-button>
             </div>
             

@@ -496,7 +496,7 @@ async function loadTemplateSheet() {
     }
   } catch (error) {
     console.error('[Calculator] 加载模板失败:', error)
-    ElMessage.error('加载模板失败')
+    ElMessage.error({ message: { message: '加载模板失败', duration: 3000 }, duration: 3000 })
   }
 }
 
@@ -540,7 +540,7 @@ async function loadPreviewSheet() {
     }
   } catch (error) {
     console.error('[Calculator] 加载预览失败:', error)
-    ElMessage.error('加载预览失败: ' + (error as Error).message)
+    ElMessage.error({ message: '加载预览失败: ' + (error as Error).message, duration: 3000 })
   }
 }
 
@@ -603,10 +603,10 @@ async function handleFile(event: Event) {
     })
     currentFileIndex.value = uploadedFiles.value.length - 1
     
-    ElMessage.success('导入成功')
+    ElMessage.success({ message: '导入成功', duration: 3000 })
   } catch (error) {
     console.error('[Calculator] 导入失败:', error)
-    ElMessage.error('导入失败: ' + (error as Error).message)
+    ElMessage.error({ message: '导入失败: ' + (error as Error).message, duration: 3000 })
   } finally {
     importing.value = false
     if (fileInput.value) {
@@ -664,7 +664,7 @@ function exitCurrentSheet() {
 
 function openPublishDialog() {
   if (currentFileIndex.value < 0) {
-    ElMessage.warning('请先导入表格')
+    ElMessage.warning({ message: { message: '请先导入表格', duration: 3000 }, duration: 3000 })
     return
   }
   publishForm.title = uploadedFiles.value[currentFileIndex.value].name.replace(/\.xlsx?$/i, '')
@@ -679,7 +679,7 @@ async function publishCurrentSheet() {
     
     const currentFile = uploadedFiles.value[currentFileIndex.value]
     if (!currentFile) {
-      ElMessage.error('没有找到要发布的文件')
+      ElMessage.error({ message: { message: '没有找到要发布的文件', duration: 3000 }, duration: 3000 })
       return
     }
 
@@ -697,12 +697,12 @@ async function publishCurrentSheet() {
         }
       })
       
-      ElMessage.success('发布成功')
+      ElMessage.success({ message: { message: '发布成功', duration: 3000 }, duration: 3000 })
       publishDialogVisible.value = false
       router.push('/community')
     } catch (error: any) {
       console.error('[Calculator] 发布失败:', error)
-      ElMessage.error(error.response?.data?.detail || '发布失败')
+      ElMessage.error({ message: error.response?.data?.detail || '发布失败', duration: 3000 })
     } finally {
       publishing.value = false
     }

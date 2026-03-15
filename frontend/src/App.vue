@@ -248,7 +248,7 @@ async function handleUpdateProfile() {
     })
     editDialogVisible.value = false
   } catch (error) {
-    ElMessage.error('更新失败')
+    ElMessage.error({ message: '更新失败', duration: 3000 })
   } finally {
     editLoading.value = false
   }
@@ -278,7 +278,7 @@ async function handleChangePassword() {
         }
       })
       console.log('密码修改成功:', response)
-      ElMessage.success('密码已修改，请重新登录')
+      ElMessage.success({ message: '密码已修改，请重新登录', duration: 3000 })
       passwordDialogVisible.value = false
       userStore.logout()
       setTimeout(() => {
@@ -286,7 +286,7 @@ async function handleChangePassword() {
       }, 1000)
     } catch (error: any) {
       console.error('修改密码失败:', error)
-      ElMessage.error(error.response?.data?.detail || '修改密码失败')
+      ElMessage.error({ message: error.response?.data?.detail || '修改密码失败', duration: 3000 })
     } finally {
       passwordLoading.value = false
     }
@@ -303,7 +303,7 @@ const handleCommand = (command: string) => {
       break
     case 'logout':
       userStore.logout()
-      ElMessage.success('已退出登录')
+      ElMessage.success({ message: '已退出登录', duration: 3000 })
       window.location.href = '/'
       break
   }

@@ -142,7 +142,7 @@ async function handleRegister() {
         })
         
         if (success) {
-          ElMessage.success('注册成功')
+          ElMessage.success({ message: '注册成功', duration: 3000 })
           router.push('/')
         }
       } finally {

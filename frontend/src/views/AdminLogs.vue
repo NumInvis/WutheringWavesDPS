@@ -301,7 +301,7 @@ const stats = ref<Stats>({
 
 onMounted(() => {
   if (!userStore.user?.is_admin) {
-    ElMessage.error('需要管理员权限')
+    ElMessage.error({ message: { message: '需要管理员权限', duration: 3000 }, duration: 3000 })
     router.push('/')
     return
   }
@@ -371,12 +371,12 @@ async function loadAnnouncements() {
     } else {
       console.warn('公告API返回非数组数据:', response.data)
       announcements.value = []
-      ElMessage.warning('公告数据加载异常')
+      ElMessage.warning({ message: { message: '公告数据加载异常', duration: 3000 }, duration: 3000 })
     }
   } catch (error) {
     console.error('加载公告失败:', error)
     announcements.value = []
-    ElMessage.error('加载公告列表失败')
+    ElMessage.error({ message: { message: '加载公告列表失败', duration: 3000 }, duration: 3000 })
   }
 }
 
@@ -411,7 +411,7 @@ async function loadVisitStats() {
 
 async function addAnnouncement() {
   if (!newAnnouncementForm.value.title || !newAnnouncementForm.value.content) {
-    ElMessage.error('请填写完整的公告信息')
+    ElMessage.error({ message: { message: '请填写完整的公告信息', duration: 3000 }, duration: 3000 })
     return
   }
   
@@ -427,13 +427,13 @@ async function addAnnouncement() {
       }
     )
     
-    ElMessage.success('公告发布成功！')
+    ElMessage.success({ message: { message: '公告发布成功！', duration: 3000 }, duration: 3000 })
     showAddAnnouncement.value = false
     newAnnouncementForm.value = { title: '', content: '', is_active: true, is_pinned: false }
     loadAnnouncements()
   } catch (error: any) {
     console.error('发布公告失败:', error)
-    ElMessage.error(error.response?.data?.detail || '发布公告失败')
+    ElMessage.error({ message: error.response?.data?.detail || '发布公告失败', duration: 3000 })
   } finally {
     addAnnouncementLoading.value = false
   }
@@ -451,11 +451,11 @@ async function activateAnnouncement(announcement: Announcement) {
       }
     )
     
-    ElMessage.success('公告已激活！')
+    ElMessage.success({ message: { message: '公告已激活！', duration: 3000 }, duration: 3000 })
     loadAnnouncements()
   } catch (error: any) {
     console.error('激活公告失败:', error)
-    ElMessage.error(error.response?.data?.detail || '激活公告失败')
+    ElMessage.error({ message: error.response?.data?.detail || '激活公告失败', duration: 3000 })
   }
 }
 
@@ -471,11 +471,11 @@ async function togglePinAnnouncement(announcement: Announcement) {
       }
     )
     
-    ElMessage.success(announcement.is_pinned ? '已取消置顶' : '已置顶')
+    ElMessage.success({ message: announcement.is_pinned ? '已取消置顶' : '已置顶', duration: 3000 })
     loadAnnouncements()
   } catch (error: any) {
     console.error('操作失败:', error)
-    ElMessage.error(error.response?.data?.detail || '操作失败')
+    ElMessage.error({ message: error.response?.data?.detail || '操作失败', duration: 3000 })
   }
 }
 
@@ -496,12 +496,12 @@ async function deleteAnnouncement(id: string) {
       }
     )
     
-    ElMessage.success('公告已删除！')
+    ElMessage.success({ message: { message: '公告已删除！', duration: 3000 }, duration: 3000 })
     loadAnnouncements()
   } catch (error: any) {
     if (error !== 'cancel') {
       console.error('删除公告失败:', error)
-      ElMessage.error(error.response?.data?.detail || '删除公告失败')
+      ElMessage.error({ message: error.response?.data?.detail || '删除公告失败', duration: 3000 })
     }
   }
 }

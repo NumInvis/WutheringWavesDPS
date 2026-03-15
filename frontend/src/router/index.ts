@@ -84,12 +84,12 @@ router.beforeEach(async (to, _from, next) => {
   // 1. 管理员权限检查（最高优先级）
   if (to.meta.requiresAdmin) {
     if (!userStore.isAuthenticated) {
-      ElMessage.warning('请先登录')
+      ElMessage.warning({ message: '请先登录', duration: 3000 })
       next({ path: '/login', query: { redirect: to.fullPath } })
       return
     }
     if (!userStore.user?.is_admin) {
-      ElMessage.error('需要管理员权限')
+      ElMessage.error({ message: '需要管理员权限', duration: 3000 })
       next('/')
       return
     }
@@ -98,7 +98,7 @@ router.beforeEach(async (to, _from, next) => {
   // 2. 需要登录的路由
   if (to.meta.requiresAuth) {
     if (!userStore.isAuthenticated) {
-      ElMessage.warning('请先登录后访问')
+      ElMessage.warning({ message: '请先登录后访问', duration: 3000 })
       next({ path: '/login', query: { redirect: to.fullPath } })
       return
     }
@@ -106,7 +106,7 @@ router.beforeEach(async (to, _from, next) => {
   
   // 3. 游客专属路由（登录后不能访问）
   if (to.meta.guest && userStore.isAuthenticated) {
-    ElMessage.info('您已登录，无需再次访问')
+    ElMessage.info({ message: '您已登录，无需再次访问', duration: 3000 })
     next('/')
     return
   }
@@ -118,7 +118,7 @@ router.beforeEach(async (to, _from, next) => {
 // 路由错误处理
 router.onError((error) => {
   console.error('Router error:', error)
-  ElMessage.error('页面加载失败，请刷新重试')
+  ElMessage.error({ message: '页面加载失败，请刷新重试', duration: 3000 })
 })
 
 export default router

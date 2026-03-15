@@ -11,7 +11,7 @@
               <router-link to="/" class="nav-link">首页</router-link>
               <router-link to="/calculator" class="nav-link">工作区</router-link>
               <router-link to="/community" class="nav-link">社区</router-link>
-              <el-dropdown trigger="click" class="nav-link more-dropdown">
+              <el-dropdown trigger="hover" class="nav-link more-dropdown">
                 <span class="more-label">
                   更多
                   <el-icon><ArrowDown /></el-icon>
@@ -505,23 +505,25 @@ html, body, #app {
 
 <style>
 .more-dropdown .el-dropdown-menu {
-  background: rgba(26, 26, 46, 0.85) !important;
+  background: rgba(20, 20, 35, 0.95) !important;
   backdrop-filter: blur(18px) !important;
   -webkit-backdrop-filter: blur(18px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
   border-radius: 12px !important;
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6) !important;
+  padding: 8px !important;
 }
 
 .more-dropdown .el-dropdown-menu__item {
-  color: #e2e8f0 !important;
-  padding: 10px 16px !important;
-  margin: 4px 8px !important;
+  color: #ffffff !important;
+  padding: 12px 16px !important;
+  margin: 4px !important;
   border-radius: 8px !important;
+  font-weight: 500 !important;
 }
 
 .more-dropdown .el-dropdown-menu__item:hover {
-  background: rgba(102, 126, 234, 0.2) !important;
-  color: #fff !important;
+  background: rgba(102, 126, 234, 0.3) !important;
+  color: #ffffff !important;
 }
 </style>

@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "14876:14876"
+    volumes:
+      - ./backend:/app
+    restart: always
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "14877:14877"
+    volumes:
+      - ./frontend:/app
+    restart: always
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://127.0.0.1:14876
+
+networks:
+  default:
+    driver: bridge

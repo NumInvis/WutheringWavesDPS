@@ -98,7 +98,7 @@
             <div class="tier-label" :style="{ backgroundColor: tier.color, fontSize: tierLabelSize + 'px', opacity: tierOpacity / 100 }">
               {{ tier.label }}
             </div>
-            <div class="tier-slots">
+            <div class="tier-slots" :ref="el => tierSlotsRef[index] = el">
               <div
                 v-for="(char, charIndex) in tier.characters"
                 :key="char.instanceId"
@@ -381,39 +381,71 @@ function handleTierDragStart(e: DragEvent, tierId: string, character: TierCharac
   }
 }
 
+// 拖放位置状态
+const dragOverIndex = ref<number | null>(null)
+const tierSlotsRef = ref<(HTMLDivElement | null)[]>([])
+
+// 计算插入位置
+function calculateDropIndex(e: DragEvent, tierIndex: number) {
+  const slotsContainer = tierSlotsRef.value?.[tierIndex]
+  if (!slotsContainer) return tiers.value[tierIndex].characters.length
+  
+  const rect = slotsContainer.getBoundingClientRect()
+  const cards = slotsContainer.querySelectorAll('.slot-card')
+  const x = e.clientX - rect.left
+  
+  for (let i = 0; i < cards.length; i++) {
+    const cardRect = cards[i].getBoundingClientRect()
+    const cardCenterX = cardRect.left - rect.left + cardRect.width / 2
+    if (x < cardCenterX) {
+      return i
+    }
+  }
+  return cards.length
+}
+
 function handleDragOver(e: DragEvent, tierIndex: number) {
   e.preventDefault()
   dragOverTier.value = tierIndex
+  dragOverIndex.value = calculateDropIndex(e, tierIndex)
 }
 
 function handleDragLeave() {
   dragOverTier.value = null
+  dragOverIndex.value = null
 }
 
 function handleDrop(e: DragEvent, tierIndex: number) {
   e.preventDefault()
+  const dropIndex = dragOverIndex.value ?? tiers.value[tierIndex].characters.length
   dragOverTier.value = null
+  dragOverIndex.value = null
   
   const data = e.dataTransfer?.getData('application/json')
   if (!data) return
   
   try {
-    const { character, tierId, index, fromTier } = JSON.parse(data)
+    const { character, tierId: sourceTierId, index: sourceIndex, fromTier } = JSON.parse(data)
     
     // 从原tier移除
-    if (fromTier && tierId) {
-      const sourceTier = tiers.value.find(t => t.id === tierId)
+    let adjustIndex = dropIndex
+    if (fromTier && sourceTierId) {
+      const sourceTier = tiers.value.find(t => t.id === sourceTierId)
       if (sourceTier) {
-        sourceTier.characters.splice(index, 1)
+        // 如果是同一个tier，先计算调整后的索引
+        if (sourceTierId === tiers.value[tierIndex].id && sourceIndex < dropIndex) {
+          adjustIndex = dropIndex - 1
+        }
+        sourceTier.characters.splice(sourceIndex, 1)
       }
     }
     
-    // 添加到目标tier
+    // 插入到指定位置
     const newChar: TierCharacter = {
       ...character,
       instanceId: `${character.id}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`
     }
-    tiers.value[tierIndex].characters.push(newChar)
+    tiers.value[tierIndex].characters.splice(adjustIndex, 0, newChar)
     
     saveUserData()
   } catch (e) {
@@ -816,6 +848,10 @@ onMounted(() => {
   padding: 4px;
   border: 2px solid #ffd700;
   cursor: grab;
+}
+
+.slot-card:hover {
+  transform: translateY(-2px);
 }
 
 .slot-image {

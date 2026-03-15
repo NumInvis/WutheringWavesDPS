@@ -40,12 +40,25 @@
             class="search-input"
           />
         </div>
+        <!-- 本地图片上传 -->
+        <div class="local-upload">
+          <input
+            ref="localImageInput"
+            type="file"
+            accept="image/*"
+            multiple
+            style="display: none"
+            @change="handleLocalImageUpload"
+          />
+          <button class="btn btn-secondary btn-sm" @click="$refs.localImageInput.click()">
+            + 添加本地图片
+          </button>
+        </div>
         <div class="material-grid">
           <div
             v-for="character in filteredCharacters"
             :key="character.id"
             class="material-card"
-            :class="{ 'star-5': character.rarity === 5, 'star-4': character.rarity === 4 }"
             draggable="true"
             @dragstart="handleDragStart($event, character)"
           >
@@ -53,6 +66,15 @@
               <img :src="character.image" :alt="character.name" loading="lazy" />
             </div>
             <span v-if="showNames" class="card-name" :style="{ fontSize: cardNameSize + 'px' }">{{ character.name }}</span>
+            <!-- 本地图片删除按钮 -->
+            <button
+              v-if="character.isLocal"
+              class="local-delete-btn"
+              @click.stop="removeLocalCharacter(character.id)"
+              title="删除"
+            >
+              ×
+            </button>
           </div>
         </div>
       </aside>
@@ -81,7 +103,6 @@
                 v-for="(char, charIndex) in tier.characters"
                 :key="char.instanceId"
                 class="slot-card"
-                :class="{ 'star-5': char.rarity === 5, 'star-4': char.rarity === 4 }"
                 draggable="true"
                 @dragstart="handleTierDragStart($event, tier.id, char, charIndex)"
               >
@@ -161,7 +182,8 @@ interface Character {
   id: string
   name: string
   image: string
-  rarity: 4 | 5
+  rarity: 5
+  isLocal?: boolean
 }
 
 interface TierCharacter extends Character {
@@ -206,19 +228,20 @@ const editBgOpacity = ref(100)
 // 搜索功能
 const searchQuery = ref('')
 
-// 按首字母排序并过滤的角色列表
+// 按首字母排序并过滤的角色列表（包含本地角色）
 const filteredCharacters = computed(() => {
-  let chars = [...allCharacters.value]
-  
+  // 合并系统角色和本地角色
+  let chars = [...allCharacters.value, ...localCharacters.value]
+
   // 搜索过滤
   if (searchQuery.value.trim()) {
     const query = searchQuery.value.toLowerCase()
     chars = chars.filter(char => char.name.toLowerCase().includes(query))
   }
-  
+
   // 按首字母排序
   chars.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
-  
+
   return chars
 })
 
@@ -274,6 +297,41 @@ const loadUserData = () => {
   } catch (e) {
     console.error('加载用户数据失败:', e)
   }
+}
+
+// 本地自定义角色（仅当前会话有效）
+const localCharacters = ref<Character[]>([])
+
+// 处理本地图片上传
+const handleLocalImageUpload = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  if (!input.files || input.files.length === 0) return
+
+  Array.from(input.files).forEach(file => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const imageUrl = e.target?.result as string
+      // 从文件名提取角色名（去掉扩展名）
+      const fileName = file.name.replace(/\.[^/.]+$/, '')
+      const newCharacter: Character = {
+        id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        name: fileName,
+        image: imageUrl,
+        rarity: 5, // 统一为5星
+        isLocal: true
+      }
+      localCharacters.value.push(newCharacter)
+    }
+    reader.readAsDataURL(file)
+  })
+
+  // 清空input，允许重复上传相同文件
+  input.value = ''
+}
+
+// 删除本地角色
+const removeLocalCharacter = (id: string) => {
+  localCharacters.value = localCharacters.value.filter(c => c.id !== id)
 }
 
 // 保存用户数据
@@ -614,20 +672,53 @@ onMounted(() => {
   padding: 8px;
   text-align: center;
   cursor: grab;
-  border: 2px solid transparent;
+  border: 2px solid #ffd700;
   transition: transform 0.15s;
+  position: relative;
 }
 
 .material-card:hover {
   transform: translateY(-2px);
 }
 
-.material-card.star-5 {
-  border-color: #ffd700;
+/* 本地图片删除按钮 */
+.local-delete-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ff6b6b;
+  color: #fff;
+  border: none;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 
-.material-card.star-4 {
-  border-color: #a855f7;
+.material-card:hover .local-delete-btn {
+  opacity: 1;
+}
+
+.local-delete-btn:hover {
+  background: #ff5252;
+}
+
+/* 本地图片上传按钮 */
+.local-upload {
+  padding: 12px 16px;
+  border-bottom: 1px solid #2a2a3a;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
 }
 
 .card-image {
@@ -723,16 +814,8 @@ onMounted(() => {
   background: #1e1e2e;
   border-radius: 8px;
   padding: 4px;
-  border: 2px solid transparent;
+  border: 2px solid #ffd700;
   cursor: grab;
-}
-
-.slot-card.star-5 {
-  border-color: #ffd700;
-}
-
-.slot-card.star-4 {
-  border-color: #a855f7;
 }
 
 .slot-image {

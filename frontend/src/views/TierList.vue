@@ -53,10 +53,10 @@
         <div class="ranking-header">
           <h2 :style="{ fontSize: titleSize + 'px' }">{{ tierTitle }}</h2>
         </div>
-        <div class="tier-list">
-          <div 
-            v-for="(tier, index) in tiers" 
-            :key="tier.id" 
+        <div class="tier-list" :style="{ backgroundColor: `rgba(22, 22, 32, ${bgOpacity / 100})` }">
+          <div
+            v-for="(tier, index) in tiers"
+            :key="tier.id"
             class="tier-row"
             :class="{ 'drop-active': dragOverTier === index }"
             @dragover.prevent="handleDragOver($event, index)"
@@ -112,8 +112,12 @@
             <input v-model.number="editCardNameSize" type="range" min="8" max="16" />
           </div>
           <div class="form-group">
-            <label>层级颜色透明度 ({{ editTierOpacity }}%)</label>
+            <label>层级颜色不透明度 ({{ editTierOpacity }}%)</label>
             <input v-model.number="editTierOpacity" type="range" min="20" max="100" />
+          </div>
+          <div class="form-group">
+            <label>排行榜背景透明度 ({{ editBgOpacity }}%)</label>
+            <input v-model.number="editBgOpacity" type="range" min="0" max="100" />
           </div>
           <div class="form-group">
             <label>层级设置</label>
@@ -171,12 +175,14 @@ const titleSize = ref(24)
 const tierLabelSize = ref(28)
 const cardNameSize = ref(11)
 const tierOpacity = ref(100)
+const bgOpacity = ref(100)
 
 const editTitleText = ref('')
 const editTitleSize = ref(24)
 const editTierLabelSize = ref(28)
 const editCardNameSize = ref(11)
 const editTierOpacity = ref(100)
+const editBgOpacity = ref(100)
 
 const defaultTiers: Tier[] = [
   { id: 'S', label: 'S', color: '#ff6b6b', characters: [] },
@@ -220,6 +226,7 @@ const loadUserData = () => {
       if (data.tierLabelSize) tierLabelSize.value = data.tierLabelSize
       if (data.cardNameSize) cardNameSize.value = data.cardNameSize
       if (data.tierOpacity) tierOpacity.value = data.tierOpacity
+      if (data.bgOpacity) bgOpacity.value = data.bgOpacity
       if (data.tiers) tiers.value = data.tiers
       if (data.showNames !== undefined) showNames.value = data.showNames
     }
@@ -237,6 +244,7 @@ const saveUserData = () => {
     tierLabelSize: tierLabelSize.value,
     cardNameSize: cardNameSize.value,
     tierOpacity: tierOpacity.value,
+    bgOpacity: bgOpacity.value,
     tiers: tiers.value,
     showNames: showNames.value
   }
@@ -319,6 +327,7 @@ function editSettings() {
   editTierLabelSize.value = tierLabelSize.value
   editCardNameSize.value = cardNameSize.value
   editTierOpacity.value = tierOpacity.value
+  editBgOpacity.value = bgOpacity.value
   editTiers.value = JSON.parse(JSON.stringify(tiers.value))
   showSettings.value = true
 }
@@ -329,6 +338,7 @@ function saveSettings() {
   tierLabelSize.value = editTierLabelSize.value
   cardNameSize.value = editCardNameSize.value
   tierOpacity.value = editTierOpacity.value
+  bgOpacity.value = editBgOpacity.value
   tiers.value = editTiers.value.map(t => ({
     ...t,
     characters: tiers.value.find(ot => ot.id === t.id)?.characters || []

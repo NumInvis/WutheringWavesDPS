@@ -99,19 +99,34 @@
               {{ tier.label }}
             </div>
             <div class="tier-slots" :ref="el => tierSlotsRef[index] = el">
+              <!-- 插入位置指示器 -->
               <div
                 v-for="(char, charIndex) in tier.characters"
                 :key="char.instanceId"
-                class="slot-card"
-                draggable="true"
-                @dragstart="handleTierDragStart($event, tier.id, char, charIndex)"
+                class="slot-card-wrapper"
               >
-                <div class="slot-image">
-                  <img :src="char.image" :alt="char.name" />
+                <div
+                  class="slot-card"
+                  draggable="true"
+                  @dragstart="handleTierDragStart($event, tier.id, char, charIndex)"
+                >
+                  <div class="slot-image">
+                    <img :src="char.image" :alt="char.name" />
+                  </div>
+                  <span v-if="showNames" class="slot-name" :style="{ fontSize: cardNameSize + 'px' }">{{ char.name }}</span>
+                  <button class="slot-remove" @click="removeFromTier(tier.id, charIndex)">×</button>
                 </div>
-                <span v-if="showNames" class="slot-name" :style="{ fontSize: cardNameSize + 'px' }">{{ char.name }}</span>
-                <button class="slot-remove" @click="removeFromTier(tier.id, charIndex)">×</button>
+                <!-- 插入指示器 - 在每个卡片之间 -->
+                <div
+                  v-if="isDragging && dragOverTier === index && dragOverIndex === charIndex + 1"
+                  class="insert-indicator active"
+                ></div>
               </div>
+              <!-- 末尾插入指示器 -->
+              <div
+                v-if="isDragging && dragOverTier === index && dragOverIndex === tier.characters.length"
+                class="insert-indicator active"
+              ></div>
             </div>
           </div>
         </div>
@@ -175,7 +190,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useUserStore } from '../stores/user'
 
 interface Character {
@@ -367,6 +382,7 @@ function getTierRowStyle() {
 
 // 拖拽从素材库
 function handleDragStart(e: DragEvent, character: Character) {
+  isDragging.value = true
   if (e.dataTransfer) {
     e.dataTransfer.setData('application/json', JSON.stringify({ character, fromPool: true }))
     e.dataTransfer.effectAllowed = 'copy'
@@ -375,6 +391,7 @@ function handleDragStart(e: DragEvent, character: Character) {
 
 // 拖拽从tier
 function handleTierDragStart(e: DragEvent, tierId: string, character: TierCharacter, index: number) {
+  isDragging.value = true
   if (e.dataTransfer) {
     e.dataTransfer.setData('application/json', JSON.stringify({ character, tierId, index, fromTier: true }))
     e.dataTransfer.effectAllowed = 'move'
@@ -382,6 +399,7 @@ function handleTierDragStart(e: DragEvent, tierId: string, character: TierCharac
 }
 
 // 拖放位置状态
+const isDragging = ref(false)
 const dragOverIndex = ref<number | null>(null)
 const tierSlotsRef = ref<(HTMLDivElement | null)[]>([])
 
@@ -420,6 +438,7 @@ function handleDrop(e: DragEvent, tierIndex: number) {
   const dropIndex = dragOverIndex.value ?? tiers.value[tierIndex].characters.length
   dragOverTier.value = null
   dragOverIndex.value = null
+  isDragging.value = false
   
   const data = e.dataTransfer?.getData('application/json')
   if (!data) return
@@ -451,6 +470,13 @@ function handleDrop(e: DragEvent, tierIndex: number) {
   } catch (e) {
     console.error('拖放失败:', e)
   }
+}
+
+// 处理拖拽结束（确保isDragging被重置）
+const handleDragEnd = () => {
+  isDragging.value = false
+  dragOverTier.value = null
+  dragOverIndex.value = null
 }
 
 function removeFromTier(tierId: string, charIndex: number) {
@@ -512,6 +538,11 @@ function removeTier(index: number) {
 onMounted(() => {
   loadCharacters()
   loadUserData()
+  window.addEventListener('dragend', handleDragEnd)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('dragend', handleDragEnd)
 })
 </script>
 
@@ -836,6 +867,14 @@ onMounted(() => {
   gap: 10px;
   padding: 14px;
   align-content: flex-start;
+  min-height: 100px;
+}
+
+/* 卡片包装器 */
+.slot-card-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
 }
 
 .slot-card {
@@ -848,10 +887,46 @@ onMounted(() => {
   padding: 4px;
   border: 2px solid #ffd700;
   cursor: grab;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .slot-card:hover {
   transform: translateY(-2px);
+}
+
+/* 插入位置指示器 */
+.insert-indicator {
+  position: absolute;
+  right: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 80px;
+  background: linear-gradient(180deg, #4dabf7, #1864ab);
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 0 15px rgba(77, 171, 247, 0.6), 0 0 5px rgba(77, 171, 247, 0.3);
+}
+
+.insert-indicator.active {
+  opacity: 1;
+  animation: pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: translateY(-50%) scaleX(1);
+    box-shadow: 0 0 15px rgba(77, 171, 247, 0.6), 0 0 5px rgba(77, 171, 247, 0.3);
+  }
+  50% {
+    opacity: 0.7;
+    transform: translateY(-50%) scaleX(1.3);
+    box-shadow: 0 0 25px rgba(77, 171, 247, 0.8), 0 0 10px rgba(77, 171, 247, 0.5);
+  }
 }
 
 .slot-image {

@@ -278,12 +278,12 @@ async function loadAnnouncements() {
     } else {
       console.warn('公告API返回非数组数据:', data)
       announcements.value = []
-      ElMessage.warning({ message: '公告数据加载异常', duration: 3000 })
+      ElMessage.warning({ message: '公告数据加载异常', duration: 2000 })
     }
   } catch (error) {
     console.error('加载公告失败:', error)
     announcements.value = []
-    ElMessage.error({ message: '加载公告列表失败', duration: 3000 })
+    ElMessage.error({ message: '加载公告列表失败', duration: 2000 })
   }
 }
 
@@ -303,7 +303,7 @@ async function loadVisitStats() {
 
 async function addAnnouncement() {
   if (!newAnnouncementForm.value.title || !newAnnouncementForm.value.content) {
-    ElMessage.error({ message: '请填写完整的公告信息', duration: 3000 })
+    ElMessage.error({ message: '请填写完整的公告信息', duration: 2000 })
     return
   }
   
@@ -311,13 +311,13 @@ async function addAnnouncement() {
   try {
     await api.post('/announcements', newAnnouncementForm.value)
     
-    ElMessage.success({ message: '公告发布成功！', duration: 3000 })
+    ElMessage.success({ message: '公告发布成功！', duration: 2000 })
     showAddAnnouncement.value = false
     newAnnouncementForm.value = { title: '', content: '', is_active: true, is_pinned: false }
     loadAnnouncements()
   } catch (error: any) {
     console.error('发布公告失败:', error)
-    ElMessage.error({ message: error.response?.data?.detail || '发布公告失败', duration: 3000 })
+    ElMessage.error({ message: error.response?.data?.detail || '发布公告失败', duration: 2000 })
   } finally {
     addAnnouncementLoading.value = false
   }
@@ -327,11 +327,11 @@ async function activateAnnouncement(announcement: Announcement) {
   try {
     await api.put('/announcements/' + announcement.id, { is_active: true })
     
-    ElMessage.success({ message: '公告已激活！', duration: 3000 })
+    ElMessage.success({ message: '公告已激活！', duration: 2000 })
     loadAnnouncements()
   } catch (error: any) {
     console.error('激活公告失败:', error)
-    ElMessage.error({ message: error.response?.data?.detail || '激活公告失败', duration: 3000 })
+    ElMessage.error({ message: error.response?.data?.detail || '激活公告失败', duration: 2000 })
   }
 }
 
@@ -339,11 +339,11 @@ async function togglePinAnnouncement(announcement: Announcement) {
   try {
     await api.put('/announcements/' + announcement.id, { is_pinned: !announcement.is_pinned })
     
-    ElMessage.success({ message: announcement.is_pinned ? '已取消置顶' : '已置顶', duration: 3000 })
+    ElMessage.success({ message: announcement.is_pinned ? '已取消置顶' : '已置顶', duration: 2000 })
     loadAnnouncements()
   } catch (error: any) {
     console.error('操作失败:', error)
-    ElMessage.error({ message: error.response?.data?.detail || '操作失败', duration: 3000 })
+    ElMessage.error({ message: error.response?.data?.detail || '操作失败', duration: 2000 })
   }
 }
 
@@ -357,12 +357,12 @@ async function deleteAnnouncement(id: string) {
     
     await api.delete('/announcements/' + id)
     
-    ElMessage.success({ message: '公告已删除！', duration: 3000 })
+    ElMessage.success({ message: '公告已删除！', duration: 2000 })
     loadAnnouncements()
   } catch (error: any) {
     if (error !== 'cancel') {
       console.error('删除公告失败:', error)
-      ElMessage.error({ message: error.response?.data?.detail || '删除公告失败', duration: 3000 })
+      ElMessage.error({ message: error.response?.data?.detail || '删除公告失败', duration: 2000 })
     }
   }
 }

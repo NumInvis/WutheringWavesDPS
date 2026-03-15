@@ -82,14 +82,14 @@ async function handleLogin() {
       try {
         const success = await userStore.login(loginForm.username, loginForm.password)
         if (success) {
-          ElMessage.success({ message: '登录成功', duration: 3000 })
+          ElMessage.success({ message: '登录成功', duration: 2000 })
           const redirect = (route.query.redirect as string) || '/'
           router.push(redirect)
         } else {
-          ElMessage.error({ message: '登录失败，请检查用户名和密码', duration: 3000 })
+          ElMessage.error({ message: '登录失败，请检查用户名和密码', duration: 2000 })
         }
       } catch (error) {
-        ElMessage.error({ message: '登录失败，请重试', duration: 3000 })
+        ElMessage.error({ message: '登录失败，请重试', duration: 2000 })
       } finally {
         loading.value = false
       }

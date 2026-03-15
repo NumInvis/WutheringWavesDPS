@@ -138,7 +138,7 @@ export function handleError(error: AxiosError, options?: {
       })
     } else {
       // 一般错误使用消息
-      ElMessage.error({ message: errorInfo.message, duration: 3000 })
+      ElMessage.error({ message: errorInfo.message, duration: 2000 })
     }
   }
 

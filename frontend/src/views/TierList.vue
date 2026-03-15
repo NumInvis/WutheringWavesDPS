@@ -2,20 +2,21 @@
   <div class="tier-list-container">
     <div class="tier-list-content">
       <div class="tier-list-left">
-        <h2 class="section-title">自定义排行</h2>
+        <div class="page-header">
+          <h1 class="page-title">🎮 自定义角色排行</h1>
+          <p class="page-subtitle">打造属于你的鸣潮角色强度榜</p>
+        </div>
         
-        <div v-if="!userStore.isLoggedIn" class="guest-notice">
-          <el-alert
-            title="游客模式 - 您只能观看排行"
-            type="info"
-            :closable="false"
-            show-icon
-          >
-            <template #default>
-              <p>登录后可以创建自己的排行并导出为图片</p>
-              <el-button type="primary" size="small" @click="router.push('/login')">立即登录</el-button>
-            </template>
-          </el-alert>
+        <div v-if="!userStore.isAuthenticated" class="guest-notice">
+          <div class="notice-icon">👀</div>
+          <div class="notice-content">
+            <h3>游客模式</h3>
+            <p>您可以浏览角色池，但无法编辑排行</p>
+            <el-button type="primary" size="large" @click="router.push('/login')" class="login-btn">
+              <el-icon><User /></el-icon>
+              立即登录
+            </el-button>
+          </div>
         </div>
         
         <div class="tier-rows" ref="tierListRef">
@@ -32,19 +33,26 @@
             </div>
             <div 
               class="tier-items"
-              :class="{ 'disabled': !userStore.isLoggedIn }"
-              @dragover.prevent="userStore.isLoggedIn"
-              @drop="userStore.isLoggedIn ? handleDrop($event, index) : null"
+              :class="{ 'disabled': !userStore.isAuthenticated }"
+              @dragover.prevent="userStore.isAuthenticated"
+              @drop="userStore.isAuthenticated ? handleDrop($event, index) : null"
             >
               <div
                 v-for="character in tier.characters"
                 :key="character.id"
                 class="character-item"
-                :class="{ 'disabled': !userStore.isLoggedIn }"
-                :draggable="userStore.isLoggedIn"
-                @dragstart="userStore.isLoggedIn ? handleDragStart($event, tier.id, character) : null"
-                @dragend="userStore.isLoggedIn ? handleDragEnd() : null"
+                :class="{ 
+                  'disabled': !userStore.isAuthenticated,
+                  'star-5': character.rarity === 5,
+                  'star-4': character.rarity === 4
+                }"
+                :draggable="userStore.isAuthenticated"
+                @dragstart="userStore.isAuthenticated ? handleDragStart($event, tier.id, character) : null"
+                @dragend="userStore.isAuthenticated ? handleDragEnd() : null"
               >
+                <div class="character-rarity" :class="'rarity-' + character.rarity">
+                  {{ character.rarity }}★
+                </div>
                 <img 
                   v-if="character.image" 
                   :src="character.image" 
@@ -58,7 +66,7 @@
               </div>
             </div>
             <button 
-              v-if="userStore.isLoggedIn && tiers.length > 1"
+              v-if="userStore.isAuthenticated && tiers.length > 1"
               class="remove-tier-btn"
               @click="removeTier(index)"
             >
@@ -67,12 +75,12 @@
           </div>
         </div>
         
-        <div v-if="userStore.isLoggedIn" class="tier-actions">
-          <el-button type="primary" @click="addTier">
+        <div v-if="userStore.isAuthenticated" class="tier-actions">
+          <el-button type="primary" size="large" @click="addTier" class="action-btn">
             <el-icon><Plus /></el-icon>
             添加层级
           </el-button>
-          <el-button type="success" @click="exportImage">
+          <el-button type="success" size="large" @click="exportImage" class="action-btn">
             <el-icon><Download /></el-icon>
             导出图片
           </el-button>
@@ -81,12 +89,13 @@
       
       <div class="tier-list-right">
         <div class="section-header">
-          <h2 class="section-title">角色池</h2>
+          <h2 class="section-title">📦 角色池</h2>
           <el-button 
             v-if="userStore.user?.is_admin"
             type="primary"
-            size="small"
+            size="large"
             @click="showAddCharacter = true"
+            class="add-char-btn"
           >
             <el-icon><Plus /></el-icon>
             添加角色
@@ -97,11 +106,18 @@
             v-for="character in characterPool"
             :key="character.id"
             class="pool-character"
-            :class="{ 'disabled': !userStore.isLoggedIn }"
-            :draggable="userStore.isLoggedIn"
-            @dragstart="userStore.isLoggedIn ? handleDragStart($event, null, character) : null"
-            @dragend="userStore.isLoggedIn ? handleDragEnd() : null"
+            :class="{ 
+              'disabled': !userStore.isAuthenticated,
+              'star-5': character.rarity === 5,
+              'star-4': character.rarity === 4
+            }"
+            :draggable="userStore.isAuthenticated"
+            @dragstart="userStore.isAuthenticated ? handleDragStart($event, null, character) : null"
+            @dragend="userStore.isAuthenticated ? handleDragEnd() : null"
           >
+            <div class="character-rarity" :class="'rarity-' + character.rarity">
+              {{ character.rarity }}★
+            </div>
             <img 
               v-if="character.image" 
               :src="character.image" 
@@ -129,12 +145,19 @@
 
     <el-dialog 
       v-model="showAddCharacter" 
-      title="添加新角色" 
+      title="✨ 添加新角色" 
       width="500px"
+      class="add-char-dialog"
     >
-      <el-form :model="newCharacterForm" label-width="80px">
+      <el-form :model="newCharacterForm" label-width="100px" class="add-char-form">
         <el-form-item label="角色名称">
-          <el-input v-model="newCharacterForm.name" placeholder="请输入角色名称" />
+          <el-input v-model="newCharacterForm.name" placeholder="请输入角色名称" size="large" />
+        </el-form-item>
+        <el-form-item label="角色星级">
+          <el-radio-group v-model="newCharacterForm.rarity" size="large">
+            <el-radio-button :value="4">四星</el-radio-button>
+            <el-radio-button :value="5">五星</el-radio-button>
+          </el-radio-group>
         </el-form-item>
         <el-form-item label="角色头像">
           <el-upload
@@ -146,13 +169,18 @@
             :before-upload="beforeAvatarUpload"
           >
             <img v-if="newCharacterForm.image" :src="newCharacterForm.image" class="avatar" />
-            <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+            <div v-else class="upload-placeholder">
+              <el-icon class="upload-icon"><Plus /></el-icon>
+              <span>点击上传头像</span>
+            </div>
           </el-upload>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showAddCharacter = false">取消</el-button>
-        <el-button type="primary" @click="addCharacter" :loading="addCharacterLoading">添加</el-button>
+        <el-button @click="showAddCharacter = false" size="large">取消</el-button>
+        <el-button type="primary" @click="addCharacter" :loading="addCharacterLoading" size="large">
+          添加角色
+        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -161,7 +189,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Plus, Download, Close, Delete } from '@element-plus/icons-vue'
+import { Plus, Download, Close, Delete, User } from '@element-plus/icons-vue'
 import html2canvas from 'html2canvas'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
@@ -171,6 +199,7 @@ interface Character {
   id: string
   name: string
   image?: string
+  rarity: 4 | 5
 }
 
 interface Tier {
@@ -188,7 +217,8 @@ const showAddCharacter = ref(false)
 const addCharacterLoading = ref(false)
 const newCharacterForm = ref({
   name: '',
-  image: ''
+  image: '',
+  rarity: 5 as 4 | 5
 })
 
 const tierColors = [
@@ -292,13 +322,13 @@ async function exportImage() {
     ElMessage.info('正在生成图片...')
     
     const canvas = await html2canvas(tierListRef.value, {
-      backgroundColor: '#1a1a2e',
+      backgroundColor: '#0f0f1a',
       scale: 2,
       useCORS: true
     })
     
     const link = document.createElement('a')
-    link.download = 'tier-list.png'
+    link.download = 'wuthering-waves-tier-list.png'
     link.href = canvas.toDataURL('image/png')
     link.click()
     
@@ -311,18 +341,19 @@ async function exportImage() {
 
 function handleAvatarSuccess(response: any) {
   newCharacterForm.value.image = response.file_url
+  ElMessage.success('头像上传成功！')
 }
 
 function beforeAvatarUpload(file: File) {
   const isImage = file.type.startsWith('image/')
-  const isLt2M = file.size / 1024 / 1024 < 2
+  const isLt5M = file.size / 1024 / 1024 < 5
 
   if (!isImage) {
     ElMessage.error('只能上传图片文件!')
     return false
   }
-  if (!isLt2M) {
-    ElMessage.error('图片大小不能超过 2MB!')
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过 5MB!')
     return false
   }
   return true
@@ -340,7 +371,8 @@ async function addCharacter() {
       import.meta.env.VITE_API_URL + '/WutheringWavesDPS/api/characters/admin/characters',
       {
         name: newCharacterForm.value.name,
-        image: newCharacterForm.value.image
+        image: newCharacterForm.value.image,
+        rarity: newCharacterForm.value.rarity
       },
       {
         headers: {
@@ -350,9 +382,9 @@ async function addCharacter() {
     )
     
     characterPool.value.push(response.data)
-    ElMessage.success('角色添加成功')
+    ElMessage.success('角色添加成功！')
     showAddCharacter.value = false
-    newCharacterForm.value = { name: '', image: '' }
+    newCharacterForm.value = { name: '', image: '', rarity: 5 }
   } catch (error) {
     ElMessage.error('添加角色失败')
   } finally {
@@ -372,7 +404,7 @@ async function deleteCharacter(id: string) {
     )
     
     characterPool.value = characterPool.value.filter(c => c.id !== id)
-    ElMessage.success('角色删除成功')
+    ElMessage.success('角色删除成功！')
   } catch (error) {
     ElMessage.error('删除角色失败')
   }
@@ -395,14 +427,15 @@ onMounted(() => {
 <style scoped>
 .tier-list-container {
   min-height: calc(100vh - 128px);
-  padding: 24px;
+  padding: 32px 24px;
   color: #e2e8f0;
+  background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
 }
 
 .tier-list-content {
   display: flex;
-  gap: 24px;
-  max-width: 1600px;
+  gap: 32px;
+  max-width: 1800px;
   margin: 0 auto;
 }
 
@@ -412,17 +445,65 @@ onMounted(() => {
 }
 
 .tier-list-right {
-  width: 320px;
+  width: 380px;
   flex-shrink: 0;
 }
 
-.guest-notice {
-  margin-bottom: 20px;
+.page-header {
+  text-align: center;
+  margin-bottom: 32px;
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-radius: 16px;
+  border: 1px solid rgba(167, 139, 250, 0.2);
 }
 
-.guest-notice p {
-  margin: 8px 0;
+.page-title {
+  font-size: 36px;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.page-subtitle {
+  font-size: 16px;
   color: #94a3b8;
+  margin: 0;
+}
+
+.guest-notice {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
+  border-radius: 16px;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.notice-icon {
+  font-size: 48px;
+}
+
+.notice-content h3 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.notice-content p {
+  margin: 0 0 16px 0;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.login-btn {
+  font-weight: 600;
 }
 
 .section-header {
@@ -439,62 +520,77 @@ onMounted(() => {
   color: #fff;
 }
 
+.add-char-btn {
+  font-weight: 600;
+}
+
 .tier-rows {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 .tier-row {
   display: flex;
   align-items: stretch;
   background: rgba(20, 20, 35, 0.9);
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
   position: relative;
+  border: 1px solid rgba(167, 139, 250, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .tier-label {
-  width: 80px;
+  width: 90px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  font-weight: 800;
+  font-size: 28px;
+  font-weight: 900;
   color: #000;
   flex-shrink: 0;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
 }
 
 .tier-items {
   flex: 1;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  padding: 12px;
-  min-height: 80px;
+  gap: 12px;
+  padding: 16px;
+  min-height: 100px;
   align-content: flex-start;
 }
 
 .tier-items.disabled {
   cursor: not-allowed;
-}
-
-.tier-items.drag-over {
-  background: rgba(102, 126, 234, 0.2);
+  opacity: 0.7;
 }
 
 .character-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  gap: 6px;
+  padding: 12px 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
   cursor: grab;
-  transition: all 0.2s ease;
-  min-width: 70px;
+  transition: all 0.3s ease;
+  min-width: 80px;
   position: relative;
+  border: 2px solid transparent;
+}
+
+.character-item.star-5 {
+  border-color: #ffd700;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%);
+}
+
+.character-item.star-4 {
+  border-color: #a855f7;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(168, 85, 247, 0.05) 100%);
 }
 
 .character-item.disabled {
@@ -503,42 +599,67 @@ onMounted(() => {
 }
 
 .character-item:hover:not(.disabled) {
-  background: rgba(102, 126, 234, 0.3);
-  transform: translateY(-2px);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
 }
 
 .character-item:active {
   cursor: grabbing;
 }
 
+.character-rarity {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 20px;
+  z-index: 10;
+}
+
+.character-rarity.rarity-5 {
+  background: linear-gradient(135deg, #ffd700, #ffb700);
+  color: #000;
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.5);
+}
+
+.character-rarity.rarity-4 {
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.5);
+}
+
 .character-image {
-  width: 50px;
-  height: 50px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .character-placeholder {
-  width: 50px;
-  height: 50px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 28px;
+  font-weight: 800;
   color: #fff;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .character-name {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
   color: #e2e8f0;
   text-align: center;
-  max-width: 70px;
+  max-width: 80px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -546,12 +667,12 @@ onMounted(() => {
 
 .remove-tier-btn {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 24px;
-  height: 24px;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: rgba(239, 68, 68, 0.8);
+  background: rgba(239, 68, 68, 0.9);
   border: none;
   color: #fff;
   cursor: pointer;
@@ -559,7 +680,8 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: all 0.3s ease;
+  z-index: 10;
 }
 
 .tier-row:hover .remove-tier-btn {
@@ -568,35 +690,55 @@ onMounted(() => {
 
 .remove-tier-btn:hover {
   background: rgba(239, 68, 68, 1);
+  transform: scale(1.1);
 }
 
 .tier-actions {
   display: flex;
-  gap: 12px;
-  margin-top: 20px;
+  gap: 16px;
+  margin-top: 24px;
+  justify-content: center;
+}
+
+.action-btn {
+  font-weight: 600;
+  padding: 12px 28px;
 }
 
 .character-pool {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  max-height: calc(100vh - 250px);
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  max-height: calc(100vh - 280px);
   overflow-y: auto;
-  padding: 4px;
+  padding: 8px;
+  background: rgba(20, 20, 35, 0.5);
+  border-radius: 16px;
+  border: 1px solid rgba(167, 139, 250, 0.15);
 }
 
 .pool-character {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 12px 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  gap: 6px;
+  padding: 16px 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
   cursor: grab;
-  transition: all 0.2s ease;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
   position: relative;
+}
+
+.pool-character.star-5 {
+  border-color: #ffd700;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%);
+}
+
+.pool-character.star-4 {
+  border-color: #a855f7;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(168, 85, 247, 0.05) 100%);
 }
 
 .pool-character.disabled {
@@ -605,10 +747,8 @@ onMounted(() => {
 }
 
 .pool-character:hover:not(.disabled) {
-  background: rgba(102, 126, 234, 0.3);
-  transform: translateY(-4px);
-  border-color: rgba(102, 126, 234, 0.5);
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+  transform: translateY(-6px) scale(1.03);
+  box-shadow: 0 16px 48px rgba(102, 126, 234, 0.5);
 }
 
 .pool-character:active {
@@ -617,66 +757,100 @@ onMounted(() => {
 
 .pool-character .character-image,
 .pool-character .character-placeholder {
-  width: 60px;
-  height: 60px;
+  width: 64px;
+  height: 64px;
 }
 
 .pool-character .character-name {
-  font-size: 12px;
-  max-width: 80px;
+  font-size: 13px;
+  max-width: 90px;
 }
 
 .delete-character-btn {
   position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 24px;
-  height: 24px;
+  top: -10px;
+  right: -10px;
+  width: 28px;
+  height: 28px;
+  z-index: 20;
 }
 
 .character-pool::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 .character-pool::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 .character-pool::-webkit-scrollbar-thumb {
-  background: rgba(102, 126, 234, 0.5);
-  border-radius: 3px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 4px;
 }
 
 .character-pool::-webkit-scrollbar-thumb:hover {
-  background: rgba(102, 126, 234, 0.7);
+  background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+}
+
+.add-char-dialog :deep(.el-dialog__header) {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  margin: 0;
+  padding: 24px;
+}
+
+.add-char-dialog :deep(.el-dialog__title) {
+  font-size: 24px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.add-char-dialog :deep(.el-dialog__body) {
+  padding: 32px 24px;
+}
+
+.add-char-form {
+  margin: 0;
 }
 
 .avatar-uploader .avatar {
-  width: 100px;
-  height: 100px;
-  border-radius: 8px;
+  width: 120px;
+  height: 120px;
+  border-radius: 16px;
   object-fit: cover;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
-.avatar-uploader :deep(.el-upload) {
-  border: 1px dashed var(--el-border-color);
-  border-radius: 6px;
+.upload-placeholder {
+  width: 120px;
+  height: 120px;
+  border: 2px dashed rgba(167, 139, 250, 0.5);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  transition: var(--el-transition-duration-fast);
+  transition: all 0.3s ease;
+  background: rgba(167, 139, 250, 0.05);
 }
 
-.avatar-uploader :deep(.el-upload:hover) {
-  border-color: var(--el-color-primary);
+.upload-placeholder:hover {
+  border-color: rgba(167, 139, 250, 0.8);
+  background: rgba(167, 139, 250, 0.1);
 }
 
-.avatar-uploader-icon {
-  font-size: 28px;
-  color: #8c939d;
-  width: 100px;
-  height: 100px;
-  text-align: center;
+.upload-icon {
+  font-size: 32px;
+  color: #a78bfa;
+}
+
+.upload-placeholder span {
+  font-size: 14px;
+  color: #94a3b8;
 }
 </style>

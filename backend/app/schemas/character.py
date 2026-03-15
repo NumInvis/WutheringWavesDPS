@@ -10,6 +10,7 @@ class CharacterBase(BaseModel):
     """角色基础模式"""
     name: str = Field(..., min_length=1, max_length=100)
     image: Optional[str] = None
+    rarity: int = Field(..., ge=4, le=5)
 
 
 class CharacterCreate(CharacterBase):
@@ -21,6 +22,7 @@ class CharacterUpdate(BaseModel):
     """角色更新模式"""
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     image: Optional[str] = None
+    rarity: Optional[int] = Field(None, ge=4, le=5)
 
 
 class CharacterResponse(CharacterBase):

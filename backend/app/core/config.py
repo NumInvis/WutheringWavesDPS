@@ -38,24 +38,23 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
 
-    # Admin account - 密码必须从环境变量读取
+    # Admin account - 密码必须从环境变量读取，不再强制重置密码
     admin_username: str = Field(default="admin", validation_alias="ADMIN_USERNAME")
     admin_email: Optional[str] = Field(default=None, validation_alias="ADMIN_EMAIL")
     admin_password: Optional[str] = Field(default=None, validation_alias="ADMIN_PASSWORD")
-    # 移除硬编码密码哈希，必须从环境变量读取
     admin_password_hash: Optional[str] = Field(default=None, validation_alias="ADMIN_PASSWORD_HASH")
     admin_singleton: bool = True
-    admin_force_password: bool = True
+    admin_force_password: bool = False  # 默认不强制重置密码
 
     # File storage
     storage_type: str = "local"
     upload_dir: str = str(BASE_DIR / "uploads")
     max_upload_size: int = 50 * 1024 * 1024
-    minio_endpoint: str = "localhost:9000"
-    minio_access_key: str = "minioadmin"
-    minio_secret_key: str = "minioadmin"
-    minio_bucket_name: str = "wuwa-calc-files"
-    minio_secure: bool = False
+    minio_endpoint: str = Field(default="localhost:9000", validation_alias="MINIO_ENDPOINT")
+    minio_access_key: str = Field(default="", validation_alias="MINIO_ACCESS_KEY")
+    minio_secret_key: str = Field(default="", validation_alias="MINIO_SECRET_KEY")
+    minio_bucket_name: str = Field(default="wuwa-calc-files", validation_alias="MINIO_BUCKET_NAME")
+    minio_secure: bool = Field(default=False, validation_alias="MINIO_SECURE")
 
     # CORS
     cors_origins: List[str] = [

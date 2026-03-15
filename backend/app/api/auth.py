@@ -93,22 +93,9 @@ def init_admin_user(db: Session):
             synchronize_session=False
         )
 
-    test_user = db.query(User).filter(User.username == "person").first()
-    if not test_user:
-        test_user = User(
-            username="person",
-            email="person@wuwa.invalid",
-            password_hash=get_password_hash("person"),
-            display_name="person",
-            is_admin=False,
-            is_verified=True,
-            is_active=True,
-            role="user"
-        )
-        db.add(test_user)
-
     db.commit()
-    db.refresh(admin_user)
+    if admin_user:
+        db.refresh(admin_user)
 
 
 async def get_current_user(

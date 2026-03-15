@@ -309,6 +309,15 @@ def upload_and_create_spreadsheet(
     
     settings = get_settings()
     
+    # 验证文件类型
+    allowed_extensions = {'.xlsx', '.xls', '.csv'}
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"不支持的文件类型。只允许: {', '.join(allowed_extensions)}"
+        )
+    
     upload_dir = settings.upload_dir
     if not os.path.isabs(upload_dir):
         backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -316,7 +325,6 @@ def upload_and_create_spreadsheet(
     os.makedirs(upload_dir, exist_ok=True)
     
     file_id = str(uuid.uuid4())
-    ext = os.path.splitext(file.filename or ".xlsx")[1]
     dest_path = os.path.join(upload_dir, f"{file_id}{ext}")
     
     with open(dest_path, "wb") as buffer:
@@ -418,6 +426,16 @@ def update_spreadsheet(
     
     if file:
         settings = get_settings()
+        
+        # 验证文件类型
+        allowed_extensions = {'.xlsx', '.xls', '.csv'}
+        ext = os.path.splitext(file.filename or "")[1].lower()
+        if ext not in allowed_extensions:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"不支持的文件类型。只允许: {', '.join(allowed_extensions)}"
+            )
+        
         upload_dir = settings.upload_dir
         if not os.path.isabs(upload_dir):
             backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -425,7 +443,6 @@ def update_spreadsheet(
         os.makedirs(upload_dir, exist_ok=True)
         
         file_id = str(uuid.uuid4())
-        ext = os.path.splitext(file.filename or ".xlsx")[1]
         dest_path = os.path.join(upload_dir, f"{file_id}{ext}")
         
         with open(dest_path, "wb") as buffer:

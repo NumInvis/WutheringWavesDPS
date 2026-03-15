@@ -21,8 +21,15 @@ async def get_sucai_image(filename: str):
     """
     获取角色素材图片
     """
-    # 安全检查：防止目录遍历
-    if ".." in filename or "/" in filename or "\\" in filename:
+    # 安全检查：防止目录遍历 - 使用Path验证文件名
+    try:
+        # 验证文件名不包含路径分隔符
+        if Path(filename).name != filename:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid filename"
+            )
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid filename"

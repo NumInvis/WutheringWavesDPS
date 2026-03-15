@@ -46,14 +46,19 @@ def add_log(level: str, message: str, details: Any = None, user: Optional[str] =
 
 
 def log_error(error: Exception, context: str = "", user: Optional[str] = None, ip: Optional[str] = None):
-    """记录错误日志"""
+    """记录错误日志（生产环境不记录完整堆栈）"""
+    from app.core.config import get_settings
+    settings = get_settings()
+    
+    details = {"error_type": type(error).__name__}
+    # 仅在调试模式下记录完整堆栈
+    if settings.app_debug:
+        details["traceback"] = traceback.format_exc()
+    
     add_log(
         level="ERROR",
         message=f"{context}: {str(error)}",
-        details={
-            "error_type": type(error).__name__,
-            "traceback": traceback.format_exc()
-        },
+        details=details,
         user=user,
         ip=ip
     )

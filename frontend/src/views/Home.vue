@@ -91,7 +91,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Close } from '@element-plus/icons-vue'
-import axios from 'axios'
+import api from '../api'
 
 interface Announcement {
   id: string
@@ -116,16 +116,16 @@ const displayAnnouncements = computed(() => {
 
 async function loadAnnouncements() {
   try {
-    const response = await axios.get(import.meta.env.VITE_API_URL + '/WutheringWavesDPS/api/announcements/active')
-    if (response.data.length > 0) {
-      const announcement = response.data[0]
+    const activeData = await api.get('/announcements/active')
+    if (activeData.length > 0) {
+      const announcement = activeData[0]
       if (!dismissedAnnouncements.value.has(announcement.id)) {
         activeAnnouncement.value = announcement
       }
     }
     
-    const historyResponse = await axios.get(import.meta.env.VITE_API_URL + '/WutheringWavesDPS/api/announcements')
-    historyAnnouncements.value = historyResponse.data.filter((a: Announcement) => !a.is_active)
+    const allData = await api.get('/announcements')
+    historyAnnouncements.value = allData.filter((a: Announcement) => !a.is_active)
   } catch (error) {
     console.error('加载公告失败:', error)
   }

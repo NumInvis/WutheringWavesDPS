@@ -225,7 +225,10 @@ async function handleUpdateProfile() {
       display_name: editForm.display_name
     })
     await userStore.fetchCurrentUser()
-    ElMessage.success('昵称已更新')
+    ElMessage.success({
+      message: '昵称已更新',
+      duration: 3000
+    })
     editDialogVisible.value = false
   } catch (error) {
     ElMessage.error('更新失败')
@@ -515,25 +518,31 @@ html, body, #app {
 }
 
 .more-dropdown .el-dropdown-menu__item {
-  color: #e2e8f0 !important;
+  color: #a78bfa !important;
   padding: 10px 16px !important;
   margin: 4px !important;
   border-radius: 8px !important;
-  font-weight: 500 !important;
+  font-weight: 700 !important;
   background: transparent !important;
 }
 
 .more-dropdown .el-dropdown-menu__item:hover {
   background: rgba(102, 126, 234, 0.2) !important;
-  color: #ffffff !important;
+  color: #c4b5fd !important;
 }
 
 .more-dropdown .dropdown-link {
-  color: #e2e8f0 !important;
+  color: #a78bfa !important;
+  font-weight: 700 !important;
   background: transparent !important;
 }
 
 .more-dropdown .dropdown-link:hover {
-  color: #ffffff !important;
+  color: #c4b5fd !important;
+}
+
+.more-dropdown .dropdown-section-title {
+  color: #8b5cf6 !important;
+  font-weight: 700 !important;
 }
 </style>

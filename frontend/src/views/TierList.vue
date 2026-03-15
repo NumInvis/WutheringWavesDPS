@@ -4,6 +4,20 @@
       <div class="tier-list-left">
         <h2 class="section-title">自定义排行</h2>
         
+        <div v-if="!userStore.isLoggedIn" class="guest-notice">
+          <el-alert
+            title="游客模式 - 您只能观看排行"
+            type="info"
+            :closable="false"
+            show-icon
+          >
+            <template #default>
+              <p>登录后可以创建自己的排行并导出为图片</p>
+              <el-button type="primary" size="small" @click="router.push('/login')">立即登录</el-button>
+            </template>
+          </el-alert>
+        </div>
+        
         <div class="tier-rows" ref="tierListRef">
           <div 
             v-for="(tier, index) in tiers" 
@@ -18,16 +32,18 @@
             </div>
             <div 
               class="tier-items"
-              @dragover.prevent
-              @drop="(e) => handleDrop(e, index)"
+              :class="{ 'disabled': !userStore.isLoggedIn }"
+              @dragover.prevent="userStore.isLoggedIn"
+              @drop="userStore.isLoggedIn ? handleDrop($event, index) : null"
             >
               <div
                 v-for="character in tier.characters"
                 :key="character.id"
                 class="character-item"
-                draggable="true"
-                @dragstart="(e) => handleDragStart(e, tier.id, character)"
-                @dragend="handleDragEnd"
+                :class="{ 'disabled': !userStore.isLoggedIn }"
+                :draggable="userStore.isLoggedIn"
+                @dragstart="userStore.isLoggedIn ? handleDragStart($event, tier.id, character) : null"
+                @dragend="userStore.isLoggedIn ? handleDragEnd() : null"
               >
                 <img 
                   v-if="character.image" 
@@ -42,16 +58,16 @@
               </div>
             </div>
             <button 
+              v-if="userStore.isLoggedIn && tiers.length > 1"
               class="remove-tier-btn"
               @click="removeTier(index)"
-              v-if="tiers.length > 1"
             >
               <el-icon><Close /></el-icon>
             </button>
           </div>
         </div>
         
-        <div class="tier-actions">
+        <div v-if="userStore.isLoggedIn" class="tier-actions">
           <el-button type="primary" @click="addTier">
             <el-icon><Plus /></el-icon>
             添加层级
@@ -81,9 +97,10 @@
             v-for="character in characterPool"
             :key="character.id"
             class="pool-character"
-            draggable="true"
-            @dragstart="(e) => handleDragStart(e, null, character)"
-            @dragend="handleDragEnd"
+            :class="{ 'disabled': !userStore.isLoggedIn }"
+            :draggable="userStore.isLoggedIn"
+            @dragstart="userStore.isLoggedIn ? handleDragStart($event, null, character) : null"
+            @dragend="userStore.isLoggedIn ? handleDragEnd() : null"
           >
             <img 
               v-if="character.image" 
@@ -371,11 +388,6 @@ async function loadCharacters() {
 }
 
 onMounted(() => {
-  if (!userStore.isLoggedIn) {
-    ElMessage.error('请先登录')
-    router.push('/login')
-    return
-  }
   loadCharacters()
 })
 </script>
@@ -402,6 +414,15 @@ onMounted(() => {
 .tier-list-right {
   width: 320px;
   flex-shrink: 0;
+}
+
+.guest-notice {
+  margin-bottom: 20px;
+}
+
+.guest-notice p {
+  margin: 8px 0;
+  color: #94a3b8;
 }
 
 .section-header {
@@ -454,6 +475,10 @@ onMounted(() => {
   align-content: flex-start;
 }
 
+.tier-items.disabled {
+  cursor: not-allowed;
+}
+
 .tier-items.drag-over {
   background: rgba(102, 126, 234, 0.2);
 }
@@ -472,7 +497,12 @@ onMounted(() => {
   position: relative;
 }
 
-.character-item:hover {
+.character-item.disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.character-item:hover:not(.disabled) {
   background: rgba(102, 126, 234, 0.3);
   transform: translateY(-2px);
 }
@@ -569,7 +599,12 @@ onMounted(() => {
   position: relative;
 }
 
-.pool-character:hover {
+.pool-character.disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.pool-character:hover:not(.disabled) {
   background: rgba(102, 126, 234, 0.3);
   transform: translateY(-4px);
   border-color: rgba(102, 126, 234, 0.5);

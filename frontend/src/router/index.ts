@@ -34,8 +34,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/tier-list',
     name: 'TierList',
-    component: () => import('@/views/TierList.vue'),
-    meta: { requiresAuth: true }
+    component: () => import('@/views/TierList.vue')
   },
   {
     path: '/admin/logs',

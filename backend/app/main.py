@@ -133,13 +133,13 @@ app.add_middleware(
 os.makedirs(settings.upload_dir, exist_ok=True)
 
 # Import models to register
-from app.models import user, spreadsheet, star, category  # noqa: F401
+from app.models import user, spreadsheet, star, category, character  # noqa: F401
 
 # Create tables (SQLite/dev)
 Base.metadata.create_all(bind=engine)
 
 # Routers - mount with prefix
-from app.api import auth, spreadsheets, stars, categories, uploads, admin, health  # noqa: E402
+from app.api import auth, spreadsheets, stars, categories, uploads, admin, health, characters  # noqa: E402
 
 app.include_router(auth.router, prefix="/WutheringWavesDPS")
 app.include_router(spreadsheets.router, prefix="/WutheringWavesDPS")
@@ -148,6 +148,7 @@ app.include_router(categories.router, prefix="/WutheringWavesDPS")
 app.include_router(uploads.router, prefix="/WutheringWavesDPS")
 app.include_router(admin.router, prefix="/WutheringWavesDPS")
 app.include_router(health.router, prefix="/WutheringWavesDPS")
+app.include_router(characters.router, prefix="/WutheringWavesDPS")
 
 # Static files for uploads with cache
 class CachedStaticFiles(StaticFiles):

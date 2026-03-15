@@ -139,13 +139,14 @@ from app.models import user, spreadsheet, star, category, character  # noqa: F40
 Base.metadata.create_all(bind=engine)
 
 # Routers - mount with prefix
-from app.api import auth, spreadsheets, stars, categories, uploads, admin, health, characters  # noqa: E402
+from app.api import auth, spreadsheets, stars, categories, uploads, admin, health, characters, images  # noqa: E402
 
 app.include_router(auth.router, prefix="/WutheringWavesDPS")
 app.include_router(spreadsheets.router, prefix="/WutheringWavesDPS")
 app.include_router(stars.router, prefix="/WutheringWavesDPS")
 app.include_router(categories.router, prefix="/WutheringWavesDPS")
 app.include_router(uploads.router, prefix="/WutheringWavesDPS")
+app.include_router(images.router, prefix="/WutheringWavesDPS")
 app.include_router(admin.router, prefix="/WutheringWavesDPS")
 app.include_router(health.router, prefix="/WutheringWavesDPS")
 app.include_router(characters.router, prefix="/WutheringWavesDPS")

@@ -215,7 +215,7 @@ const tiers = ref<Tier[]>([
   { id: 'tier-5', label: 'C', color: '#2196f3', characters: [] }
 ])
 
-const uploadUrl = import.meta.env.VITE_API_URL + '/WutheringWavesDPS/api/upload'
+const uploadUrl = import.meta.env.VITE_API_URL + '/WutheringWavesDPS/api/images'
 const uploadHeaders = {
   'Authorization': userStore.token ? 'Bearer ' + userStore.token : ''
 }
@@ -321,8 +321,9 @@ async function addCharacter() {
     ElMessage.success('角色添加成功！')
     showAddCharacter.value = false
     newCharacterForm.value = { name: '', image: '', rarity: 5 }
-  } catch (error) {
-    ElMessage.error('添加角色失败')
+  } catch (error: any) {
+    console.error('添加角色失败:', error)
+    ElMessage.error(error.response?.data?.detail || '添加角色失败')
   } finally {
     addCharacterLoading.value = false
   }
@@ -341,8 +342,9 @@ async function deleteCharacter(id: string) {
     
     characterPool.value = characterPool.value.filter(c => c.id !== id)
     ElMessage.success('角色删除成功！')
-  } catch (error) {
-    ElMessage.error('删除角色失败')
+  } catch (error: any) {
+    console.error('删除角色失败:', error)
+    ElMessage.error(error.response?.data?.detail || '删除角色失败')
   }
 }
 

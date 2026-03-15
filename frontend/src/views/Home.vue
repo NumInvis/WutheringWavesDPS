@@ -1,13 +1,14 @@
 <template>
   <div class="home">
-    <div class="announcement-section" v-if="showAnnouncement">
+    <div class="announcement-section" v-if="activeAnnouncement">
       <div class="announcement-content">
         <div class="announcement-icon">📢</div>
         <div class="announcement-text">
           <span class="announcement-tag">公告</span>
-          <span class="announcement-message">自定义排行功能已上线！支持角色拖拽排序、导出图片、管理员可添加新角色！</span>
+          <span class="announcement-title">{{ activeAnnouncement.title }}</span>
+          <span class="announcement-message">{{ activeAnnouncement.content }}</span>
         </div>
-        <el-button text class="close-btn" @click="showAnnouncement = false">
+        <el-button text class="close-btn" @click="dismissAnnouncement">
           <el-icon><Close /></el-icon>
         </el-button>
       </div>
@@ -59,20 +60,100 @@
         </div>
       </div>
     </div>
+
+    <div class="history-announcements-section" v-if="historyAnnouncements.length > 0">
+      <div class="section-header">
+        <h2 class="section-title">历史公告</h2>
+        <el-button text @click="showAllAnnouncements = !showAllAnnouncements">
+          {{ showAllAnnouncements ? '收起' : '查看全部' }}
+        </el-button>
+      </div>
+      <div class="announcements-list">
+        <div 
+          v-for="announcement in displayAnnouncements" 
+          :key="announcement.id"
+          class="announcement-item"
+        >
+          <div class="announcement-date">
+            {{ formatDate(announcement.created_at) }}
+          </div>
+          <div class="announcement-info">
+            <h3 class="announcement-item-title">{{ announcement.title }}</h3>
+            <p class="announcement-item-content">{{ announcement.content }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Close } from '@element-plus/icons-vue'
+import axios from 'axios'
+
+interface Announcement {
+  id: string
+  title: string
+  content: string
+  is_active: boolean
+  is_pinned: boolean
+  created_at: string
+}
 
 const router = useRouter()
-const showAnnouncement = ref(true)
+const activeAnnouncement = ref<Announcement | null>(null)
+const historyAnnouncements = ref<Announcement[]>([])
+const showAllAnnouncements = ref(false)
+const dismissedAnnouncements = ref<Set<string>>(new Set())
+
+const displayAnnouncements = computed(() => {
+  return showAllAnnouncements.value 
+    ? historyAnnouncements.value 
+    : historyAnnouncements.value.slice(0, 3)
+})
+
+async function loadAnnouncements() {
+  try {
+    const response = await axios.get(import.meta.env.VITE_API_URL + '/WutheringWavesDPS/api/announcements/active')
+    if (response.data.length > 0) {
+      const announcement = response.data[0]
+      if (!dismissedAnnouncements.value.has(announcement.id)) {
+        activeAnnouncement.value = announcement
+      }
+    }
+    
+    const historyResponse = await axios.get(import.meta.env.VITE_API_URL + '/WutheringWavesDPS/api/announcements')
+    historyAnnouncements.value = historyResponse.data.filter((a: Announcement) => !a.is_active)
+  } catch (error) {
+    console.error('加载公告失败:', error)
+  }
+}
+
+function dismissAnnouncement() {
+  if (activeAnnouncement.value) {
+    dismissedAnnouncements.value.add(activeAnnouncement.value.id)
+    activeAnnouncement.value = null
+  }
+}
+
+function formatDate(dateStr: string) {
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+}
 
 function startCalculate() {
   router.push('/calculator?loadTemplate=true')
 }
+
+onMounted(() => {
+  loadAnnouncements()
+})
 </script>
 
 <style scoped>
@@ -119,9 +200,15 @@ function startCalculate() {
   color: #fff;
 }
 
+.announcement-title {
+  font-size: 16px;
+  color: #fff;
+  font-weight: 700;
+}
+
 .announcement-message {
-  font-size: 15px;
-  color: #e2e8f0;
+  font-size: 14px;
+  color: #cbd5e1;
   font-weight: 500;
 }
 
@@ -132,6 +219,81 @@ function startCalculate() {
 
 .close-btn:hover {
   color: #e2e8f0;
+}
+
+.history-announcements-section {
+  max-width: 1000px;
+  margin: 48px auto 0;
+  padding: 0 20px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.section-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin: 0;
+}
+
+.announcements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.announcement-item {
+  display: flex;
+  gap: 20px;
+  padding: 20px 24px;
+  background: rgba(26, 26, 46, 0.85);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.announcement-item:hover {
+  border-color: rgba(102, 126, 234, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.announcement-date {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+  border: 1px solid rgba(102, 126, 234, 0.4);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #a5b4fc;
+  height: fit-content;
+}
+
+.announcement-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.announcement-item-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin: 0 0 8px 0;
+}
+
+.announcement-item-content {
+  font-size: 14px;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.6;
 }
 
 .hero-section {

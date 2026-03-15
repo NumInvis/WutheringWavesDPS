@@ -40,7 +40,7 @@ def get_character(
     return character
 
 
-@router.post("/admin/characters", response_model=CharacterResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=CharacterResponse, status_code=status.HTTP_201_CREATED)
 def create_character(
     character_data: CharacterCreate,
     db: Session = Depends(get_db),
@@ -61,7 +61,7 @@ def create_character(
     return character
 
 
-@router.put("/admin/characters/{character_id}", response_model=CharacterResponse)
+@router.put("/{character_id}", response_model=CharacterResponse)
 def update_character(
     character_id: str,
     character_data: CharacterUpdate,
@@ -92,7 +92,7 @@ def update_character(
     return character
 
 
-@router.delete("/admin/characters/{character_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{character_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_character(
     character_id: str,
     db: Session = Depends(get_db),

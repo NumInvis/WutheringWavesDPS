@@ -1,693 +1,830 @@
 <template>
-  <div class="tier-list-container">
-    <div class="tier-list-header">
-      <h1 class="page-title">自定义角色排行</h1>
-      <div class="header-actions">
-        <el-button 
-          v-if="userStore.user?.is_admin"
-          type="primary"
-          @click="showAddCharacter = true"
-        >
-          <el-icon><Plus /></el-icon>
-          添加角色
-        </el-button>
-        <el-button 
-          v-if="userStore.isAuthenticated"
-          type="success"
-          @click="exportImage"
-        >
-          <el-icon><Download /></el-icon>
-          导出图片
-        </el-button>
+  <div class="tier-maker">
+    <!-- 顶部工具栏 -->
+    <header class="toolbar">
+      <div class="toolbar-brand">
+        <h1>角色排行制作器</h1>
       </div>
+      <div class="toolbar-actions">
+        <label class="toggle-label">
+          <input type="checkbox" v-model="showNames" @change="saveUserData" />
+          <span>显示名称</span>
+        </label>
+        <button v-if="userStore.isAuthenticated" class="btn btn-text" @click="editSettings">
+          设置
+        </button>
+        <button v-if="userStore.isAuthenticated" class="btn btn-text" @click="resetTierList">
+          重置
+        </button>
+      </div>
+    </header>
+
+    <!-- 游客提示 -->
+    <div v-if="!userStore.isAuthenticated" class="guest-notice">
+      <span>登录后可以创建和保存自己的排行榜</span>
     </div>
 
-    <div class="tier-list-content">
-      <div class="tier-list-main" ref="tierListRef">
-        <div class="tier-rows">
+    <div class="workspace">
+      <!-- 左侧：角色素材库 -->
+      <aside class="material-panel">
+        <div class="panel-header">
+          <h2>角色素材库</h2>
+          <span class="badge">{{ allCharacters.length }}</span>
+        </div>
+        <div class="material-grid">
+          <div
+            v-for="character in allCharacters"
+            :key="character.id"
+            class="material-card"
+            :class="{ 'star-5': character.rarity === 5, 'star-4': character.rarity === 4 }"
+            draggable="true"
+            @dragstart="handleDragStart($event, character)"
+          >
+            <div class="card-image">
+              <img :src="character.image" :alt="character.name" loading="lazy" />
+            </div>
+            <span v-if="showNames" class="card-name" :style="{ fontSize: cardNameSize + 'px' }">{{ character.name }}</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- 右侧：排行榜 -->
+      <main class="ranking-panel">
+        <div class="ranking-header">
+          <h2 :style="{ fontSize: titleSize + 'px' }">{{ tierTitle }}</h2>
+        </div>
+        <div class="tier-list">
           <div 
             v-for="(tier, index) in tiers" 
-            :key="tier.id"
+            :key="tier.id" 
             class="tier-row"
+            :class="{ 'drop-active': dragOverTier === index }"
+            @dragover.prevent="handleDragOver($event, index)"
+            @dragleave="handleDragLeave"
+            @drop="handleDrop($event, index)"
           >
-            <div 
-              class="tier-label"
-              :style="{ backgroundColor: tier.color }"
-            >
+            <div class="tier-label" :style="{ backgroundColor: tier.color, fontSize: tierLabelSize + 'px' }">
               {{ tier.label }}
             </div>
-            <div 
-              class="tier-items"
-              :class="{ 'disabled': !userStore.isAuthenticated }"
-              @dragover.prevent="userStore.isAuthenticated"
-              @drop="userStore.isAuthenticated ? handleDrop($event, index) : null"
-            >
+            <div class="tier-slots">
               <div
-                v-for="character in tier.characters"
-                :key="character.id"
-                class="character-item"
-                :class="{ 
-                  'disabled': !userStore.isAuthenticated,
-                  'star-5': character.rarity === 5,
-                  'star-4': character.rarity === 4
-                }"
-                :draggable="userStore.isAuthenticated"
-                @dragstart="userStore.isAuthenticated ? handleDragStart($event, tier.id, character) : null"
-                @dragend="userStore.isAuthenticated ? handleDragEnd() : null"
+                v-for="(char, charIndex) in tier.characters"
+                :key="char.instanceId"
+                class="slot-card"
+                :class="{ 'star-5': char.rarity === 5, 'star-4': char.rarity === 4 }"
+                draggable="true"
+                @dragstart="handleTierDragStart($event, tier.id, char, charIndex)"
               >
-                <img 
-                  v-if="character.image" 
-                  :src="character.image" 
-                  :alt="character.name"
-                  class="character-image"
-                />
-                <div v-else class="character-placeholder">
-                  {{ character.name ? character.name.charAt(0) : '?' }}
+                <div class="slot-image">
+                  <img :src="char.image" :alt="char.name" />
                 </div>
-                <span class="character-name">{{ character.name }}</span>
-                <div class="rarity-badge" :class="'rarity-' + character.rarity">
-                  {{ character.rarity }}★
-                </div>
+                <span v-if="showNames" class="slot-name" :style="{ fontSize: cardNameSize + 'px' }">{{ char.name }}</span>
+                <button class="slot-remove" @click="removeFromTier(tier.id, charIndex)">×</button>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </main>
+    </div>
 
-      <div class="character-pool-section">
-        <h2 class="section-title">角色池</h2>
-        <div class="character-pool">
-          <div
-            v-for="character in characterPool"
-            :key="character.id"
-            class="pool-character"
-            :class="{ 
-              'disabled': !userStore.isAuthenticated,
-              'star-5': character.rarity === 5,
-              'star-4': character.rarity === 4
-            }"
-            :draggable="userStore.isAuthenticated"
-            @dragstart="userStore.isAuthenticated ? handleDragStart($event, null, character) : null"
-            @dragend="userStore.isAuthenticated ? handleDragEnd() : null"
-          >
-            <img 
-              v-if="character.image" 
-              :src="character.image" 
-              :alt="character.name"
-              class="character-image"
-            />
-            <div v-else class="character-placeholder">
-              {{ character.name ? character.name.charAt(0) : '?' }}
-            </div>
-            <span class="character-name">{{ character.name }}</span>
-            <div class="rarity-badge" :class="'rarity-' + character.rarity">
-              {{ character.rarity }}★
-            </div>
-            <el-button 
-              v-if="userStore.user?.is_admin"
-              type="danger"
-              size="small"
-              circle
-              class="delete-btn"
-              @click.stop="deleteCharacter(character.id)"
-            >
-              <el-icon><Delete /></el-icon>
-            </el-button>
+    <!-- 设置弹窗 -->
+    <div v-if="showSettings" class="modal" @click.self="showSettings = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>排行榜设置</h3>
+          <button class="close-btn" @click="showSettings = false">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>排行榜标题</label>
+            <input v-model="editTitleText" type="text" maxlength="30" />
           </div>
+          <div class="form-group">
+            <label>标题字号 ({{ editTitleSize }}px)</label>
+            <input v-model.number="editTitleSize" type="range" min="16" max="48" />
+          </div>
+          <div class="form-group">
+            <label>层级标签字号 ({{ editTierLabelSize }}px)</label>
+            <input v-model.number="editTierLabelSize" type="range" min="16" max="40" />
+          </div>
+          <div class="form-group">
+            <label>角色名字号 ({{ editCardNameSize }}px)</label>
+            <input v-model.number="editCardNameSize" type="range" min="8" max="16" />
+          </div>
+          <div class="form-group">
+            <label>层级设置</label>
+            <div class="tier-settings">
+              <div v-for="(tier, index) in editTiers" :key="tier.id" class="tier-setting-row">
+                <input v-model="tier.label" type="text" maxlength="3" class="tier-label-input" />
+                <input v-model="tier.color" type="color" class="tier-color-input" />
+                <button v-if="editTiers.length > 2" class="btn-icon" @click="removeTier(index)">−</button>
+              </div>
+              <button v-if="editTiers.length < 8" class="btn btn-secondary btn-full" @click="addTier">
+                + 添加层级
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showSettings = false">取消</button>
+          <button class="btn btn-primary" @click="saveSettings">保存</button>
         </div>
       </div>
     </div>
-
-    <el-dialog 
-      v-model="showAddCharacter" 
-      title="添加新角色" 
-      width="450px"
-    >
-      <el-form :model="newCharacterForm" label-width="80px">
-        <el-form-item label="角色名称">
-          <el-input v-model="newCharacterForm.name" placeholder="请输入角色名称" />
-        </el-form-item>
-        <el-form-item label="角色星级">
-          <el-radio-group v-model="newCharacterForm.rarity">
-            <el-radio-button :value="4">四星</el-radio-button>
-            <el-radio-button :value="5">五星</el-radio-button>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="角色头像">
-          <el-upload
-            class="avatar-uploader"
-            :action="uploadUrl"
-            :headers="uploadHeaders"
-            :show-file-list="false"
-            :on-success="handleAvatarSuccess"
-            :before-upload="beforeAvatarUpload"
-          >
-            <img v-if="newCharacterForm.image" :src="newCharacterForm.image" class="avatar" />
-            <div v-else class="upload-placeholder">
-              <el-icon class="upload-icon"><Plus /></el-icon>
-              <span>点击上传</span>
-            </div>
-          </el-upload>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showAddCharacter = false">取消</el-button>
-        <el-button type="primary" @click="addCharacter" :loading="addCharacterLoading">
-          添加
-        </el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Plus, Download, Delete } from '@element-plus/icons-vue'
-import html2canvas from 'html2canvas'
 import { useUserStore } from '../stores/user'
-import axios from 'axios'
 
 interface Character {
   id: string
   name: string
-  image?: string
+  image: string
   rarity: 4 | 5
+}
+
+interface TierCharacter extends Character {
+  instanceId: string
 }
 
 interface Tier {
   id: string
   label: string
   color: string
-  characters: Character[]
+  characters: TierCharacter[]
 }
 
 const userStore = useUserStore()
+const showSettings = ref(false)
+const showNames = ref(true)
+const dragOverTier = ref<number | null>(null)
 
-const tierListRef = ref<HTMLElement>()
-const showAddCharacter = ref(false)
-const addCharacterLoading = ref(false)
-const newCharacterForm = ref({
-  name: '',
-  image: '',
-  rarity: 5 as 4 | 5
-})
+const tierTitle = ref('我的排行榜')
+const titleSize = ref(24)
+const tierLabelSize = ref(28)
+const cardNameSize = ref(11)
 
-const tierColors = [
-  '#ff4444',
-  '#ff9800',
-  '#ffeb3b',
-  '#4caf50',
-  '#2196f3',
-  '#9c27b0',
-  '#607d8b'
+const editTitleText = ref('')
+const editTitleSize = ref(24)
+const editTierLabelSize = ref(28)
+const editCardNameSize = ref(11)
+
+const defaultTiers: Tier[] = [
+  { id: 'S', label: 'S', color: '#ff6b6b', characters: [] },
+  { id: 'A', label: 'A', color: '#ffa94d', characters: [] },
+  { id: 'B', label: 'B', color: '#ffd43b', characters: [] },
+  { id: 'C', label: 'C', color: '#69db7c', characters: [] },
+  { id: 'D', label: 'D', color: '#4dabf7', characters: [] }
 ]
 
-const tierLabels = ['SS', 'S', 'A', 'B', 'C', 'D', 'F']
+const tiers = ref<Tier[]>(JSON.parse(JSON.stringify(defaultTiers)))
+const editTiers = ref<Tier[]>([])
 
-const characterPool = ref<Character[]>([])
+const allCharacters = ref<Character[]>([])
 
-const tiers = ref<Tier[]>([
-  { id: 'tier-1', label: 'SS', color: '#ff4444', characters: [] },
-  { id: 'tier-2', label: 'S', color: '#ff9800', characters: [] },
-  { id: 'tier-3', label: 'A', color: '#ffeb3b', characters: [] },
-  { id: 'tier-4', label: 'B', color: '#4caf50', characters: [] },
-  { id: 'tier-5', label: 'C', color: '#2196f3', characters: [] }
-])
-
-const uploadUrl = import.meta.env.VITE_API_URL + '/WutheringWavesDPS/api/images'
-const uploadHeaders = {
-  'Authorization': userStore.token ? 'Bearer ' + userStore.token : ''
+// 加载角色数据
+const loadCharacters = async () => {
+  try {
+    const response = await fetch('/WutheringWavesDPS/characters.json')
+    const data = await response.json()
+    if (data.characters && Array.isArray(data.characters)) {
+      allCharacters.value = data.characters
+    }
+  } catch (e) {
+    console.error('加载角色失败:', e)
+  }
 }
 
-let dragData: { tierId: string | null; character: Character } | null = null
+// 加载用户数据
+const loadUserData = () => {
+  if (!userStore.user?.id) return
+  try {
+    const stored = localStorage.getItem(`wwdps_user_${userStore.user.id}`)
+    if (stored) {
+      const data = JSON.parse(stored)
+      if (data.title) tierTitle.value = data.title
+      if (data.titleSize) titleSize.value = data.titleSize
+      if (data.tierLabelSize) tierLabelSize.value = data.tierLabelSize
+      if (data.cardNameSize) cardNameSize.value = data.cardNameSize
+      if (data.tiers) tiers.value = data.tiers
+      if (data.showNames !== undefined) showNames.value = data.showNames
+    }
+  } catch (e) {
+    console.error('加载用户数据失败:', e)
+  }
+}
 
-function handleDragStart(e: DragEvent, tierId: string | null, character: Character) {
-  dragData = { tierId, character }
+// 保存用户数据
+const saveUserData = () => {
+  if (!userStore.user?.id) return
+  const data = {
+    title: tierTitle.value,
+    titleSize: titleSize.value,
+    tierLabelSize: tierLabelSize.value,
+    cardNameSize: cardNameSize.value,
+    tiers: tiers.value,
+    showNames: showNames.value
+  }
+  localStorage.setItem(`wwdps_user_${userStore.user.id}`, JSON.stringify(data))
+}
+
+// 拖拽从素材库
+function handleDragStart(e: DragEvent, character: Character) {
   if (e.dataTransfer) {
+    e.dataTransfer.setData('application/json', JSON.stringify({ character, fromPool: true }))
+    e.dataTransfer.effectAllowed = 'copy'
+  }
+}
+
+// 拖拽从tier
+function handleTierDragStart(e: DragEvent, tierId: string, character: TierCharacter, index: number) {
+  if (e.dataTransfer) {
+    e.dataTransfer.setData('application/json', JSON.stringify({ character, tierId, index, fromTier: true }))
     e.dataTransfer.effectAllowed = 'move'
   }
 }
 
-function handleDragEnd() {
-  dragData = null
-}
-
-function handleDrop(e: DragEvent, targetTierIndex: number) {
+function handleDragOver(e: DragEvent, tierIndex: number) {
   e.preventDefault()
-  if (!dragData) return
+  dragOverTier.value = tierIndex
+}
 
-  const { tierId, character } = dragData
+function handleDragLeave() {
+  dragOverTier.value = null
+}
+
+function handleDrop(e: DragEvent, tierIndex: number) {
+  e.preventDefault()
+  dragOverTier.value = null
   
-  if (tierId) {
-    const sourceTier = tiers.value.find(t => t.id === tierId)
-    if (sourceTier) {
-      sourceTier.characters = sourceTier.characters.filter(c => c.id !== character.id)
+  const data = e.dataTransfer?.getData('application/json')
+  if (!data) return
+  
+  try {
+    const { character, tierId, index, fromTier } = JSON.parse(data)
+    
+    // 从原tier移除
+    if (fromTier && tierId) {
+      const sourceTier = tiers.value.find(t => t.id === tierId)
+      if (sourceTier) {
+        sourceTier.characters.splice(index, 1)
+      }
     }
-  } else {
-    characterPool.value = characterPool.value.filter(c => c.id !== character.id)
-  }
-
-  tiers.value[targetTierIndex].characters.push({ ...character })
-}
-
-async function exportImage() {
-  if (!tierListRef.value) return
-  
-  try {
-    ElMessage.info('正在生成图片...')
     
-    const canvas = await html2canvas(tierListRef.value, {
-      backgroundColor: '#0f0f1a',
-      scale: 2,
-      useCORS: true
-    })
+    // 添加到目标tier
+    const newChar: TierCharacter = {
+      ...character,
+      instanceId: `${character.id}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`
+    }
+    tiers.value[tierIndex].characters.push(newChar)
     
-    const link = document.createElement('a')
-    link.download = 'wuthering-waves-tier-list.png'
-    link.href = canvas.toDataURL('image/png')
-    link.click()
-    
-    ElMessage.success('图片导出成功！')
-  } catch (error) {
-    console.error('导出失败:', error)
-    ElMessage.error('图片导出失败，请重试')
+    saveUserData()
+  } catch (e) {
+    console.error('拖放失败:', e)
   }
 }
 
-function handleAvatarSuccess(response: any) {
-  newCharacterForm.value.image = response.file_url
-  ElMessage.success('头像上传成功！')
-}
-
-function beforeAvatarUpload(file: File) {
-  const isImage = file.type.startsWith('image/')
-  const isLt5M = file.size / 1024 / 1024 < 5
-
-  if (!isImage) {
-    ElMessage.error('只能上传图片文件!')
-    return false
-  }
-  if (!isLt5M) {
-    ElMessage.error('图片大小不能超过 5MB!')
-    return false
-  }
-  return true
-}
-
-async function addCharacter() {
-  if (!newCharacterForm.value.name) {
-    ElMessage.error('请输入角色名称')
-    return
-  }
-  
-  addCharacterLoading.value = true
-  try {
-    const response = await axios.post(
-      import.meta.env.VITE_API_URL + '/WutheringWavesDPS/api/characters/admin/characters',
-      {
-        name: newCharacterForm.value.name,
-        image: newCharacterForm.value.image,
-        rarity: newCharacterForm.value.rarity
-      },
-      {
-        headers: {
-          'Authorization': 'Bearer ' + userStore.token
-        }
-      }
-    )
-    
-    characterPool.value.push(response.data)
-    ElMessage.success('角色添加成功！')
-    showAddCharacter.value = false
-    newCharacterForm.value = { name: '', image: '', rarity: 5 }
-  } catch (error: any) {
-    console.error('添加角色失败:', error)
-    ElMessage.error(error.response?.data?.detail || '添加角色失败')
-  } finally {
-    addCharacterLoading.value = false
+function removeFromTier(tierId: string, charIndex: number) {
+  const tier = tiers.value.find(t => t.id === tierId)
+  if (tier) {
+    tier.characters.splice(charIndex, 1)
+    saveUserData()
   }
 }
 
-async function deleteCharacter(id: string) {
-  try {
-    await axios.delete(
-      import.meta.env.VITE_API_URL + '/WutheringWavesDPS/api/characters/admin/characters/' + id,
-      {
-        headers: {
-          'Authorization': 'Bearer ' + userStore.token
-        }
-      }
-    )
-    
-    characterPool.value = characterPool.value.filter(c => c.id !== id)
-    ElMessage.success('角色删除成功！')
-  } catch (error: any) {
-    console.error('删除角色失败:', error)
-    ElMessage.error(error.response?.data?.detail || '删除角色失败')
-  }
+function resetTierList() {
+  tiers.value.forEach(tier => tier.characters = [])
+  saveUserData()
 }
 
-async function loadCharacters() {
-  try {
-    const response = await axios.get(import.meta.env.VITE_API_URL + '/WutheringWavesDPS/api/characters')
-    characterPool.value = response.data
-  } catch (error) {
-    console.error('加载角色失败:', error)
-  }
+// 编辑设置
+function editSettings() {
+  editTitleText.value = tierTitle.value
+  editTitleSize.value = titleSize.value
+  editTierLabelSize.value = tierLabelSize.value
+  editCardNameSize.value = cardNameSize.value
+  editTiers.value = JSON.parse(JSON.stringify(tiers.value))
+  showSettings.value = true
+}
+
+function saveSettings() {
+  tierTitle.value = editTitleText.value || '我的排行榜'
+  titleSize.value = editTitleSize.value
+  tierLabelSize.value = editTierLabelSize.value
+  cardNameSize.value = editCardNameSize.value
+  tiers.value = editTiers.value.map(t => ({
+    ...t,
+    characters: tiers.value.find(ot => ot.id === t.id)?.characters || []
+  }))
+  showSettings.value = false
+  saveUserData()
+}
+
+function addTier() {
+  const colors = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#4dabf7', '#da77f2', '#adb5bd', '#495057']
+  const labels = ['S', 'A', 'B', 'C', 'D', 'E', 'F', 'G']
+  const index = editTiers.value.length
+  editTiers.value.push({
+    id: `tier_${Date.now()}`,
+    label: labels[index] || `T${index + 1}`,
+    color: colors[index] || '#666',
+    characters: []
+  })
+}
+
+function removeTier(index: number) {
+  editTiers.value.splice(index, 1)
 }
 
 onMounted(() => {
   loadCharacters()
+  loadUserData()
 })
 </script>
 
 <style scoped>
-.tier-list-container {
-  min-height: calc(100vh - 128px);
-  padding: 24px;
-  color: #e2e8f0;
-  position: relative;
-  z-index: 1;
+.tier-maker {
+  min-height: 100vh;
+  background: #0d0d15;
+  color: #e8e8f0;
 }
 
-.tier-list-header {
+/* 工具栏 */
+.toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding: 20px 24px;
-  background: rgba(26, 26, 46, 0.85);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
+  padding: 12px 24px;
+  background: #161620;
+  border-bottom: 1px solid #2a2a3a;
 }
 
-.page-title {
-  font-size: 28px;
-  font-weight: 700;
-  margin: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.header-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.tier-list-content {
-  display: flex;
-  gap: 24px;
-  max-width: 1800px;
-  margin: 0 auto;
-}
-
-.tier-list-main {
-  flex: 1;
-  min-width: 0;
-  background: rgba(26, 26, 46, 0.85);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 24px;
-}
-
-.tier-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.tier-row {
-  display: flex;
-  align-items: stretch;
-  background: rgba(20, 20, 35, 0.9);
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid rgba(167, 139, 250, 0.15);
-}
-
-.tier-label {
-  width: 70px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: 800;
-  color: #000;
-  flex-shrink: 0;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
-}
-
-.tier-items {
-  flex: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 12px;
-  min-height: 80px;
-  align-content: flex-start;
-}
-
-.tier-items.disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-.character-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 10px 8px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  cursor: grab;
-  transition: all 0.3s ease;
-  min-width: 70px;
-  position: relative;
-  border: 2px solid transparent;
-}
-
-.character-item.star-5 {
-  border-color: #ffd700;
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
-}
-
-.character-item.star-4 {
-  border-color: #a855f7;
-  box-shadow: 0 0 10px rgba(168, 85, 247, 0.3);
-}
-
-.character-item.disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-.character-item:hover:not(.disabled) {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
-}
-
-.character-item:active {
-  cursor: grabbing;
-}
-
-.character-image {
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
-  object-fit: cover;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-}
-
-.character-placeholder {
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: 700;
-  color: #fff;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-}
-
-.character-name {
-  font-size: 11px;
+.toolbar-brand h1 {
+  font-size: 18px;
   font-weight: 600;
-  color: #e2e8f0;
+  margin: 0;
+  color: #fff;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #a0a0b0;
+}
+
+.toggle-label input {
+  accent-color: #4dabf7;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: #4dabf7;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #339af0;
+}
+
+.btn-secondary {
+  background: #2a2a3a;
+  color: #fff;
+}
+
+.btn-secondary:hover {
+  background: #3a3a4a;
+}
+
+.btn-full {
+  width: 100%;
+}
+
+.btn-text {
+  background: transparent;
+  color: #a0a0b0;
+}
+
+.btn-text:hover {
+  color: #fff;
+}
+
+.btn-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: none;
+  background: #ff6b6b;
+  color: #fff;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+/* 游客提示 */
+.guest-notice {
+  background: #1a1a28;
+  padding: 10px 24px;
   text-align: center;
-  max-width: 70px;
+  color: #808090;
+  font-size: 13px;
+  border-bottom: 1px solid #2a2a3a;
+}
+
+/* 工作区 */
+.workspace {
+  display: flex;
+  height: calc(100vh - 57px);
+}
+
+/* 左侧素材面板 */
+.material-panel {
+  width: 380px;
+  flex-shrink: 0;
+  background: #161620;
+  border-right: 1px solid #2a2a3a;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #2a2a3a;
+}
+
+.panel-header h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  color: #fff;
+}
+
+.badge {
+  background: #2a2a3a;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #808090;
+}
+
+.material-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  align-content: start;
+}
+
+.material-card {
+  background: #1e1e2e;
+  border-radius: 8px;
+  padding: 8px;
+  text-align: center;
+  cursor: grab;
+  border: 2px solid transparent;
+  transition: transform 0.15s;
+}
+
+.material-card:hover {
+  transform: translateY(-2px);
+}
+
+.material-card.star-5 {
+  border-color: #ffd700;
+}
+
+.material-card.star-4 {
+  border-color: #a855f7;
+}
+
+.card-image {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 8px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #2a2a3a;
+}
+
+.card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-name {
+  color: #b0b0c0;
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.rarity-badge {
+/* 右侧排行面板 */
+.ranking-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ranking-header {
+  padding: 24px;
+  border-bottom: 1px solid #2a2a3a;
+  text-align: center;
+}
+
+.ranking-header h2 {
+  font-weight: 700;
+  margin: 0;
+  color: #fff;
+}
+
+.tier-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tier-row {
+  display: flex;
+  background: #161620;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #2a2a3a;
+  min-height: 100px;
+}
+
+.tier-row.drop-active {
+  border-color: #4dabf7;
+  box-shadow: 0 0 0 2px rgba(77, 171, 247, 0.2);
+}
+
+.tier-label {
+  width: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #000;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.tier-slots {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px;
+  align-content: flex-start;
+}
+
+.slot-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #1e1e2e;
+  border-radius: 8px;
+  padding: 4px;
+  border: 2px solid transparent;
+  cursor: grab;
+}
+
+.slot-card.star-5 {
+  border-color: #ffd700;
+}
+
+.slot-card.star-4 {
+  border-color: #a855f7;
+}
+
+.slot-image {
+  width: 64px;
+  height: 64px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #2a2a3a;
+}
+
+.slot-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.slot-name {
+  color: #b0b0c0;
+  margin-top: 4px;
+  max-width: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slot-remove {
   position: absolute;
   top: -6px;
   right: -6px;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 10px;
-  z-index: 10;
-}
-
-.rarity-badge.rarity-5 {
-  background: linear-gradient(135deg, #ffd700, #ffb700);
-  color: #000;
-  box-shadow: 0 2px 6px rgba(255, 215, 0, 0.5);
-}
-
-.rarity-badge.rarity-4 {
-  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ff6b6b;
+  border: 2px solid #0d0d15;
   color: #fff;
-  box-shadow: 0 2px 6px rgba(168, 85, 247, 0.5);
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.character-pool-section {
-  width: 320px;
-  flex-shrink: 0;
-  background: rgba(26, 26, 46, 0.85);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 24px;
+.slot-card:hover .slot-remove {
+  opacity: 1;
 }
 
-.section-title {
-  font-size: 20px;
-  font-weight: 700;
-  margin: 0 0 16px 0;
-  color: #fff;
+/* 弹窗 */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
 
-.character-pool {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  max-height: calc(100vh - 280px);
+.modal-content {
+  background: #161620;
+  border-radius: 12px;
+  width: 420px;
+  max-height: 80vh;
   overflow-y: auto;
-  padding: 4px;
+  border: 1px solid #2a2a3a;
 }
 
-.pool-character {
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #2a2a3a;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #606070;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid #2a2a3a;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #a0a0b0;
+}
+
+.form-group input[type="text"] {
+  width: 100%;
+  padding: 10px 12px;
+  background: #1e1e2e;
+  border: 1px solid #2a2a3a;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.form-group input[type="range"] {
+  width: 100%;
+  cursor: pointer;
+}
+
+.tier-settings {
   display: flex;
   flex-direction: column;
+  gap: 8px;
+}
+
+.tier-setting-row {
+  display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 10px 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  cursor: grab;
-  transition: all 0.3s ease;
-  border: 2px solid transparent;
-  position: relative;
+  gap: 8px;
 }
 
-.pool-character.star-5 {
-  border-color: #ffd700;
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+.tier-label-input {
+  width: 60px !important;
+  text-align: center;
 }
 
-.pool-character.star-4 {
-  border-color: #a855f7;
-  box-shadow: 0 0 10px rgba(168, 85, 247, 0.3);
+.tier-color-input {
+  width: 40px;
+  height: 36px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
-.pool-character.disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-.pool-character:hover:not(.disabled) {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
-}
-
-.pool-character:active {
-  cursor: grabbing;
-}
-
-.pool-character .character-image,
-.pool-character .character-placeholder {
-  width: 44px;
-  height: 44px;
-}
-
-.pool-character .character-name {
-  font-size: 10px;
-  max-width: 60px;
-}
-
-.delete-btn {
-  position: absolute;
-  top: -8px;
-  left: -8px;
-  width: 24px;
-  height: 24px;
-  z-index: 20;
-}
-
-.character-pool::-webkit-scrollbar {
+/* 滚动条 */
+.material-grid::-webkit-scrollbar,
+.tier-list::-webkit-scrollbar,
+.modal-content::-webkit-scrollbar {
   width: 6px;
 }
 
-.character-pool::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+.material-grid::-webkit-scrollbar-track,
+.tier-list::-webkit-scrollbar-track,
+.modal-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.material-grid::-webkit-scrollbar-thumb,
+.tier-list::-webkit-scrollbar-thumb,
+.modal-content::-webkit-scrollbar-thumb {
+  background: #3a3a4a;
   border-radius: 3px;
 }
 
-.character-pool::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  border-radius: 3px;
+/* 响应式 */
+@media (max-width: 1024px) {
+  .material-panel {
+    width: 300px;
+  }
+  
+  .material-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
-.avatar-uploader .avatar {
-  width: 100px;
-  height: 100px;
-  border-radius: 12px;
-  object-fit: cover;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.upload-placeholder {
-  width: 100px;
-  height: 100px;
-  border: 2px dashed rgba(167, 139, 250, 0.5);
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background: rgba(167, 139, 250, 0.05);
-}
-
-.upload-placeholder:hover {
-  border-color: rgba(167, 139, 250, 0.8);
-  background: rgba(167, 139, 250, 0.1);
-}
-
-.upload-icon {
-  font-size: 28px;
-  color: #a78bfa;
-}
-
-.upload-placeholder span {
-  font-size: 12px;
-  color: #94a3b8;
+@media (max-width: 768px) {
+  .workspace {
+    flex-direction: column;
+  }
+  
+  .material-panel {
+    width: 100%;
+    height: 200px;
+    border-right: none;
+    border-bottom: 1px solid #2a2a3a;
+  }
+  
+  .material-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
 }
 </style>

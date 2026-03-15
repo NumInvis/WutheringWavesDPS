@@ -96,14 +96,22 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """记录所有 HTTP 请求（安全版本，不记录敏感信息）"""
+    """记录所有 HTTP 请求（安全版本，不记录敏感信息）并统计访问量"""
     from app.api.admin import add_log
+    from app.api.visit_stats import record_visit
     
     start_time = time.time()
     
     # 过滤敏感路径和无信息量的路径
     excluded_paths = ["/login", "/register", "/change-password", "/admin/logs", "/health"]
     is_excluded = any(path in request.url.path for path in excluded_paths)
+    
+    # 记录访问统计
+    if not is_excluded and not request.url.path.startswith("/uploads/") and not request.url.path.startswith("/assets/"):
+        try:
+            record_visit(request.url.path)
+        except Exception:
+            pass
     
     response = await call_next(request)
     duration = time.time() - start_time
@@ -133,13 +141,13 @@ app.add_middleware(
 os.makedirs(settings.upload_dir, exist_ok=True)
 
 # Import models to register
-from app.models import user, spreadsheet, star, category, character  # noqa: F401
+from app.models import user, spreadsheet, star, category, character, announcement, visit_stat  # noqa: F401
 
 # Create tables (SQLite/dev)
 Base.metadata.create_all(bind=engine)
 
 # Routers - mount with prefix
-from app.api import auth, spreadsheets, stars, categories, uploads, admin, health, characters, images  # noqa: E402
+from app.api import auth, spreadsheets, stars, categories, uploads, admin, health, characters, images, announcements, visit_stats  # noqa: E402
 
 app.include_router(auth.router, prefix="/WutheringWavesDPS")
 app.include_router(spreadsheets.router, prefix="/WutheringWavesDPS")
@@ -150,6 +158,8 @@ app.include_router(images.router, prefix="/WutheringWavesDPS")
 app.include_router(admin.router, prefix="/WutheringWavesDPS")
 app.include_router(health.router, prefix="/WutheringWavesDPS")
 app.include_router(characters.router, prefix="/WutheringWavesDPS")
+app.include_router(announcements.router, prefix="/WutheringWavesDPS")
+app.include_router(visit_stats.router, prefix="/WutheringWavesDPS")
 
 # Static files for uploads with cache
 class CachedStaticFiles(StaticFiles):
@@ -166,6 +176,11 @@ class CachedStaticFiles(StaticFiles):
 
 # Static files for uploads
 app.mount("/WutheringWavesDPS/uploads", CachedStaticFiles(directory=settings.upload_dir), name="uploads")
+
+# Static files for sucai (character images)
+SUCAI_DIR = BASE_DIR / "sucai"
+if SUCAI_DIR.exists():
+    app.mount("/WutheringWavesDPS/sucai", CachedStaticFiles(directory=str(SUCAI_DIR)), name="sucai")
 
 # Static files for frontend assets with cache
 if FRONTEND_DIST.exists():
@@ -202,6 +217,13 @@ async def health_check():
 @app.get("/WutheringWavesDPS/{path:path}")
 async def serve_frontend(path: str):
     """Serve frontend SPA and handle client-side routing"""
+    if path.startswith("api/"):
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "API endpoint not found"}
+        )
+    
     if FRONTEND_DIST.exists():
         # 首先检查是否是具体的静态文件
         file_path = FRONTEND_DIST / path

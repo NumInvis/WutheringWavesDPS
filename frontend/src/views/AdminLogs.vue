@@ -3,35 +3,36 @@
     <div class="logs-header">
       <h1 class="logs-title">
         <el-icon><Document /></el-icon>
-        平台日志
+        平台管理
       </h1>
-      <el-button text @click="showLogs = !showLogs">
-        {{ showLogs ? '收起' : '展开' }}
-        <el-icon><ArrowUp v-if="showLogs" /><ArrowDown v-else /></el-icon>
-      </el-button>
+      <el-tabs v-model="activeTab" class="header-tabs">
+        <el-tab-pane label="日志" name="logs" />
+        <el-tab-pane label="统计" name="stats" />
+        <el-tab-pane label="公告管理" name="announcements" />
+      </el-tabs>
     </div>
 
-    <div v-if="showStatistics" class="statistics-section">
+    <div v-if="activeTab === 'stats'" class="statistics-section">
       <div class="stats-cards">
         <div class="stat-card stat-purple">
           <div class="stat-icon"><el-icon><ChatDotRound /></el-icon></div>
           <div class="stat-content">
             <div class="stat-label">访问总数</div>
-            <div class="stat-value">{{ stats.totalRequests }}</div>
+            <div class="stat-value">{{ visitStats.total_visits }}</div>
           </div>
         </div>
         <div class="stat-card stat-blue">
           <div class="stat-icon"><el-icon><Monitor /></el-icon></div>
           <div class="stat-content">
-            <div class="stat-label">运行平台</div>
-            <div class="stat-value">1</div>
+            <div class="stat-label">今日访问</div>
+            <div class="stat-value">{{ visitStats.today_visits }}</div>
           </div>
         </div>
         <div class="stat-card stat-green">
           <div class="stat-icon"><el-icon><Clock /></el-icon></div>
           <div class="stat-content">
-            <div class="stat-label">运行时间</div>
-            <div class="stat-value">{{ formatUptime() }}</div>
+            <div class="stat-label">7天访问</div>
+            <div class="stat-value">{{ visitStats.seven_days_visits }}</div>
           </div>
         </div>
         <div class="stat-card stat-orange">
@@ -51,23 +52,23 @@
               <h3 class="chart-title">访问趋势分析</h3>
               <p class="chart-subtitle">跟踪访问数量随时间的变化</p>
             </div>
-            <el-select v-model="timeRange" size="large">
-              <el-option label="过去 7 天" value="7d" />
-              <el-option label="过去 30 天" value="30d" />
+            <el-select v-model="timeRange" size="large" @change="loadVisitStats">
+              <el-option label="过去 7 天" :value="7" />
+              <el-option label="过去 30 天" :value="30" />
             </el-select>
           </div>
           <div class="chart-summary">
             <div class="summary-item">
               <div class="summary-label">总访问数</div>
-              <div class="summary-value">{{ stats.totalRequests }}</div>
+              <div class="summary-value">{{ visitStats.total_visits }}</div>
             </div>
             <div class="summary-item">
               <div class="summary-label">平均每天</div>
-              <div class="summary-value">{{ Math.round(stats.totalRequests / 7) }}</div>
+              <div class="summary-value">{{ Math.round(visitStats.total_visits / timeRange) }}</div>
             </div>
             <div class="summary-item">
-              <div class="summary-label">增长率</div>
-              <div class="summary-value">↑ 18%</div>
+              <div class="summary-label">今日访问</div>
+              <div class="summary-value">{{ visitStats.today_visits }}</div>
             </div>
           </div>
           <div ref="trendChartRef" class="chart-container"></div>
@@ -82,7 +83,7 @@
             <div class="platform-item">
               <span class="platform-num">1</span>
               <span class="platform-name">Web</span>
-              <span class="platform-count">{{ stats.totalRequests }} 次</span>
+              <span class="platform-count">{{ visitStats.total_visits }} 次</span>
             </div>
           </div>
           <div class="progress-bar">
@@ -92,7 +93,7 @@
       </div>
     </div>
 
-    <div v-if="showLogs" class="logs-content">
+    <div v-if="activeTab === 'logs'" class="logs-content">
       <div class="level-filters">
         <el-tag
           v-for="level in logLevels"
@@ -127,17 +128,105 @@
         </div>
       </div>
     </div>
+
+    <div v-if="activeTab === 'announcements'" class="announcements-section">
+      <div class="section-header">
+        <h2 class="section-title">公告管理</h2>
+        <el-button type="primary" @click="showAddAnnouncement = true">
+          <el-icon><Plus /></el-icon>
+          发布公告
+        </el-button>
+      </div>
+
+      <div class="announcements-list">
+        <div 
+          v-for="announcement in announcements" 
+          :key="announcement.id"
+          class="announcement-item"
+        >
+          <div class="announcement-info">
+            <div class="announcement-header">
+              <h3 class="announcement-title">{{ announcement.title }}</h3>
+              <div class="announcement-badges">
+                <el-tag v-if="announcement.is_active" type="success" size="small">当前公告</el-tag>
+                <el-tag v-if="announcement.is_pinned" type="warning" size="small">置顶</el-tag>
+              </div>
+            </div>
+            <p class="announcement-content">{{ announcement.content }}</p>
+            <div class="announcement-meta">
+              <span class="announcement-date">{{ formatDate(announcement.created_at) }}</span>
+            </div>
+          </div>
+          <div class="announcement-actions">
+            <el-button 
+              v-if="!announcement.is_active" 
+              type="primary" 
+              size="small"
+              @click="activateAnnouncement(announcement)"
+            >
+              激活
+            </el-button>
+            <el-button 
+              type="warning" 
+              size="small"
+              @click="togglePinAnnouncement(announcement)"
+            >
+              {{ announcement.is_pinned ? '取消置顶' : '置顶' }}
+            </el-button>
+            <el-button 
+              type="danger" 
+              size="small"
+              @click="deleteAnnouncement(announcement.id)"
+            >
+              删除
+            </el-button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <el-dialog 
+      v-model="showAddAnnouncement" 
+      title="发布新公告" 
+      width="500px"
+    >
+      <el-form :model="newAnnouncementForm" label-width="80px">
+        <el-form-item label="公告标题">
+          <el-input v-model="newAnnouncementForm.title" placeholder="请输入公告标题" />
+        </el-form-item>
+        <el-form-item label="公告内容">
+          <el-input 
+            v-model="newAnnouncementForm.content" 
+            type="textarea" 
+            :rows="4"
+            placeholder="请输入公告内容" 
+          />
+        </el-form-item>
+        <el-form-item label="立即激活">
+          <el-switch v-model="newAnnouncementForm.is_active" />
+        </el-form-item>
+        <el-form-item label="置顶公告">
+          <el-switch v-model="newAnnouncementForm.is_pinned" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showAddAnnouncement = false">取消</el-button>
+        <el-button type="primary" @click="addAnnouncement" :loading="addAnnouncementLoading">
+          发布
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Document, ArrowUp, ArrowDown, ChatDotRound, Monitor, Clock, Cpu, Select } from '@element-plus/icons-vue'
+import { Document, ArrowUp, ArrowDown, ChatDotRound, Monitor, Clock, Cpu, Select, Plus } from '@element-plus/icons-vue'
 import { useUserStore } from '../stores/user'
 import * as echarts from 'echarts'
-import api from '../api'
+import axios from 'axios'
 
 interface LogEntry {
   timestamp: number
@@ -150,8 +239,22 @@ interface LogEntry {
   ip?: string
 }
 
+interface Announcement {
+  id: string
+  title: string
+  content: string
+  is_active: boolean
+  is_pinned: boolean
+  created_at: string
+}
+
+interface VisitStats {
+  total_visits: number
+  today_visits: number
+  seven_days_visits: number
+}
+
 interface Stats {
-  totalRequests: number
   memoryUsed: number
   memoryTotal: number
   cpuUsage: number
@@ -161,21 +264,35 @@ interface Stats {
 const router = useRouter()
 const userStore = useUserStore()
 
+const activeTab = ref('logs')
 const logs = ref<LogEntry[]>([])
 const loading = ref(false)
 const selectedLevels = ref<string[]>(['debug', 'info', 'warning', 'error', 'critical'])
 const logLevels = ['debug', 'info', 'warning', 'error', 'critical']
-const showLogs = ref(true)
-const showStatistics = ref(true)
-const timeRange = ref('7d')
+const timeRange = ref(7)
 const refreshInterval = ref<number | null>(null)
 
 const trendChartRef = ref<HTMLElement>()
 const logsContainerRef = ref<HTMLElement>()
 let trendChart: echarts.ECharts | null = null
 
+const announcements = ref<Announcement[]>([])
+const showAddAnnouncement = ref(false)
+const addAnnouncementLoading = ref(false)
+const newAnnouncementForm = ref({
+  title: '',
+  content: '',
+  is_active: true,
+  is_pinned: false
+})
+
+const visitStats = ref<VisitStats>({
+  total_visits: 0,
+  today_visits: 0,
+  seven_days_visits: 0
+})
+
 const stats = ref<Stats>({
-  totalRequests: 61234,
   memoryUsed: 164,
   memoryTotal: 3655,
   cpuUsage: 4.6,
@@ -190,12 +307,14 @@ onMounted(() => {
   }
   
   fetchLogs()
+  loadAnnouncements()
+  loadVisitStats()
   initCharts()
   
   refreshInterval.value = window.setInterval(() => {
     fetchLogs()
     updateStats()
-  }, 3000)
+  }, 5000)
 })
 
 onUnmounted(() => {
@@ -210,10 +329,16 @@ onUnmounted(() => {
 async function fetchLogs() {
   loading.value = true
   try {
-    const data = await api.get('/admin/logs', {
-      params: { limit: 200 }
-    })
-    const fetchedLogs = data.logs || []
+    const response = await axios.get(
+      import.meta.env.VITE_API_URL + '/WutheringWavesDPS/api/admin/logs',
+      {
+        params: { limit: 200 },
+        headers: {
+          'Authorization': 'Bearer ' + userStore.token
+        }
+      }
+    )
+    const fetchedLogs = response.data.logs || []
     
     logs.value = fetchedLogs.map((log: any) => ({
       ...log,
@@ -230,26 +355,183 @@ async function fetchLogs() {
   }
 }
 
+async function loadAnnouncements() {
+  try {
+    const response = await axios.get(
+      import.meta.env.VITE_API_URL + '/WutheringWavesDPS/api/announcements',
+      {
+        headers: {
+          'Authorization': 'Bearer ' + userStore.token
+        }
+      }
+    )
+    // 验证返回数据是否为数组
+    if (Array.isArray(response.data)) {
+      announcements.value = response.data
+    } else {
+      console.warn('公告API返回非数组数据:', response.data)
+      announcements.value = []
+      ElMessage.warning('公告数据加载异常')
+    }
+  } catch (error) {
+    console.error('加载公告失败:', error)
+    announcements.value = []
+    ElMessage.error('加载公告列表失败')
+  }
+}
+
+async function loadVisitStats() {
+  try {
+    const [summaryResponse, hourlyResponse] = await Promise.all([
+      axios.get(
+        import.meta.env.VITE_API_URL + '/WutheringWavesDPS/api/visit-stats/summary',
+        {
+          headers: {
+            'Authorization': 'Bearer ' + userStore.token
+          }
+        }
+      ),
+      axios.get(
+        import.meta.env.VITE_API_URL + '/WutheringWavesDPS/api/visit-stats/hourly',
+        {
+          params: { days: timeRange.value },
+          headers: {
+            'Authorization': 'Bearer ' + userStore.token
+          }
+        }
+      )
+    ])
+    
+    visitStats.value = summaryResponse.data
+    updateTrendChart(hourlyResponse.data)
+  } catch (error) {
+    console.error('加载访问统计失败:', error)
+  }
+}
+
+async function addAnnouncement() {
+  if (!newAnnouncementForm.value.title || !newAnnouncementForm.value.content) {
+    ElMessage.error('请填写完整的公告信息')
+    return
+  }
+  
+  addAnnouncementLoading.value = true
+  try {
+    await axios.post(
+      import.meta.env.VITE_API_URL + '/WutheringWavesDPS/api/announcements',
+      newAnnouncementForm.value,
+      {
+        headers: {
+          'Authorization': 'Bearer ' + userStore.token
+        }
+      }
+    )
+    
+    ElMessage.success('公告发布成功！')
+    showAddAnnouncement.value = false
+    newAnnouncementForm.value = { title: '', content: '', is_active: true, is_pinned: false }
+    loadAnnouncements()
+  } catch (error: any) {
+    console.error('发布公告失败:', error)
+    ElMessage.error(error.response?.data?.detail || '发布公告失败')
+  } finally {
+    addAnnouncementLoading.value = false
+  }
+}
+
+async function activateAnnouncement(announcement: Announcement) {
+  try {
+    await axios.put(
+      import.meta.env.VITE_API_URL + '/WutheringWavesDPS/api/announcements/' + announcement.id,
+      { is_active: true },
+      {
+        headers: {
+          'Authorization': 'Bearer ' + userStore.token
+        }
+      }
+    )
+    
+    ElMessage.success('公告已激活！')
+    loadAnnouncements()
+  } catch (error: any) {
+    console.error('激活公告失败:', error)
+    ElMessage.error(error.response?.data?.detail || '激活公告失败')
+  }
+}
+
+async function togglePinAnnouncement(announcement: Announcement) {
+  try {
+    await axios.put(
+      import.meta.env.VITE_API_URL + '/WutheringWavesDPS/api/announcements/' + announcement.id,
+      { is_pinned: !announcement.is_pinned },
+      {
+        headers: {
+          'Authorization': 'Bearer ' + userStore.token
+        }
+      }
+    )
+    
+    ElMessage.success(announcement.is_pinned ? '已取消置顶' : '已置顶')
+    loadAnnouncements()
+  } catch (error: any) {
+    console.error('操作失败:', error)
+    ElMessage.error(error.response?.data?.detail || '操作失败')
+  }
+}
+
+async function deleteAnnouncement(id: string) {
+  try {
+    await ElMessageBox.confirm('确定要删除这条公告吗？', '确认删除', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    
+    await axios.delete(
+      import.meta.env.VITE_API_URL + '/WutheringWavesDPS/api/announcements/' + id,
+      {
+        headers: {
+          'Authorization': 'Bearer ' + userStore.token
+        }
+      }
+    )
+    
+    ElMessage.success('公告已删除！')
+    loadAnnouncements()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('删除公告失败:', error)
+      ElMessage.error(error.response?.data?.detail || '删除公告失败')
+    }
+  }
+}
+
 function initCharts() {
   nextTick(() => {
     if (trendChartRef.value) {
       trendChart = echarts.init(trendChartRef.value)
-      updateTrendChart()
     }
   })
 }
 
-function updateTrendChart() {
+function updateTrendChart(data: any[] = []) {
   if (!trendChart) return
   
-  const data = []
-  const now = Date.now()
-  for (let i = 168; i >= 0; i--) {
-    const time = new Date(now - i * 60 * 60 * 1000)
-    data.push({
-      time: time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-      value: Math.floor(Math.random() * 900) + 100
-    })
+  let chartData = data
+  if (chartData.length === 0) {
+    const now = Date.now()
+    for (let i = 168; i >= 0; i--) {
+      const time = new Date(now - i * 60 * 60 * 1000)
+      chartData.push({
+        time: time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+        count: 0
+      })
+    }
+  } else {
+    chartData = data.map((d: any) => ({
+      time: d.time,
+      count: d.count
+    }))
   }
   
   const option = {
@@ -263,7 +545,7 @@ function updateTrendChart() {
     xAxis: {
       type: 'category',
       boundaryGap: false,
-      data: data.map(d => d.time),
+      data: chartData.map((d: any) => d.time),
       axisLine: { lineStyle: { color: '#374151' } },
       axisLabel: { color: '#9ca3af', fontSize: 10 }
     },
@@ -274,7 +556,7 @@ function updateTrendChart() {
       splitLine: { lineStyle: { color: '#1f2937' } }
     },
     series: [{
-      data: data.map(d => d.value),
+      data: chartData.map((d: any) => d.count),
       type: 'line',
       smooth: true,
       areaStyle: {
@@ -299,16 +581,18 @@ function updateTrendChart() {
 }
 
 function updateStats() {
-  stats.value.totalRequests += Math.floor(Math.random() * 10)
   stats.value.cpuUsage = 3 + Math.random() * 4
 }
 
-function formatUptime() {
-  const elapsed = Date.now() - stats.value.startTime
-  const hours = Math.floor(elapsed / (1000 * 60 * 60))
-  const minutes = Math.floor((elapsed % (1000 * 60 * 60)) / (1000 * 60))
-  const seconds = Math.floor((elapsed % (1000 * 60)) / 1000)
-  return `${hours}小时${minutes}分${seconds}秒`
+function formatDate(dateStr: string) {
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 function formatLogTime(timestamp: number) {
@@ -324,6 +608,10 @@ function toggleLevel(level: string) {
     selectedLevels.value.push(level)
   }
 }
+
+watch(timeRange, () => {
+  loadVisitStats()
+})
 
 const filteredLogs = computed(() => {
   return logs.value.filter(log => selectedLevels.value.includes(log.level || 'info'))
@@ -363,6 +651,101 @@ const filteredLogs = computed(() => {
 
 .logs-title .el-icon {
   font-size: 36px;
+}
+
+.header-tabs {
+  margin-left: auto;
+}
+
+.announcements-section {
+  margin-top: 24px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.section-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin: 0;
+}
+
+.announcements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.announcement-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 24px;
+  background: rgba(26, 26, 46, 0.85);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.announcement-item:hover {
+  border-color: rgba(102, 126, 234, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.announcement-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.announcement-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.announcement-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin: 0;
+}
+
+.announcement-badges {
+  display: flex;
+  gap: 8px;
+}
+
+.announcement-content {
+  font-size: 14px;
+  color: #94a3b8;
+  margin: 0 0 12px 0;
+  line-height: 1.6;
+}
+
+.announcement-meta {
+  display: flex;
+  gap: 16px;
+}
+
+.announcement-date {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.announcement-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .statistics-section {

@@ -10,10 +10,10 @@
           <input type="checkbox" v-model="showNames" @change="saveUserData" />
           <span>显示名称</span>
         </label>
-        <button v-if="userStore.isAuthenticated" class="btn btn-text" @click="editSettings">
+        <button v-if="userStore.isAuthenticated" class="btn btn-secondary" @click="editSettings">
           设置
         </button>
-        <button v-if="userStore.isAuthenticated" class="btn btn-text" @click="resetTierList">
+        <button v-if="userStore.isAuthenticated" class="btn btn-secondary" @click="resetTierList">
           重置
         </button>
       </div>
@@ -137,6 +137,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useUserStore } from '../stores/user'
+import { characterImages } from '../characterImages.js'
 
 interface Character {
   id: string
@@ -190,7 +191,11 @@ const loadCharacters = async () => {
     const response = await fetch('/WutheringWavesDPS/characters.json')
     const data = await response.json()
     if (data.characters && Array.isArray(data.characters)) {
-      allCharacters.value = data.characters
+      // 使用Base64图片
+      allCharacters.value = data.characters.map(char => ({
+        ...char,
+        image: characterImages[char.name] || ''
+      }))
     }
   } catch (e) {
     console.error('加载角色失败:', e)
@@ -388,10 +393,11 @@ onMounted(() => {
 }
 
 .btn {
-  padding: 8px 16px;
-  border-radius: 6px;
+  padding: 10px 20px;
+  border-radius: 8px;
   border: none;
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -406,12 +412,15 @@ onMounted(() => {
 }
 
 .btn-secondary {
-  background: #2a2a3a;
+  background: #3a3a5a;
   color: #fff;
+  border: 1px solid #4a4a6a;
+  font-weight: 500;
 }
 
 .btn-secondary:hover {
-  background: #3a3a4a;
+  background: #4a4a7a;
+  border-color: #5a5a8a;
 }
 
 .btn-full {

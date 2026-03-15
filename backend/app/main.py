@@ -107,7 +107,7 @@ async def log_requests(request: Request, call_next):
     is_excluded = any(path in request.url.path for path in excluded_paths)
     
     # 记录访问统计
-    if not is_excluded and not request.url.path.startswith("/uploads/") and not request.url.path.startswith("/assets/"):
+    if not is_excluded and not request.url.path.startswith("/uploads/") and not request.url.path.startswith("/assets/") and not request.url.path.startswith("/sucai/"):
         try:
             record_visit(request.url.path)
         except Exception:
@@ -117,7 +117,7 @@ async def log_requests(request: Request, call_next):
     duration = time.time() - start_time
     
     # 只记录有价值的请求，排除无信息量的请求
-    if not is_excluded and not request.url.path.startswith("/uploads/") and not request.url.path.startswith("/assets/"):
+    if not is_excluded and not request.url.path.startswith("/uploads/") and not request.url.path.startswith("/assets/") and not request.url.path.startswith("/sucai/"):
         add_log(
             "INFO",
             f"{request.method} {request.url.path}",
@@ -146,21 +146,6 @@ from app.models import user, spreadsheet, star, category, character, announcemen
 # Create tables (SQLite/dev)
 Base.metadata.create_all(bind=engine)
 
-# Routers - mount with prefix
-from app.api import auth, spreadsheets, stars, categories, uploads, admin, health, characters, images, announcements, visit_stats  # noqa: E402
-
-app.include_router(auth.router, prefix="/WutheringWavesDPS")
-app.include_router(spreadsheets.router, prefix="/WutheringWavesDPS")
-app.include_router(stars.router, prefix="/WutheringWavesDPS")
-app.include_router(categories.router, prefix="/WutheringWavesDPS")
-app.include_router(uploads.router, prefix="/WutheringWavesDPS")
-app.include_router(images.router, prefix="/WutheringWavesDPS")
-app.include_router(admin.router, prefix="/WutheringWavesDPS")
-app.include_router(health.router, prefix="/WutheringWavesDPS")
-app.include_router(characters.router, prefix="/WutheringWavesDPS")
-app.include_router(announcements.router, prefix="/WutheringWavesDPS")
-app.include_router(visit_stats.router, prefix="/WutheringWavesDPS")
-
 # Static files for uploads with cache
 class CachedStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope):
@@ -174,46 +159,38 @@ class CachedStaticFiles(StaticFiles):
                 response.headers['Cache-Control'] = 'public, max-age=86400'
         return response
 
+# Note: sucai images are now served via API route /api/sucai/{filename}
+# Static file mount removed to avoid conflicts with API routes
+
 # Static files for uploads
 app.mount("/WutheringWavesDPS/uploads", CachedStaticFiles(directory=settings.upload_dir), name="uploads")
-
-# Static files for sucai (character images)
-SUCAI_DIR = BASE_DIR / "sucai"
-if SUCAI_DIR.exists():
-    app.mount("/WutheringWavesDPS/sucai", CachedStaticFiles(directory=str(SUCAI_DIR)), name="sucai")
 
 # Static files for frontend assets with cache
 if FRONTEND_DIST.exists():
     app.mount("/WutheringWavesDPS/assets", CachedStaticFiles(directory=str(FRONTEND_DIST / "assets")), name="assets")
 
+# Routers - mount with prefix
+from app.api import auth, spreadsheets, stars, categories, uploads, admin, health, characters, images, announcements, visit_stats, sucai  # noqa: E402
 
-@app.on_event("startup")
-async def startup_event():
-    """Startup hook."""
-    from app.api.admin import add_log
-    
-    add_log("INFO", "系统启动", {"version": "Beta1.0", "port": settings.app_port})
-    
-    db = SessionLocal()
-    try:
-        from app.api.categories import init_categories
-        from app.api.auth import init_admin_user
-        from app.api.spreadsheets import init_template_spreadsheet
-        init_categories(db)
-        init_admin_user(db)
-        init_template_spreadsheet(db)
-        add_log("INFO", "数据库初始化完成")
-    except Exception as e:
-        add_log("ERROR", "数据库初始化失败", {"error": str(e)})
-    finally:
-        db.close()
+app.include_router(auth.router, prefix="/WutheringWavesDPS")
+app.include_router(spreadsheets.router, prefix="/WutheringWavesDPS")
+app.include_router(stars.router, prefix="/WutheringWavesDPS")
+app.include_router(categories.router, prefix="/WutheringWavesDPS")
+app.include_router(uploads.router, prefix="/WutheringWavesDPS")
+app.include_router(images.router, prefix="/WutheringWavesDPS")
+app.include_router(admin.router, prefix="/WutheringWavesDPS")
+app.include_router(health.router, prefix="/WutheringWavesDPS")
+app.include_router(characters.router, prefix="/WutheringWavesDPS")
+app.include_router(announcements.router, prefix="/WutheringWavesDPS")
+app.include_router(visit_stats.router, prefix="/WutheringWavesDPS")
+app.include_router(sucai.router, prefix="/WutheringWavesDPS")
 
-
+# Health check endpoint
 @app.get("/WutheringWavesDPS/health")
 async def health_check():
     return {"status": "healthy", "version": settings.app_version}
 
-
+# Frontend SPA catch-all route - MUST be last
 @app.get("/WutheringWavesDPS/{path:path}")
 async def serve_frontend(path: str):
     """Serve frontend SPA and handle client-side routing"""
@@ -241,6 +218,27 @@ async def serve_frontend(path: str):
         "version": settings.app_version,
         "docs": "/WutheringWavesDPS/docs"
     }
+
+@app.on_event("startup")
+async def startup_event():
+    """Startup hook."""
+    from app.api.admin import add_log
+    
+    add_log("INFO", "系统启动", {"version": "Beta1.0", "port": settings.app_port})
+    
+    db = SessionLocal()
+    try:
+        from app.api.categories import init_categories
+        from app.api.auth import init_admin_user
+        from app.api.spreadsheets import init_template_spreadsheet
+        init_categories(db)
+        init_admin_user(db)
+        init_template_spreadsheet(db)
+        add_log("INFO", "数据库初始化完成")
+    except Exception as e:
+        add_log("ERROR", "数据库初始化失败", {"error": str(e)})
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":

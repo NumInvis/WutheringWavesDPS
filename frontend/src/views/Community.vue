@@ -75,7 +75,7 @@
             
             <div class="card-actions">
               <el-button size="small" @click="previewSheet(sheet)">
-                预览
+                载入
               </el-button>
               <el-button size="small" type="primary" @click="downloadSheet(sheet)">
                 下载
@@ -216,7 +216,7 @@ const editRules: FormRules = {
 
 function canEdit(sheet: any): boolean {
   if (!userStore.user) return false
-  return sheet.owner_username === userStore.user.username
+  return sheet.user_id === userStore.user.id
 }
 
 async function fetchSpreadsheets() {
@@ -258,7 +258,7 @@ function handleUploadSuccess() {
 }
 
 function previewSheet(sheet: any) {
-  const isOwner = userStore.user && sheet.owner_id === userStore.user.id
+  const isOwner = userStore.user && sheet.user_id === userStore.user.id
   const isAdmin = userStore.user?.is_admin
   
   router.push({
@@ -427,10 +427,21 @@ onMounted(() => {
 .community {
   max-width: 1400px;
   margin: 0 auto;
+  padding: 20px;
 }
 
 .search-card {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 15, 26, 0.75);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.search-card :deep(.el-card__body) {
+  padding: 24px;
 }
 
 .spreadsheet-list {
@@ -439,49 +450,81 @@ onMounted(() => {
 
 .spreadsheet-card {
   margin-bottom: 20px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 15, 26, 0.75);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.spreadsheet-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+.spreadsheet-card :deep(.el-card__body) {
+  padding: 20px;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  gap: 12px;
 }
 
 .card-header .title {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  color: #e2e8f0;
 }
 
 .sheet-number {
-  font-size: 12px;
-  color: #888;
-  font-family: monospace;
+  font-size: 13px;
+  color: #909399;
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 600;
 }
 
 .card-body {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .meta {
   display: flex;
-  gap: 16px;
-  color: #888;
-  font-size: 13px;
+  gap: 20px;
+  color: #94a3b8;
+  font-size: 14px;
+  margin-bottom: 12px;
 }
 
 .meta span {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.meta span:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .meta .view-count:hover {
@@ -492,46 +535,77 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 0;
-  margin-bottom: 12px;
-  border-top: 1px solid #2a2a3e;
-  border-bottom: 1px solid #2a2a3e;
+  padding: 14px 0;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.1) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  margin: 16px 0;
+  padding: 14px 18px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.star-section:hover {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.15) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(251, 191, 36, 0.2);
 }
 
 .star-number {
-  font-size: 16px;
-  font-weight: 600;
-  color: #888;
-  transition: color 0.3s;
+  font-size: 17px;
+  font-weight: 700;
+  color: #fbbf24;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .star-number-active {
-  color: #f7ba2a;
-  text-shadow: 0 0 8px rgba(247, 186, 42, 0.5);
+  color: #f59e0b;
+  text-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
+  transform: scale(1.03);
 }
 
 .star-button {
-  transform: scale(1.17);
+  transform: scale(1);
+  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.15) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.star-button:hover {
+  transform: scale(1.08) rotate(10deg);
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.4);
 }
 
 .description {
   display: flex;
   align-items: flex-start;
-  gap: 6px;
-  margin-top: 10px;
-  padding: 8px;
-  background: #f5f5f5;
-  border-radius: 4px;
-  font-size: 13px;
-  color: #666;
-  line-height: 1.5;
-  max-height: 60px;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 10px;
+  font-size: 14px;
+  color: #1e3a5f;
+  line-height: 1.6;
+  max-height: 72px;
   overflow: hidden;
+  border-left: 4px solid #3b82f6;
 }
 
 .description .el-icon {
   flex-shrink: 0;
   margin-top: 2px;
+  color: #3b82f6;
 }
 
 .description span {
@@ -543,13 +617,33 @@ onMounted(() => {
 
 .card-actions {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.card-actions .el-button {
+  border-radius: 8px;
+  font-weight: 500;
+  padding: 8px 16px;
+  transition: all 0.2s;
+}
+
+.card-actions .el-button:hover {
+  transform: translateY(-1px);
 }
 
 .pagination-container {
   display: flex;
   justify-content: center;
-  margin-top: 30px;
+  margin-top: 40px;
+  padding: 20px;
+}
+
+.pagination-container :deep(.el-pagination) {
+  background: white;
+  padding: 12px 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 }
 </style>

@@ -147,7 +147,7 @@ async function handleSubmit() {
         formData.append('file', form.file)
       }
 
-      const uploadResponse = await fetch('/api/uploads', {
+      const uploadResponse = await fetch('/WutheringWavesDPS/api/uploads', {
         method: 'POST',
         body: formData,
         headers: {
@@ -161,6 +161,11 @@ async function handleSubmit() {
       }
 
       const uploadResult = await uploadResponse.json()
+      
+      let fileUrl = uploadResult.file_url
+      if (!fileUrl.startsWith('/WutheringWavesDPS')) {
+        fileUrl = '/WutheringWavesDPS' + fileUrl
+      }
 
       const spreadsheetData = {
         title: form.title,
@@ -170,11 +175,11 @@ async function handleSubmit() {
         tags: [],
         is_public: true,
         is_draft: false,
-        file_url: uploadResult.file_url,
+        file_url: fileUrl,
         file_size: uploadResult.file_size
       }
 
-      const createResponse = await fetch('/api/spreadsheets', {
+      const createResponse = await fetch('/WutheringWavesDPS/api/spreadsheets', {
         method: 'POST',
         body: JSON.stringify(spreadsheetData),
         headers: {

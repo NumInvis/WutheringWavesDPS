@@ -11,6 +11,31 @@
               <router-link to="/" class="nav-link">首页</router-link>
               <router-link to="/calculator" class="nav-link">工作区</router-link>
               <router-link to="/community" class="nav-link">社区</router-link>
+              <el-dropdown trigger="click" class="nav-link more-dropdown">
+                <span class="more-label">
+                  更多
+                  <el-icon><ArrowDown /></el-icon>
+                </span>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <div class="dropdown-section">
+                      <div class="dropdown-section-title">友情链接</div>
+                      <a href="https://github.com/NumInvis" target="_blank" rel="noopener noreferrer" class="dropdown-link">
+                        <el-icon><User /></el-icon>
+                        GitHub 主页
+                      </a>
+                      <a href="https://www.kdocs.cn/l/chWXEqFmFGvu" target="_blank" rel="noopener noreferrer" class="dropdown-link">
+                        <el-icon><Document /></el-icon>
+                        鸣潮动作数据汇总
+                      </a>
+                      <a href="https://encore.moe/" target="_blank" rel="noopener noreferrer" class="dropdown-link">
+                        <el-icon><Link /></el-icon>
+                        安可网
+                      </a>
+                    </div>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
               <router-link v-if="isAdmin" to="/admin/logs" class="nav-link">日志</router-link>
             </nav>
             <div class="user-area">
@@ -100,7 +125,7 @@ import { useRouter } from 'vue-router'
 import { onMounted, ref, reactive, computed } from 'vue'
 import { ElConfigProvider, ElMessage } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
-import { SwitchButton, ArrowDown, Edit, Lock } from '@element-plus/icons-vue'
+import { SwitchButton, ArrowDown, Edit, Lock, User, Document, Link } from '@element-plus/icons-vue'
 import { useUserStore } from './stores/user'
 import api from './api'
 
@@ -161,7 +186,32 @@ const passwordRules = {
 
 onMounted(() => {
   userStore.initialize()
+  
+  // 预加载壁纸 - 使用 requestIdleCallback 和 link preload 确保快速加载
+  if ('requestIdleCallback' in window) {
+    (window as any).requestIdleCallback(() => {
+      preloadBackgroundImage()
+    })
+  } else {
+    setTimeout(preloadBackgroundImage, 100)
+  }
 })
+
+// 预加载背景图片
+function preloadBackgroundImage() {
+  const img = new Image()
+  img.src = '/picture.webp'
+  img.crossOrigin = 'anonymous'
+  
+  // 添加 link preload 到 head
+  const link = document.createElement('link')
+  link.rel = 'preload'
+  link.as = 'image'
+  link.href = '/picture.webp'
+  document.head.appendChild(link)
+  
+  console.log('[App] Background image preloaded')
+}
 
 function openEditDialog() {
   editForm.display_name = userStore.user?.display_name || userStore.user?.username || ''
@@ -250,11 +300,31 @@ const handleCommand = (command: string) => {
 html, body, #app {
   height: 100%;
   width: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .app-container {
   height: 100%;
   width: 100%;
+  background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+  background-attachment: fixed;
+  position: relative;
+}
+
+.app-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('/picture.webp');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.15;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .main-layout {
@@ -262,10 +332,12 @@ html, body, #app {
 }
 
 .app-header {
-  background: #1a1a2e;
-  border-bottom: 1px solid #2a2a3e;
+  background: rgba(26, 26, 46, 0.85);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0 20px;
-  height: 60px !important;
+  height: 64px !important;
 }
 
 .header-content {
@@ -279,33 +351,104 @@ html, body, #app {
 
 .logo {
   cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.logo:hover {
+  transform: scale(1.02);
 }
 
 .logo-text {
-  font-size: 20px;
-  font-weight: 600;
-  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.3px;
 }
 
 .nav-menu {
   display: flex;
-  gap: 20px;
+  gap: 8px;
 }
 
 .nav-link {
-  color: #a0a0a0;
+  color: #cbd5e1;
   text-decoration: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  transition: all 0.3s;
+  padding: 10px 18px;
+  border-radius: 8px;
+  transition: all 0.25s ease;
+  font-weight: 500;
+  font-size: 14px;
+  position: relative;
 }
 
 .nav-link:hover {
-  color: #409eff;
+  color: #fff;
+  background: rgba(102, 126, 234, 0.2);
 }
 
 .nav-link.router-link-active {
-  color: #409eff;
+  color: #fff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.more-dropdown {
+  display: flex;
+  align-items: center;
+}
+
+.more-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.more-label .el-icon {
+  font-size: 12px;
+  transition: transform 0.2s ease;
+}
+
+.more-dropdown:hover .more-label .el-icon {
+  transform: rotate(180deg);
+}
+
+.dropdown-section {
+  padding: 8px 0;
+}
+
+.dropdown-section-title {
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dropdown-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  color: #e2e8f0;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.dropdown-link:hover {
+  background: rgba(102, 126, 234, 0.2);
+  color: #fff;
+}
+
+.dropdown-link .el-icon {
+  font-size: 16px;
+  color: #a5b4fc;
 }
 
 .user-area {
@@ -316,9 +459,17 @@ html, body, #app {
 .user-dropdown {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   cursor: pointer;
-  color: #fff;
+  color: #e2e8f0;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: all 0.25s ease;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.user-dropdown:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .username {
@@ -326,25 +477,51 @@ html, body, #app {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 500;
 }
 
 .app-main {
-  background: #0a0a0f;
-  padding: 20px;
+  padding: 24px;
   overflow: auto;
 }
 
 .app-footer {
-  background: #1a1a2e;
-  border-top: 1px solid #2a2a3e;
+  background: rgba(26, 26, 46, 0.85);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   height: auto !important;
-  padding: 16px;
+  padding: 20px;
   text-align: center;
 }
 
 .app-footer p {
   margin: 0;
-  color: #666;
+  color: #94a3b8;
   font-size: 13px;
+  font-weight: 500;
+}
+</style>
+
+<style>
+.more-dropdown .el-dropdown-menu {
+  background: rgba(26, 26, 46, 0.85) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5) !important;
+}
+
+.more-dropdown .el-dropdown-menu__item {
+  color: #e2e8f0 !important;
+  padding: 10px 16px !important;
+  margin: 4px 8px !important;
+  border-radius: 8px !important;
+}
+
+.more-dropdown .el-dropdown-menu__item:hover {
+  background: rgba(102, 126, 234, 0.2) !important;
+  color: #fff !important;
 }
 </style>

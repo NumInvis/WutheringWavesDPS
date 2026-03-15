@@ -61,8 +61,18 @@ class Settings(BaseSettings):
     cors_origins: List[str] = [
         "http://localhost:14876", 
         "http://127.0.0.1:14876",
+        "http://localhost:14877", 
+        "http://127.0.0.1:14877",
+        "http://localhost:14878", 
+        "http://127.0.0.1:14878",
+        "http://localhost:14879", 
+        "http://127.0.0.1:14879",
         "http://localhost:5173", 
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "http://www.arcanamorning.tech:14876",
+        "https://www.arcanamorning.tech:14876",
+        "http://www.arcanamorning.tech",
+        "https://www.arcanamorning.tech"
     ]
 
 

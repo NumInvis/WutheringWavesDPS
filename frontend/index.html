@@ -2,25 +2,73 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="WutheringWavesDPS - 鸣潮拉表社区平台，Excel拉表完整保留（数据、公式、格式不变），在线编辑，社区分享" />
     <meta name="keywords" content="鸣潮,拉表,DPS计算,Excel,社区,WutheringWaves" />
+    <meta name="author" content="WutheringWavesDPS Team" />
+    <meta name="theme-color" content="#667eea" />
     <title>WutheringWavesDPS - 鸣潮拉表社区 Beta1.0</title>
     
-    <!-- Luckysheet CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/css/pluginsCss.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/plugins.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/css/luckysheet.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/assets/iconfont/iconfont.css">
+    <!-- DNS Prefetch -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="shortcut icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="apple-touch-icon" href="/vite.svg" />
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    </noscript>
+    
+    <!-- Preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="WutheringWavesDPS - 鸣潮拉表社区" />
+    <meta property="og:description" content="鸣潮拉表社区平台，Excel拉表完整保留（数据、公式、格式不变），在线编辑，社区分享" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/vite.svg" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="WutheringWavesDPS" />
+    <meta name="twitter:description" content="鸣潮拉表社区平台" />
+    <meta name="twitter:image" content="/vite.svg" />
+    
+    <!-- Luckysheet CSS - Defer non-critical CSS (Local) -->
+    <link rel="stylesheet" media="print" onload="this.media='all'" href="/luckysheet/plugins/css/pluginsCss.css">
+    <link rel="stylesheet" media="print" onload="this.media='all'" href="/luckysheet/plugins/plugins.css">
+    <link rel="stylesheet" media="print" onload="this.media='all'" href="/luckysheet/css/luckysheet.css">
+    <link rel="stylesheet" media="print" onload="this.media='all'" href="/luckysheet/assets/iconfont/iconfont.css">
   </head>
   <body>
     <div id="app"></div>
     
-    <!-- Luckysheet JS - 在Vue应用之前加载 -->
-    <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.js"></script>
+    <!-- Luckysheet JS - Load asynchronously (Local) -->
+    <script src="/luckysheet/plugins/js/plugin.js" async></script>
+    <script src="/luckysheet/luckysheet.umd.js" async></script>
     
     <script type="module" src="/src/main.ts"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('SW registered: ', registration);
+            })
+            .catch((registrationError) => {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+    </script>
   </body>
 </html>

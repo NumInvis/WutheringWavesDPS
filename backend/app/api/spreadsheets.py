@@ -5,7 +5,7 @@ import json
 import shutil
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import String
 
@@ -61,7 +61,7 @@ def init_template_spreadsheet(db: Session):
     shutil.copyfile(template_path, dest_path)
     
     file_size = os.path.getsize(dest_path)
-    file_url = f"/uploads/{file_id}{ext}"
+    file_url = f"/WutheringWavesDPS/uploads/{file_id}{ext}"
     
     admin_user = db.query(User).filter(User.is_admin == True).first()
     if not admin_user:
@@ -117,24 +117,64 @@ def get_template_spreadsheet(
 
 
 def _hydrate_spreadsheet(item: Spreadsheet, current_user_id: Optional[str] = None, db: Optional[Session] = None):
-    if item.tags:
+    result = {
+        "id": item.id,
+        "sheet_number": item.sheet_number,
+        "user_id": item.user_id,
+        "title": item.title,
+        "description": item.description,
+        "category": item.category,
+        "area": item.area,
+        "is_draft": item.is_draft,
+        "is_banned": item.is_banned,
+        "is_featured": item.is_featured,
+        "is_public": item.is_public,
+        "star_count": item.star_count,
+        "view_count": item.view_count,
+        "download_count": item.download_count,
+        "file_url": item.file_url,
+        "file_size": item.file_size,
+        "thumbnail_url": item.thumbnail_url,
+        "created_at": item.created_at,
+        "updated_at": item.updated_at,
+        "tags": [],
+        "character_tags": [],
+        "extra_metadata": None,
+        "owner_username": None,
+        "owner_display_name": None,
+        "has_starred": False
+    }
+    
+    if hasattr(item, 'tags') and item.tags:
         try:
-            item.tags = json.loads(item.tags)
+            if isinstance(item.tags, str):
+                result["tags"] = json.loads(item.tags)
+            else:
+                result["tags"] = [tag.tag_name for tag in item.tags]
         except Exception:
-            item.tags = []
-    if item.character_tags:
+            result["tags"] = []
+    
+    if hasattr(item, 'character_tags') and item.character_tags:
         try:
-            item.character_tags = json.loads(item.character_tags)
+            if isinstance(item.character_tags, str):
+                result["character_tags"] = json.loads(item.character_tags)
+            else:
+                result["character_tags"] = [tag.character_name for tag in item.character_tags]
         except Exception:
-            item.character_tags = []
+            result["character_tags"] = []
+    
     if item.extra_metadata:
         try:
-            item.extra_metadata = json.loads(item.extra_metadata)
+            if isinstance(item.extra_metadata, str):
+                result["extra_metadata"] = json.loads(item.extra_metadata)
+            else:
+                result["extra_metadata"] = item.extra_metadata
         except Exception:
-            item.extra_metadata = None
+            result["extra_metadata"] = None
+    
     if item.user:
-        item.owner_username = item.user.username
-        item.owner_display_name = item.user.display_name or item.user.username
+        result["owner_username"] = item.user.username
+        result["owner_display_name"] = item.user.display_name or item.user.username
     
     if current_user_id and db:
         from app.models.star import Star
@@ -142,7 +182,9 @@ def _hydrate_spreadsheet(item: Spreadsheet, current_user_id: Optional[str] = Non
             Star.user_id == current_user_id,
             Star.spreadsheet_id == item.id
         ).first() is not None
-        item.has_starred = has_starred
+        result["has_starred"] = has_starred
+    
+    return result
 
 
 @router.get("", response_model=SpreadsheetListResponse)
@@ -204,11 +246,12 @@ def list_spreadsheets(
     items = query.offset((page - 1) * page_size).limit(page_size).all()
 
     current_user_id = current_user.id if current_user else None
+    hydrated_items = []
     for item in items:
-        _hydrate_spreadsheet(item, current_user_id, db)
+        hydrated_items.append(_hydrate_spreadsheet(item, current_user_id, db))
 
     return {
-        "items": items,
+        "items": hydrated_items,
         "total": total,
         "page": page,
         "page_size": page_size
@@ -247,8 +290,64 @@ def get_spreadsheet(
         db.commit()
 
     current_user_id = current_user.id if current_user else None
-    _hydrate_spreadsheet(spreadsheet, current_user_id, db)
-    return spreadsheet
+    return _hydrate_spreadsheet(spreadsheet, current_user_id, db)
+
+
+@router.post("/upload", response_model=SpreadsheetResponse, status_code=status.HTTP_201_CREATED)
+def upload_and_create_spreadsheet(
+    title: str = Form(...),
+    description: Optional[str] = Form(None),
+    area: str = Form("pull_table"),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Upload file and create spreadsheet in one step."""
+    from app.core.config import get_settings
+    import os
+    import uuid
+    
+    settings = get_settings()
+    
+    upload_dir = settings.upload_dir
+    if not os.path.isabs(upload_dir):
+        backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        upload_dir = os.path.join(backend_dir, upload_dir)
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    file_id = str(uuid.uuid4())
+    ext = os.path.splitext(file.filename or ".xlsx")[1]
+    dest_path = os.path.join(upload_dir, f"{file_id}{ext}")
+    
+    with open(dest_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    file_size = os.path.getsize(dest_path)
+    file_url = f"/WutheringWavesDPS/uploads/{file_id}{ext}"
+    
+    max_number = db.query(Spreadsheet.sheet_number).filter(
+        Spreadsheet.sheet_number.isnot(None)
+    ).order_by(Spreadsheet.sheet_number.desc()).first()
+    
+    next_number = 1 if max_number is None else (max_number[0] + 1)
+    
+    spreadsheet = Spreadsheet(
+        user_id=current_user.id,
+        sheet_number=next_number,
+        title=title,
+        description=description,
+        area=area,
+        is_public=True,
+        is_draft=False,
+        file_url=file_url,
+        file_size=file_size
+    )
+
+    db.add(spreadsheet)
+    db.commit()
+    db.refresh(spreadsheet)
+
+    return _hydrate_spreadsheet(spreadsheet)
 
 
 @router.post("", response_model=SpreadsheetResponse, status_code=status.HTTP_201_CREATED)
@@ -270,8 +369,6 @@ def create_spreadsheet(
         title=spreadsheet_data.title,
         description=spreadsheet_data.description,
         category=spreadsheet_data.category,
-        tags=json.dumps(spreadsheet_data.tags) if spreadsheet_data.tags else None,
-        character_tags=json.dumps(spreadsheet_data.character_tags) if spreadsheet_data.character_tags else None,
         area=spreadsheet_data.area,
         is_public=spreadsheet_data.is_public,
         is_draft=spreadsheet_data.is_draft,
@@ -285,16 +382,15 @@ def create_spreadsheet(
     db.commit()
     db.refresh(spreadsheet)
 
-    _hydrate_spreadsheet(spreadsheet)
-    return spreadsheet
+    return _hydrate_spreadsheet(spreadsheet)
 
 
 @router.put("/{spreadsheet_id}", response_model=SpreadsheetResponse)
 def update_spreadsheet(
     spreadsheet_id: str,
-    title: Optional[str] = None,
-    description: Optional[str] = None,
-    file: Optional[UploadFile] = None,
+    title: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -315,7 +411,7 @@ def update_spreadsheet(
             detail="无权修改此表格"
         )
 
-    if title:
+    if title is not None:
         spreadsheet.title = title
     if description is not None:
         spreadsheet.description = description
@@ -336,13 +432,33 @@ def update_spreadsheet(
             shutil.copyfileobj(file.file, buffer)
         
         file_size = os.path.getsize(dest_path)
-        spreadsheet.file_url = f"/uploads/{file_id}{ext}"
+        spreadsheet.file_url = f"/WutheringWavesDPS/uploads/{file_id}{ext}"
         spreadsheet.file_size = file_size
 
     db.commit()
     db.refresh(spreadsheet)
+    return _hydrate_spreadsheet(spreadsheet)
+
+
+@router.post("/{spreadsheet_id}/toggle-feature")
+def toggle_feature_spreadsheet(
+    spreadsheet_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Toggle feature status (admin only)."""
+    spreadsheet = db.query(Spreadsheet).filter(Spreadsheet.id == spreadsheet_id).first()
+    if not spreadsheet:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="表格不存在"
+        )
+
+    spreadsheet.is_featured = not spreadsheet.is_featured
+    db.commit()
+    db.refresh(spreadsheet)
     _hydrate_spreadsheet(spreadsheet)
-    return spreadsheet
+    return {"is_featured": spreadsheet.is_featured}
 
 
 @router.put("/{spreadsheet_id}/admin", response_model=SpreadsheetResponse)
@@ -366,8 +482,7 @@ def admin_update_spreadsheet(
 
     db.commit()
     db.refresh(spreadsheet)
-    _hydrate_spreadsheet(spreadsheet)
-    return spreadsheet
+    return _hydrate_spreadsheet(spreadsheet)
 
 
 @router.delete("/{spreadsheet_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -448,11 +563,12 @@ def get_my_spreadsheets(
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
 
+    hydrated_items = []
     for item in items:
-        _hydrate_spreadsheet(item)
+        hydrated_items.append(_hydrate_spreadsheet(item))
 
     return {
-        "items": items,
+        "items": hydrated_items,
         "total": total,
         "page": page,
         "page_size": page_size

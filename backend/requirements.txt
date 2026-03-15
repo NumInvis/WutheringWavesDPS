@@ -7,7 +7,7 @@ sqlalchemy>=2.0
 
 # 认证与安全
 python-jose[cryptography]
-passlib[bcrypt]
+bcrypt
 python-multipart
 email-validator
 

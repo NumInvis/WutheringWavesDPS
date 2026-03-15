@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { ElMessage } from 'element-plus'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -22,7 +23,8 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/calculator',
     name: 'Calculator',
-    component: () => import('@/views/Calculator.vue')
+    component: () => import('@/views/Calculator.vue'),
+    meta: { requiresAuth: true }
   },
   {
     path: '/community',
@@ -38,32 +40,80 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/test-sheet',
     name: 'TestSheet',
-    component: () => import('@/views/Calculator-simple.vue')
+    component: () => import('@/views/Calculator-simple.vue'),
+    meta: { requiresAuth: true }
   },
   {
     path: '/test',
     name: 'Test',
     component: () => import('@/views/Test.vue')
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/views/NotFound.vue')
   }
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory('/WutheringWavesDPS/'),
   routes
 })
 
-router.beforeEach((to, _from, next) => {
+// 白名单路由（不需要登录）
+const whiteList = ['/', '/login', '/register', '/community', '/test']
+
+router.beforeEach(async (to, _from, next) => {
   const userStore = useUserStore()
   
-  if (to.meta.requiresAuth && !userStore.isAuthenticated) {
-    next({ path: '/login', query: { redirect: to.fullPath } })
-  } else if (to.meta.guest && userStore.isAuthenticated) {
-    next('/')
-  } else if (to.meta.requiresAdmin && !userStore.user?.is_admin) {
-    next('/')
-  } else {
-    next()
+  // 初始化用户状态
+  if (!userStore.user && userStore.token) {
+    try {
+      await userStore.fetchCurrentUser()
+    } catch (error) {
+      console.error('Failed to fetch user:', error)
+      userStore.logout()
+    }
   }
+  
+  // 1. 管理员权限检查（最高优先级）
+  if (to.meta.requiresAdmin) {
+    if (!userStore.isAuthenticated) {
+      ElMessage.warning('请先登录')
+      next({ path: '/login', query: { redirect: to.fullPath } })
+      return
+    }
+    if (!userStore.user?.is_admin) {
+      ElMessage.error('需要管理员权限')
+      next('/')
+      return
+    }
+  }
+  
+  // 2. 需要登录的路由
+  if (to.meta.requiresAuth) {
+    if (!userStore.isAuthenticated) {
+      ElMessage.warning('请先登录后访问')
+      next({ path: '/login', query: { redirect: to.fullPath } })
+      return
+    }
+  }
+  
+  // 3. 游客专属路由（登录后不能访问）
+  if (to.meta.guest && userStore.isAuthenticated) {
+    ElMessage.info('您已登录，无需再次访问')
+    next('/')
+    return
+  }
+  
+  // 4. 默认放行
+  next()
+})
+
+// 路由错误处理
+router.onError((error) => {
+  console.error('Router error:', error)
+  ElMessage.error('页面加载失败，请刷新重试')
 })
 
 export default router

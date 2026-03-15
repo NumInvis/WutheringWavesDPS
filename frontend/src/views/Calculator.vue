@@ -60,7 +60,7 @@
         </div>
       </div>
       
-      <div class="sheet-wrapper" style="height: 600px;">
+      <div class="sheet-wrapper">
         <div id="luckysheet" style="width: 100%; height: 100%;"></div>
       </div>
     </el-card>
@@ -101,7 +101,6 @@
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { useUserStore } from '../stores/user'
 import api from '../api'
 
 interface UploadedFile {
@@ -114,7 +113,6 @@ interface UploadedFile {
 
 const route = useRoute()
 const router = useRouter()
-const userStore = useUserStore()
 
 const fileInput = ref<HTMLInputElement>()
 const loadError = ref('')
@@ -165,6 +163,37 @@ function destroySheet() {
   }
 }
 
+function convertPercentFormula(formula: string): string {
+  if (!formula) return formula
+  return formula.replace(/(\d+\.?\d*)%/g, '($1/100)')
+}
+
+function setupPercentFormulaHandler() {
+  const luckysheet = (window as any).luckysheet
+  if (!luckysheet) return
+  
+  setTimeout(() => {
+    try {
+      const fileData = luckysheet.getLuckysheetfile && luckysheet.getLuckysheetfile()
+      if (fileData && fileData.length > 0) {
+        fileData.forEach((sheet: any) => {
+          if (sheet.celldata) {
+            sheet.celldata.forEach((cell: any) => {
+              if (cell.v && typeof cell.v === 'object' && cell.v.f) {
+                cell.v.f = convertPercentFormula(cell.v.f)
+              }
+            })
+          }
+        })
+        if (typeof luckysheet.refresh === 'function') {
+          luckysheet.refresh()
+        }
+      }
+    } catch (e) {
+    }
+  }, 800)
+}
+
 function initEmptySheet() {
   console.log('[Calculator] 初始化空表格...')
   
@@ -188,6 +217,25 @@ function initEmptySheet() {
       enableAddRow: true,
       enableAddCol: true,
       allowEdit: true,
+      forceCalculation: true,
+      sheetFormulaBar: true,
+      cellRightClickConfig: {
+        copy: true,
+        copyAs: true,
+        paste: true,
+        insertRow: true,
+        insertColumn: true,
+        deleteRow: true,
+        deleteColumn: true,
+        deleteCell: true,
+        hideRow: true,
+        hideColumn: true,
+        clear: true,
+        matrix: true,
+        sort: true,
+        filter: true,
+        cellFormat: true
+      },
       data: [{
         name: 'Sheet1',
         color: '#409eff',
@@ -196,9 +244,47 @@ function initEmptySheet() {
         celldata: [],
         row: 84,
         column: 60
-      }]
+      }],
+      hook: {
+        cellUpdateBefore: function(rc: any, change: any, workbook: any) {
+          try {
+            if (change && change.v && typeof change.v === 'object' && change.v.f) {
+              change.v.f = convertPercentFormula(change.v.f)
+            }
+          } catch (e) {
+          }
+          return true
+        },
+        cellUpdated: function(rc: any, oldValue: any, newValue: any, isRefresh: any) {
+          try {
+            const luckysheet = (window as any).luckysheet
+            if (luckysheet && luckysheet.refresh) {
+              setTimeout(() => {
+                try {
+                  const fileData = luckysheet.getLuckysheetfile && luckysheet.getLuckysheetfile()
+                  if (fileData && fileData.length > 0) {
+                    fileData.forEach((sheet: any) => {
+                      if (sheet.celldata) {
+                        sheet.celldata.forEach((cell: any) => {
+                          if (cell.v && typeof cell.v === 'object' && cell.v.f) {
+                            cell.v.f = convertPercentFormula(cell.v.f)
+                          }
+                        })
+                      }
+                    })
+                    luckysheet.refresh()
+                  }
+                } catch (e) {
+                }
+              }, 100)
+            }
+          } catch (e) {
+          }
+        }
+      }
     })
     console.log('[Calculator] 空表格初始化成功')
+    setupPercentFormulaHandler()
   } catch (e) {
     console.error('[Calculator] 初始化失败:', e)
     loadError.value = '表格初始化失败'
@@ -258,37 +344,33 @@ async function parseAndShowExcel(file: File, readOnly: boolean = false): Promise
   }
 
   console.log('[Calculator] 解析到', exportJson.sheets.length, '个工作表')
+  console.log('[Calculator] 原始数据:', exportJson)
 
   destroySheet()
 
-  const MAX_ROWS = 100
-  const MAX_COLS = 100
-  
   const sheetsData = exportJson.sheets.map((sheet: any, index: number) => {
-    let celldata = sheet.celldata || []
-    if (celldata.length > 0) {
-      celldata = celldata.filter((cell: any) => {
-        const row = cell?.r || 0
-        const col = cell?.c || 0
-        return row < MAX_ROWS && col < MAX_COLS
+    const sheetData = {
+      ...sheet,
+      name: sheet.name || `Sheet${index + 1}`,
+      status: index === 0 ? 1 : 0,
+      order: index
+    }
+    
+    if (sheetData.celldata && sheetData.celldata.length > 0) {
+      sheetData.celldata.forEach((cell: any) => {
+        if (cell.v && typeof cell.v === 'object' && cell.v.f) {
+          cell.v.f = convertPercentFormula(cell.v.f)
+        }
       })
     }
     
-    return {
-      name: sheet.name || `Sheet${index + 1}`,
-      color: sheet.color || '',
-      status: index === 0 ? 1 : 0,
-      order: index,
-      celldata,
-      row: Math.min(sheet.row || 84, MAX_ROWS),
-      column: Math.min(sheet.column || 60, MAX_COLS),
-      config: sheet.config || {}
-    }
+    return sheetData
   })
 
   luckysheet.create({
     container: 'luckysheet',
-    title: file.name.replace(/\.(xlsx|xls|xlsm)$/i, ''),
+    data: sheetsData,
+    title: exportJson.info?.name || file.name.replace(/\.(xlsx|xls|xlsm)$/i, ''),
     lang: 'zh',
     showinfobar: false,
     showsheetbar: true,
@@ -296,10 +378,75 @@ async function parseAndShowExcel(file: File, readOnly: boolean = false): Promise
     enableAddRow: !readOnly,
     enableAddCol: !readOnly,
     allowEdit: !readOnly,
-    data: sheetsData
+    forceCalculation: true,
+    sheetFormulaBar: true,
+    cellRightClickConfig: {
+      copy: true,
+      copyAs: true,
+      paste: true,
+      insertRow: true,
+      insertColumn: true,
+      deleteRow: true,
+      deleteColumn: true,
+      deleteCell: true,
+      hideRow: true,
+      hideColumn: true,
+      clear: true,
+      matrix: true,
+      sort: true,
+      filter: true,
+      cellFormat: true
+    },
+    hook: {
+      cellUpdateBefore: function(rc: any, change: any, workbook: any) {
+        try {
+          if (change && change.v && typeof change.v === 'object' && change.v.f) {
+            change.v.f = convertPercentFormula(change.v.f)
+          }
+        } catch (e) {
+        }
+        return true
+      },
+      cellUpdated: function(rc: any, oldValue: any, newValue: any, isRefresh: any) {
+        try {
+          const luckysheet = (window as any).luckysheet
+          if (luckysheet && luckysheet.refresh) {
+            setTimeout(() => {
+              try {
+                const fileData = luckysheet.getLuckysheetfile && luckysheet.getLuckysheetfile()
+                if (fileData && fileData.length > 0) {
+                  fileData.forEach((sheet: any) => {
+                    if (sheet.celldata) {
+                      sheet.celldata.forEach((cell: any) => {
+                        if (cell.v && typeof cell.v === 'object' && cell.v.f) {
+                          cell.v.f = convertPercentFormula(cell.v.f)
+                        }
+                      })
+                    }
+                  })
+                  luckysheet.refresh()
+                }
+              } catch (e) {
+              }
+            }, 100)
+          }
+        } catch (e) {
+        }
+      }
+    }
   })
 
-  console.log('[Calculator] Excel加载成功')
+  setTimeout(() => {
+    try {
+      const luckysheetInstance = (window as any).luckysheet
+      if (luckysheetInstance && typeof luckysheetInstance.refresh === 'function') {
+        luckysheetInstance.refresh()
+      }
+    } catch (e) {
+    }
+  }, 500)
+  
+  setupPercentFormulaHandler()
 }
 
 function checkPreviewMode() {
@@ -320,11 +467,15 @@ async function loadTemplateSheet() {
   console.log('[Calculator] 加载模板表格 #00000000')
   
   try {
-    const templateResponse = await fetch('/api/spreadsheets/template')
+    const templateResponse = await fetch('/WutheringWavesDPS/api/spreadsheets/template')
     if (templateResponse.ok) {
       const templateData = await templateResponse.json()
       if (templateData.id && templateData.file_url) {
-        const fileResponse = await fetch(templateData.file_url)
+        let fileUrl = templateData.file_url
+        if (!fileUrl.startsWith('/WutheringWavesDPS')) {
+          fileUrl = '/WutheringWavesDPS' + fileUrl
+        }
+        const fileResponse = await fetch(fileUrl)
         const blob = await fileResponse.blob()
         const arrayBuffer = await blob.arrayBuffer()
         const file = new File([blob], templateData.title + '.xlsx', { type: blob.type })
@@ -355,35 +506,41 @@ async function loadPreviewSheet() {
   console.log('[Calculator] 加载预览表格:', previewSheetId.value)
   
   try {
-    const response = await fetch(`/api/spreadsheets/${previewSheetId.value}/download`, {
-      headers: {
-        'Authorization': userStore.token ? `Bearer ${userStore.token}` : ''
-      }
-    })
+    const response = await api.get(`/spreadsheets/${previewSheetId.value}/download`)
+    console.log('[Calculator] 下载接口响应:', response)
     
-    if (response.ok) {
-      const data = await response.json()
-      if (data.file_url) {
-        const fileResponse = await fetch(data.file_url)
-        const blob = await fileResponse.blob()
-        const arrayBuffer = await blob.arrayBuffer()
-        const file = new File([blob], data.filename || 'preview.xlsx', { type: blob.type })
-        
-        previewFile.value = {
-          id: 'preview-' + Date.now(),
-          name: file.name,
-          size: blob.size,
-          content: arrayBuffer,
-          file: file
-        }
-        
-        await loadExcelParser()
-        await parseAndShowExcel(file, !isEditable.value)
+    if (response.file_url) {
+      let fileUrl = response.file_url
+      if (!fileUrl.startsWith('/WutheringWavesDPS')) {
+        fileUrl = '/WutheringWavesDPS' + fileUrl
       }
+      console.log('[Calculator] 下载文件:', fileUrl)
+      
+      const fileResponse = await fetch(fileUrl)
+      const blob = await fileResponse.blob()
+      const arrayBuffer = await blob.arrayBuffer()
+      const file = new File([blob], response.filename || 'preview.xlsx', { type: blob.type })
+      
+      console.log('[Calculator] 文件信息:', file.name, file.size)
+      
+      uploadedFiles.value.push({
+        id: 'preview-' + Date.now(),
+        name: file.name,
+        size: blob.size,
+        content: arrayBuffer,
+        file: file
+      })
+      currentFileIndex.value = uploadedFiles.value.length - 1
+      isPreviewMode.value = false
+      
+      console.log('[Calculator] 开始解析Excel')
+      await loadExcelParser()
+      await parseAndShowExcel(file, false)
+      console.log('[Calculator] Excel解析完成')
     }
   } catch (error) {
     console.error('[Calculator] 加载预览失败:', error)
-    ElMessage.error('加载预览失败')
+    ElMessage.error('加载预览失败: ' + (error as Error).message)
   }
 }
 
@@ -409,12 +566,10 @@ async function init() {
     
     if (shouldLoadTemplate.value) {
       await loadTemplateSheet()
+    } else if (isPreviewMode.value) {
+      await loadPreviewSheet()
     } else {
       initEmptySheet()
-      
-      if (isPreviewMode.value) {
-        loadPreviewSheet()
-      }
     }
     
     console.log('[Calculator] 初始化完成')
@@ -533,10 +688,10 @@ async function publishCurrentSheet() {
       const formData = new FormData()
       formData.append('file', currentFile.file)
       formData.append('title', publishForm.title)
-      formData.append('description', publishForm.description)
+      formData.append('description', publishForm.description || '')
       formData.append('area', publishForm.area)
 
-      await api.post('/spreadsheets', formData, {
+      await api.post('/spreadsheets/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -561,6 +716,9 @@ function formatFileSize(size: number): string {
 }
 
 onMounted(() => {
+  window.alert = function() {}
+  window.confirm = function() { return false }
+  window.prompt = function() { return null }
   checkPreviewMode()
   init()
 })
@@ -572,12 +730,37 @@ onUnmounted(() => {
 
 <style scoped>
 .calculator {
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .calculator-card {
-  min-height: 600px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 15, 26, 0.75);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.calculator-card :deep(.el-card__body) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.calculator-card :deep(.el-card__header) {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 16px 24px;
 }
 
 .card-header {
@@ -586,25 +769,42 @@ onUnmounted(() => {
   align-items: center;
 }
 
+.card-header span {
+  font-size: 18px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
 .header-actions {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .sheet-list {
-  margin-bottom: 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #2a2a3e;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
 }
 
 .sheet-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
-  background: #1a1a2e;
-  border-radius: 4px;
-  margin-bottom: 8px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  transition: all 0.25s ease;
+}
+
+.sheet-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(102, 126, 234, 0.3);
+  transform: translateY(-2px);
 }
 
 .sheet-info {
@@ -614,13 +814,14 @@ onUnmounted(() => {
 }
 
 .sheet-name {
-  font-weight: 500;
-  color: #fff;
+  font-weight: 600;
+  color: #e2e8f0;
+  font-size: 15px;
 }
 
 .sheet-size {
-  font-size: 12px;
-  color: #888;
+  font-size: 13px;
+  color: #94a3b8;
 }
 
 .sheet-actions {
@@ -629,9 +830,19 @@ onUnmounted(() => {
 }
 
 .sheet-wrapper {
-  min-height: 500px;
+  flex: 1;
   background: #fff;
-  border-radius: 4px;
+  border-radius: 12px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+#luckysheet {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 500px;
 }
 </style>

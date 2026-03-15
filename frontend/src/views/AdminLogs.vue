@@ -242,6 +242,22 @@ function getLogType(level: string): string {
 
 .logs-card {
   min-height: 600px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 15, 26, 0.75);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.logs-card :deep(.el-card__header) {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 16px 24px;
+}
+
+.logs-card :deep(.el-card__body) {
+  padding: 24px;
 }
 
 .card-header {
@@ -250,18 +266,26 @@ function getLogType(level: string): string {
   align-items: center;
 }
 
+.card-header span {
+  font-size: 18px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
 .header-actions {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .logs-filter {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #2a2a3e;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
 .logs-container {
@@ -275,67 +299,88 @@ function getLogType(level: string): string {
 .logs-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 .log-item {
-  padding: 12px 16px;
-  background: #1a1a2e;
-  border-radius: 4px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-left: 4px solid #409eff;
+  transition: all 0.25s ease;
+}
+
+.log-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .log-item.info {
-  border-left-color: #409eff;
+  border-left-color: #60a5fa;
+  background: rgba(96, 165, 250, 0.08);
 }
 
 .log-item.warn {
-  border-left-color: #e6a23c;
+  border-left-color: #fbbf24;
+  background: rgba(251, 191, 36, 0.08);
 }
 
 .log-item.error {
-  border-left-color: #f56c6c;
+  border-left-color: #f87171;
+  background: rgba(248, 113, 113, 0.08);
 }
 
 .log-item.debug {
-  border-left-color: #909399;
+  border-left-color: #94a3b8;
+  background: rgba(148, 163, 184, 0.08);
 }
 
 .log-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .log-time {
-  font-size: 12px;
-  color: #888;
-  font-family: monospace;
+  font-size: 13px;
+  color: #94a3b8;
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 10px;
+  border-radius: 6px;
 }
 
 .log-message {
-  font-size: 14px;
-  color: #fff;
+  font-size: 15px;
+  color: #e2e8f0;
   word-break: break-all;
+  line-height: 1.6;
 }
 
 .log-details {
-  margin-top: 8px;
-  padding: 8px;
-  background: #0a0a0f;
-  border-radius: 4px;
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .log-details pre {
   margin: 0;
   font-size: 12px;
-  color: #888;
+  color: #94a3b8;
   overflow-x: auto;
+  line-height: 1.5;
 }
 
 .logs-pagination {
-  margin-top: 20px;
+  margin-top: 24px;
   display: flex;
   justify-content: center;
 }

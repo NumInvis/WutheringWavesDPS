@@ -1,0 +1,17 @@
+{
+  "name": "WutheringWavesDPS",
+  "short_name": "WWDPS",
+  "description": "鸣潮拉表分享社区",
+  "theme_color": "#667eea",
+  "background_color": "#0f0f1a",
+  "display": "standalone",
+  "scope": "/WutheringWavesDPS/",
+  "start_url": "/WutheringWavesDPS/",
+  "icons": [
+    {
+      "src": "/WutheringWavesDPS/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

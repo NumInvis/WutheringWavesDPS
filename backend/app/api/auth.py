@@ -6,7 +6,7 @@ import uuid
 from datetime import timedelta, datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -19,6 +19,7 @@ from app.core.security import (
     create_access_token,
     decode_access_token
 )
+from app.core.rate_limit import login_tracker
 from app.models.user import User
 from app.schemas.user import (
     UserCreate,
@@ -33,7 +34,7 @@ router = APIRouter(prefix="/api/auth", tags=["认证"])
 settings = get_settings()
 
 # Allow optional auth for public endpoints
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/WutheringWavesDPS/api/auth/login", auto_error=False)
 
 
 def _safe_email_local_part(value: str) -> str:
@@ -259,11 +260,29 @@ def update_current_user(
 
 
 @router.post("/login", response_model=Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login(
+    request: Request,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
     """用户登录。"""
-    user = db.query(User).filter(User.username == form_data.username).first()
+    # 获取客户端IP
+    client_ip = request.client.host if request.client else "unknown"
+    username = form_data.username
+    
+    # 检查是否被锁定
+    if login_tracker.is_locked(client_ip):
+        remaining = login_tracker.get_remaining_lock_time(client_ip)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"登录尝试次数过多，请 {remaining // 60} 分钟后再试"
+        )
+    
+    user = db.query(User).filter(User.username == username).first()
 
     if not user:
+        # 记录失败尝试
+        login_tracker.record_attempt(client_ip, username, success=False)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="用户不存在，请先注册",
@@ -271,6 +290,8 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         )
 
     if not verify_password(form_data.password, user.password_hash):
+        # 记录失败尝试
+        login_tracker.record_attempt(client_ip, username, success=False)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="用户名或密码错误",
@@ -283,6 +304,9 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
             detail="用户已被禁用"
         )
 
+    # 登录成功，清除失败记录
+    login_tracker.record_attempt(client_ip, username, success=True)
+    
     user.last_login_at = datetime.utcnow()
     db.commit()
 

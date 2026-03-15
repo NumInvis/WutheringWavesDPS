@@ -19,6 +19,7 @@ build/
 *.db
 *.sqlite
 *.sqlite3
+*.db.backup.*
 
 # Environment
 .env
@@ -55,5 +56,18 @@ excel_storage/*
 *.tmp
 *.temp
 
+# Pid files
+*.pid
+
+# Large assets (not needed in repo)
+picture.png
+picture.webp
+
 # Keep template
 !backend/拉表模板.xlsx
+
+# Frontend dist
+frontend/dist/
+
+# Luckysheet (can be installed via npm)
+frontend/public/luckysheet/

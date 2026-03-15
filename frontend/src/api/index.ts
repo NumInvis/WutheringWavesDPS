@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
-import { ElMessage } from 'element-plus'
+import { handleError, setupGlobalErrorHandler } from './errorHandler'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
+const API_BASE_URL = '/WutheringWavesDPS/api'
 
 interface ApiResponse<T = any> {
   message?: string
@@ -24,6 +24,9 @@ class ApiClient {
 
     this.setupInterceptors()
     this.loadToken()
+    
+    // 设置全局错误处理
+    setupGlobalErrorHandler()
   }
 
   private loadToken() {
@@ -44,45 +47,32 @@ class ApiClient {
   }
 
   private setupInterceptors() {
+    // 请求拦截器
     this.client.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
+        // 添加请求时间戳，用于缓存控制
+        if (config.method === 'get') {
+          config.params = {
+            ...config.params,
+            _t: Date.now()
+          }
+        }
         return config
       },
       (error) => {
+        handleError(error)
         return Promise.reject(error)
       }
     )
 
+    // 响应拦截器
     this.client.interceptors.response.use(
       (response: AxiosResponse) => {
         return response
       },
       (error) => {
-        if (error.response) {
-          const { status, data } = error.response
-          
-          if (status === 401) {
-            if (this.token) {
-              this.removeAuthToken()
-              localStorage.removeItem('token')
-              ElMessage.error('登录已过期，请重新登录')
-              window.location.href = '/login'
-            }
-          } else if (status === 403) {
-            ElMessage.error(data.detail || '没有权限执行此操作')
-          } else if (status === 404) {
-            ElMessage.error(data.detail || '请求的资源不存在')
-          } else if (status >= 500) {
-            ElMessage.error('服务器错误，请稍后重试')
-          } else {
-            ElMessage.error(data.detail || '请求失败')
-          }
-        } else if (error.request) {
-          ElMessage.error('网络错误，请检查网络连接')
-        } else {
-          ElMessage.error('请求配置错误')
-        }
-
+        // 使用新的错误处理系统
+        handleError(error)
         return Promise.reject(error)
       }
     )

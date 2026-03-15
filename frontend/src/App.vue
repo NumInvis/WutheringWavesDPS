@@ -11,28 +11,33 @@
               <router-link to="/" class="nav-link">首页</router-link>
               <router-link to="/calculator" class="nav-link">工作区</router-link>
               <router-link to="/community" class="nav-link">社区</router-link>
+              <router-link to="/tier-list" class="nav-link">排行</router-link>
               <el-dropdown trigger="hover" class="nav-link more-dropdown">
                 <span class="more-label">
                   更多
                   <el-icon><ArrowDown /></el-icon>
                 </span>
                 <template #dropdown>
-                  <el-dropdown-menu>
-                    <div class="dropdown-section">
-                      <div class="dropdown-section-title">友情链接</div>
-                      <a href="https://github.com/NumInvis" target="_blank" rel="noopener noreferrer" class="dropdown-link">
+                  <el-dropdown-menu class="more-dropdown-menu">
+                    <div class="dropdown-header">友情链接</div>
+                    <el-dropdown-item>
+                      <a href="https://github.com/NumInvis" target="_blank" rel="noopener noreferrer" class="dropdown-item-link">
                         <el-icon><User /></el-icon>
-                        GitHub 主页
+                        <span>GitHub 主页</span>
                       </a>
-                      <a href="https://www.kdocs.cn/l/chWXEqFmFGvu" target="_blank" rel="noopener noreferrer" class="dropdown-link">
+                    </el-dropdown-item>
+                    <el-dropdown-item>
+                      <a href="https://www.kdocs.cn/l/chWXEqFmFGvu" target="_blank" rel="noopener noreferrer" class="dropdown-item-link">
                         <el-icon><Document /></el-icon>
-                        鸣潮动作数据汇总
+                        <span>鸣潮动作数据汇总</span>
                       </a>
-                      <a href="https://encore.moe/" target="_blank" rel="noopener noreferrer" class="dropdown-link">
+                    </el-dropdown-item>
+                    <el-dropdown-item>
+                      <a href="https://encore.moe/" target="_blank" rel="noopener noreferrer" class="dropdown-item-link">
                         <el-icon><Link /></el-icon>
-                        安可网
+                        <span>安可网</span>
                       </a>
-                    </div>
+                    </el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -507,7 +512,7 @@ html, body, #app {
 </style>
 
 <style>
-.more-dropdown .el-dropdown-menu {
+.more-dropdown-menu {
   background: #1a1a2e !important;
   border: 1px solid rgba(167, 139, 250, 0.3) !important;
   border-radius: 12px !important;
@@ -515,35 +520,44 @@ html, body, #app {
   padding: 8px !important;
 }
 
-.more-dropdown .el-dropdown-menu__item {
-  color: #ffffff !important;
-  padding: 12px 16px !important;
+.more-dropdown-menu .dropdown-header {
+  padding: 8px 12px 4px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #a78bfa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.more-dropdown-menu .el-dropdown-menu__item {
+  padding: 0 !important;
   margin: 4px !important;
   border-radius: 8px !important;
-  font-weight: 700 !important;
-  font-size: 15px !important;
   background: transparent !important;
 }
 
-.more-dropdown .el-dropdown-menu__item:hover {
-  background: rgba(167, 139, 250, 0.3) !important;
-  color: #ffffff !important;
+.more-dropdown-menu .el-dropdown-menu__item:hover {
+  background: rgba(167, 139, 250, 0.2) !important;
 }
 
-.more-dropdown .dropdown-link {
-  color: #ffffff !important;
-  font-weight: 700 !important;
-  font-size: 15px !important;
-  background: transparent !important;
+.dropdown-item-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 15px;
+  width: 100%;
 }
 
-.more-dropdown .dropdown-link:hover {
-  color: #ffffff !important;
+.dropdown-item-link:hover {
+  color: #ffffff;
 }
 
-.more-dropdown .dropdown-section-title {
-  color: #a78bfa !important;
-  font-weight: 700 !important;
-  font-size: 12px !important;
+.dropdown-item-link .el-icon {
+  font-size: 18px;
+  color: #a78bfa;
 }
 </style>

@@ -32,6 +32,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/Community.vue')
   },
   {
+    path: '/tier-list',
+    name: 'TierList',
+    component: () => import('@/views/TierList.vue')
+  },
+  {
     path: '/admin/logs',
     name: 'AdminLogs',
     component: () => import('@/views/AdminLogs.vue'),
@@ -61,7 +66,7 @@ const router = createRouter({
 })
 
 // 白名单路由（不需要登录）
-const whiteList = ['/', '/login', '/register', '/community', '/test']
+const whiteList = ['/', '/login', '/register', '/community', '/test', '/tier-list']
 
 router.beforeEach(async (to, _from, next) => {
   const userStore = useUserStore()

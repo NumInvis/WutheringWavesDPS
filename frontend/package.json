@@ -15,6 +15,7 @@
     "@element-plus/icons-vue": "^2.3.1",
     "axios": "^1.6.5",
     "element-plus": "^2.5.3",
+    "html2canvas": "^1.4.1",
     "luckyexcel": "^1.0.1",
     "luckysheet": "^2.1.13",
     "pinia": "^2.1.7",

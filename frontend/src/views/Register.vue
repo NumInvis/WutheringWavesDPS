@@ -8,7 +8,7 @@
         <el-form-item prop="username">
           <el-input 
             v-model="registerForm.username" 
-            placeholder="用户名"
+            placeholder="账号"
             size="large"
           />
         </el-form-item>
@@ -94,11 +94,11 @@ const validateConfirmPassword = (_rule: any, value: any, callback: any) => {
 
 const validateUsername = (_rule: any, value: any, callback: any) => {
   if (!value) {
-    callback(new Error('请输入用户名'))
+    callback(new Error('请输入账号'))
   } else if (!/^[a-zA-Z0-9]+$/.test(value)) {
-    callback(new Error('用户名只能包含英文和数字'))
+    callback(new Error('账号只能包含英文和数字'))
   } else if (value.length < 3 || value.length > 50) {
-    callback(new Error('用户名长度在 3 到 50 个字符'))
+    callback(new Error('账号长度在 3 到 50 个字符'))
   } else {
     callback()
   }

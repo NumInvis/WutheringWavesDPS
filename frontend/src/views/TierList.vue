@@ -49,7 +49,7 @@
       </aside>
 
       <!-- 右侧：排行榜 -->
-      <main class="ranking-panel" :style="{ backgroundColor: `rgba(22, 22, 32, ${bgOpacity / 100})` }">
+      <main class="ranking-panel">
         <div class="ranking-header">
           <h2 :style="{ fontSize: titleSize + 'px' }">{{ tierTitle }}</h2>
         </div>
@@ -59,6 +59,7 @@
             :key="tier.id"
             class="tier-row"
             :class="{ 'drop-active': dragOverTier === index }"
+            :style="{ opacity: bgOpacity / 100 }"
             @dragover.prevent="handleDragOver($event, index)"
             @dragleave="handleDragLeave"
             @drop="handleDrop($event, index)"
@@ -116,7 +117,7 @@
             <input v-model.number="editTierOpacity" type="range" min="20" max="100" />
           </div>
           <div class="form-group">
-            <label>排行榜背景透明度 ({{ editBgOpacity }}%)</label>
+            <label>排行榜背景不透明度 ({{ editBgOpacity }}%)</label>
             <input v-model.number="editBgOpacity" type="range" min="0" max="100" />
           </div>
           <div class="form-group">

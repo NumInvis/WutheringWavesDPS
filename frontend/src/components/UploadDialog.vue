@@ -113,7 +113,7 @@ const rules: FormRules = {
 function beforeUpload(file: File) {
   const maxSize = 5 * 1024 * 1024
   if (file.size > maxSize) {
-    ElMessage.error({ message: { message: '文件大小不能超过 5MB', duration: 3000 }, duration: 3000 })
+    ElMessage.error({ message: '文件大小不能超过 5MB', duration: 3000 })
     return false
   }
   return true
@@ -137,7 +137,7 @@ async function handleSubmit() {
     try {
       const token = localStorage.getItem('token')
       if (!token) {
-        ElMessage.error({ message: { message: '请先登录后再上传', duration: 3000 }, duration: 3000 })
+        ElMessage.error({ message: '请先登录后再上传', duration: 3000 })
         uploading.value = false
         return
       }
@@ -193,7 +193,7 @@ async function handleSubmit() {
         throw new Error(errorData.detail || '创建表格失败')
       }
 
-      ElMessage.success({ message: { message: '表格已发布！', duration: 3000 }, duration: 3000 })
+      ElMessage.success({ message: '表格已发布！', duration: 3000 })
       emit('success')
       handleCancel()
 

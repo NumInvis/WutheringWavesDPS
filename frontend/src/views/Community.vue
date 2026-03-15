@@ -239,7 +239,7 @@ async function fetchSpreadsheets() {
     spreadsheets.value = data.items || []
     total.value = data.total || 0
   } catch (error) {
-    ElMessage.error({ message: { message: '加载失败', duration: 3000 }, duration: 3000 })
+    ElMessage.error({ message: '加载失败', duration: 3000 })
   } finally {
     loading.value = false
   }
@@ -247,7 +247,7 @@ async function fetchSpreadsheets() {
 
 function openUploadDialog() {
   if (!userStore.isAuthenticated) {
-    ElMessage.warning({ message: { message: '请先登录后上传', duration: 3000 }, duration: 3000 })
+    ElMessage.warning({ message: '请先登录后上传', duration: 3000 })
     return
   }
   uploadDialogVisible.value = true
@@ -286,13 +286,13 @@ async function downloadSheet(sheet: any) {
       window.URL.revokeObjectURL(url)
     }
   } catch (error) {
-    ElMessage.error({ message: { message: '下载失败', duration: 3000 }, duration: 3000 })
+    ElMessage.error({ message: '下载失败', duration: 3000 })
   }
 }
 
 async function toggleStar(sheet: any) {
   if (!userStore.isAuthenticated) {
-    ElMessage.warning({ message: { message: '请先登录', duration: 3000 }, duration: 3000 })
+    ElMessage.warning({ message: '请先登录', duration: 3000 })
     return
   }
   
@@ -309,28 +309,28 @@ async function toggleStar(sheet: any) {
       sheet.has_starred = true
     }
   } catch (error) {
-    ElMessage.error({ message: { message: '操作失败', duration: 3000 }, duration: 3000 })
+    ElMessage.error({ message: '操作失败', duration: 3000 })
   }
 }
 
 async function toggleFeature(sheet: any) {
   if (!isAdmin.value) {
-    ElMessage.warning({ message: { message: '需要管理员权限', duration: 3000 }, duration: 3000 })
+    ElMessage.warning({ message: '需要管理员权限', duration: 3000 })
     return
   }
 
   try {
     await api.post(`/spreadsheets/${sheet.id}/toggle-feature`)
     sheet.is_featured = !sheet.is_featured
-    ElMessage.success({ message: { message: '操作成功', duration: 3000 }, duration: 3000 })
+    ElMessage.success({ message: '操作成功', duration: 3000 })
   } catch (error) {
-    ElMessage.error({ message: { message: '操作失败', duration: 3000 }, duration: 3000 })
+    ElMessage.error({ message: '操作失败', duration: 3000 })
   }
 }
 
 function openEditDialog(sheet: any) {
   if (!canEdit(sheet)) {
-    ElMessage.warning({ message: { message: '无权限编辑', duration: 3000 }, duration: 3000 })
+    ElMessage.warning({ message: '无权限编辑', duration: 3000 })
     return
   }
   currentEditingSheet.value = sheet
@@ -349,7 +349,7 @@ function handleEditFileChange(file: any) {
 function beforeUpload(file: File) {
   const maxSize = 5 * 1024 * 1024
   if (file.size > maxSize) {
-    ElMessage.error({ message: { message: '文件大小不能超过 5MB', duration: 3000 }, duration: 3000 })
+    ElMessage.error({ message: '文件大小不能超过 5MB', duration: 3000 })
     return false
   }
   return true
@@ -362,7 +362,7 @@ async function submitEdit() {
     if (!valid) return
     
     if (!currentEditingSheet.value) {
-      ElMessage.error({ message: { message: '编辑信息无效', duration: 3000 }, duration: 3000 })
+      ElMessage.error({ message: '编辑信息无效', duration: 3000 })
       return
     }
     
@@ -383,7 +383,7 @@ async function submitEdit() {
         }
       })
       
-      ElMessage.success({ message: { message: '编辑成功', duration: 3000 }, duration: 3000 })
+      ElMessage.success({ message: '编辑成功', duration: 3000 })
       editDialogVisible.value = false
       await fetchSpreadsheets()
     } catch (error: any) {
@@ -409,11 +409,11 @@ async function confirmDelete(sheet: any) {
     })
     
     await api.delete(`/spreadsheets/${sheet.id}`)
-    ElMessage.success({ message: { message: '删除成功', duration: 3000 }, duration: 3000 })
+    ElMessage.success({ message: '删除成功', duration: 3000 })
     await fetchSpreadsheets()
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error({ message: { message: '删除失败', duration: 3000 }, duration: 3000 })
+      ElMessage.error({ message: '删除失败', duration: 3000 })
     }
   }
 }

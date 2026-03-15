@@ -496,7 +496,7 @@ async function loadTemplateSheet() {
     }
   } catch (error) {
     console.error('[Calculator] 加载模板失败:', error)
-    ElMessage.error({ message: { message: '加载模板失败', duration: 3000 }, duration: 3000 })
+    ElMessage.error({ message: '加载模板失败', duration: 3000 })
   }
 }
 
@@ -664,7 +664,7 @@ function exitCurrentSheet() {
 
 function openPublishDialog() {
   if (currentFileIndex.value < 0) {
-    ElMessage.warning({ message: { message: '请先导入表格', duration: 3000 }, duration: 3000 })
+    ElMessage.warning({ message: '请先导入表格', duration: 3000 })
     return
   }
   publishForm.title = uploadedFiles.value[currentFileIndex.value].name.replace(/\.xlsx?$/i, '')
@@ -679,7 +679,7 @@ async function publishCurrentSheet() {
     
     const currentFile = uploadedFiles.value[currentFileIndex.value]
     if (!currentFile) {
-      ElMessage.error({ message: { message: '没有找到要发布的文件', duration: 3000 }, duration: 3000 })
+      ElMessage.error({ message: '没有找到要发布的文件', duration: 3000 })
       return
     }
 
@@ -697,7 +697,7 @@ async function publishCurrentSheet() {
         }
       })
       
-      ElMessage.success({ message: { message: '发布成功', duration: 3000 }, duration: 3000 })
+      ElMessage.success({ message: '发布成功', duration: 3000 })
       publishDialogVisible.value = false
       router.push('/community')
     } catch (error: any) {

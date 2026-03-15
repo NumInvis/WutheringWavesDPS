@@ -49,11 +49,11 @@
       </aside>
 
       <!-- 右侧：排行榜 -->
-      <main class="ranking-panel">
+      <main class="ranking-panel" :style="{ backgroundColor: `rgba(22, 22, 32, ${bgOpacity / 100})` }">
         <div class="ranking-header">
           <h2 :style="{ fontSize: titleSize + 'px' }">{{ tierTitle }}</h2>
         </div>
-        <div class="tier-list" :style="{ backgroundColor: `rgba(22, 22, 32, ${bgOpacity / 100})` }">
+        <div class="tier-list">
           <div
             v-for="(tier, index) in tiers"
             :key="tier.id"

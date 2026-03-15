@@ -3,7 +3,7 @@
     <div class="hero-section">
       <div class="hero-content">
         <div class="hero-badge">Beta 1.0</div>
-        <h1 class="hero-title">鸣潮拉表分享社区</h1>
+        <h1 class="hero-title">莫宁宁的WutheringWavesDPS</h1>
         <div class="hero-features">
           <div class="feature-item">
             <div class="feature-icon">📊</div>

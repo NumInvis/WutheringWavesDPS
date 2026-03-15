@@ -59,7 +59,7 @@
             :key="tier.id"
             class="tier-row"
             :class="{ 'drop-active': dragOverTier === index }"
-            :style="{ opacity: bgOpacity / 100 }"
+            :style="{ backgroundColor: `rgba(22, 22, 32, ${bgOpacity / 100})` }"
             @dragover.prevent="handleDragOver($event, index)"
             @dragleave="handleDragLeave"
             @drop="handleDrop($event, index)"
@@ -146,7 +146,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useUserStore } from '../stores/user'
-import { characterImages } from '../characterImages.js'
 
 interface Character {
   id: string
@@ -178,6 +177,15 @@ const cardNameSize = ref(11)
 const tierOpacity = ref(100)
 const bgOpacity = ref(100)
 
+// 异步加载角色图片数据
+let characterImagesCache: Record<string, string> | null = null
+const loadCharacterImages = async (): Promise<Record<string, string>> => {
+  if (characterImagesCache) return characterImagesCache
+  const module = await import('../characterImages.js')
+  characterImagesCache = module.characterImages
+  return characterImagesCache
+}
+
 const editTitleText = ref('')
 const editTitleSize = ref(24)
 const editTierLabelSize = ref(28)
@@ -201,7 +209,10 @@ const allCharacters = ref<Character[]>([])
 // 加载角色数据
 const loadCharacters = async () => {
   try {
-    const response = await fetch('/WutheringWavesDPS/characters.json')
+    const [response, characterImages] = await Promise.all([
+      fetch('/WutheringWavesDPS/characters.json'),
+      loadCharacterImages()
+    ])
     const data = await response.json()
     if (data.characters && Array.isArray(data.characters)) {
       // 使用Base64图片
@@ -603,7 +614,6 @@ onMounted(() => {
 
 .tier-row {
   display: flex;
-  background: #161620;
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #2a2a3a;

@@ -508,41 +508,42 @@ html, body, #app {
 
 <style>
 .more-dropdown .el-dropdown-menu {
-  background: rgba(26, 26, 46, 0.85) !important;
-  backdrop-filter: blur(18px) !important;
-  -webkit-backdrop-filter: blur(18px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: #1a1a2e !important;
+  border: 1px solid rgba(167, 139, 250, 0.3) !important;
   border-radius: 12px !important;
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.7) !important;
   padding: 8px !important;
 }
 
 .more-dropdown .el-dropdown-menu__item {
-  color: #a78bfa !important;
-  padding: 10px 16px !important;
+  color: #ffffff !important;
+  padding: 12px 16px !important;
   margin: 4px !important;
   border-radius: 8px !important;
   font-weight: 700 !important;
+  font-size: 15px !important;
   background: transparent !important;
 }
 
 .more-dropdown .el-dropdown-menu__item:hover {
-  background: rgba(102, 126, 234, 0.2) !important;
-  color: #c4b5fd !important;
+  background: rgba(167, 139, 250, 0.3) !important;
+  color: #ffffff !important;
 }
 
 .more-dropdown .dropdown-link {
-  color: #a78bfa !important;
+  color: #ffffff !important;
   font-weight: 700 !important;
+  font-size: 15px !important;
   background: transparent !important;
 }
 
 .more-dropdown .dropdown-link:hover {
-  color: #c4b5fd !important;
+  color: #ffffff !important;
 }
 
 .more-dropdown .dropdown-section-title {
-  color: #8b5cf6 !important;
+  color: #a78bfa !important;
   font-weight: 700 !important;
+  font-size: 12px !important;
 }
 </style>

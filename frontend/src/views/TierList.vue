@@ -1,25 +1,30 @@
 <template>
   <div class="tier-list-container">
+    <div class="tier-list-header">
+      <h1 class="page-title">自定义角色排行</h1>
+      <div class="header-actions">
+        <el-button 
+          v-if="userStore.user?.is_admin"
+          type="primary"
+          @click="showAddCharacter = true"
+        >
+          <el-icon><Plus /></el-icon>
+          添加角色
+        </el-button>
+        <el-button 
+          v-if="userStore.isAuthenticated"
+          type="success"
+          @click="exportImage"
+        >
+          <el-icon><Download /></el-icon>
+          导出图片
+        </el-button>
+      </div>
+    </div>
+
     <div class="tier-list-content">
-      <div class="tier-list-left">
-        <div class="page-header">
-          <h1 class="page-title">🎮 自定义角色排行</h1>
-          <p class="page-subtitle">打造属于你的鸣潮角色强度榜</p>
-        </div>
-        
-        <div v-if="!userStore.isAuthenticated" class="guest-notice">
-          <div class="notice-icon">👀</div>
-          <div class="notice-content">
-            <h3>游客模式</h3>
-            <p>您可以浏览角色池，但无法编辑排行</p>
-            <el-button type="primary" size="large" @click="router.push('/login')" class="login-btn">
-              <el-icon><User /></el-icon>
-              立即登录
-            </el-button>
-          </div>
-        </div>
-        
-        <div class="tier-rows" ref="tierListRef">
+      <div class="tier-list-main" ref="tierListRef">
+        <div class="tier-rows">
           <div 
             v-for="(tier, index) in tiers" 
             :key="tier.id"
@@ -50,9 +55,6 @@
                 @dragstart="userStore.isAuthenticated ? handleDragStart($event, tier.id, character) : null"
                 @dragend="userStore.isAuthenticated ? handleDragEnd() : null"
               >
-                <div class="character-rarity" :class="'rarity-' + character.rarity">
-                  {{ character.rarity }}★
-                </div>
                 <img 
                   v-if="character.image" 
                   :src="character.image" 
@@ -63,44 +65,17 @@
                   {{ character.name ? character.name.charAt(0) : '?' }}
                 </div>
                 <span class="character-name">{{ character.name }}</span>
+                <div class="rarity-badge" :class="'rarity-' + character.rarity">
+                  {{ character.rarity }}★
+                </div>
               </div>
             </div>
-            <button 
-              v-if="userStore.isAuthenticated && tiers.length > 1"
-              class="remove-tier-btn"
-              @click="removeTier(index)"
-            >
-              <el-icon><Close /></el-icon>
-            </button>
           </div>
         </div>
-        
-        <div v-if="userStore.isAuthenticated" class="tier-actions">
-          <el-button type="primary" size="large" @click="addTier" class="action-btn">
-            <el-icon><Plus /></el-icon>
-            添加层级
-          </el-button>
-          <el-button type="success" size="large" @click="exportImage" class="action-btn">
-            <el-icon><Download /></el-icon>
-            导出图片
-          </el-button>
-        </div>
       </div>
-      
-      <div class="tier-list-right">
-        <div class="section-header">
-          <h2 class="section-title">📦 角色池</h2>
-          <el-button 
-            v-if="userStore.user?.is_admin"
-            type="primary"
-            size="large"
-            @click="showAddCharacter = true"
-            class="add-char-btn"
-          >
-            <el-icon><Plus /></el-icon>
-            添加角色
-          </el-button>
-        </div>
+
+      <div class="character-pool-section">
+        <h2 class="section-title">角色池</h2>
         <div class="character-pool">
           <div
             v-for="character in characterPool"
@@ -115,9 +90,6 @@
             @dragstart="userStore.isAuthenticated ? handleDragStart($event, null, character) : null"
             @dragend="userStore.isAuthenticated ? handleDragEnd() : null"
           >
-            <div class="character-rarity" :class="'rarity-' + character.rarity">
-              {{ character.rarity }}★
-            </div>
             <img 
               v-if="character.image" 
               :src="character.image" 
@@ -128,12 +100,15 @@
               {{ character.name ? character.name.charAt(0) : '?' }}
             </div>
             <span class="character-name">{{ character.name }}</span>
+            <div class="rarity-badge" :class="'rarity-' + character.rarity">
+              {{ character.rarity }}★
+            </div>
             <el-button 
               v-if="userStore.user?.is_admin"
               type="danger"
               size="small"
               circle
-              class="delete-character-btn"
+              class="delete-btn"
               @click.stop="deleteCharacter(character.id)"
             >
               <el-icon><Delete /></el-icon>
@@ -145,16 +120,15 @@
 
     <el-dialog 
       v-model="showAddCharacter" 
-      title="✨ 添加新角色" 
-      width="500px"
-      class="add-char-dialog"
+      title="添加新角色" 
+      width="450px"
     >
-      <el-form :model="newCharacterForm" label-width="100px" class="add-char-form">
+      <el-form :model="newCharacterForm" label-width="80px">
         <el-form-item label="角色名称">
-          <el-input v-model="newCharacterForm.name" placeholder="请输入角色名称" size="large" />
+          <el-input v-model="newCharacterForm.name" placeholder="请输入角色名称" />
         </el-form-item>
         <el-form-item label="角色星级">
-          <el-radio-group v-model="newCharacterForm.rarity" size="large">
+          <el-radio-group v-model="newCharacterForm.rarity">
             <el-radio-button :value="4">四星</el-radio-button>
             <el-radio-button :value="5">五星</el-radio-button>
           </el-radio-group>
@@ -171,15 +145,15 @@
             <img v-if="newCharacterForm.image" :src="newCharacterForm.image" class="avatar" />
             <div v-else class="upload-placeholder">
               <el-icon class="upload-icon"><Plus /></el-icon>
-              <span>点击上传头像</span>
+              <span>点击上传</span>
             </div>
           </el-upload>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showAddCharacter = false" size="large">取消</el-button>
-        <el-button type="primary" @click="addCharacter" :loading="addCharacterLoading" size="large">
-          添加角色
+        <el-button @click="showAddCharacter = false">取消</el-button>
+        <el-button type="primary" @click="addCharacter" :loading="addCharacterLoading">
+          添加
         </el-button>
       </template>
     </el-dialog>
@@ -189,9 +163,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Plus, Download, Close, Delete, User } from '@element-plus/icons-vue'
+import { Plus, Download, Delete } from '@element-plus/icons-vue'
 import html2canvas from 'html2canvas'
-import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import axios from 'axios'
 
@@ -209,7 +182,6 @@ interface Tier {
   characters: Character[]
 }
 
-const router = useRouter()
 const userStore = useUserStore()
 
 const tierListRef = ref<HTMLElement>()
@@ -236,30 +208,11 @@ const tierLabels = ['SS', 'S', 'A', 'B', 'C', 'D', 'F']
 const characterPool = ref<Character[]>([])
 
 const tiers = ref<Tier[]>([
-  {
-    id: 'tier-1',
-    label: 'SS',
-    color: '#ff4444',
-    characters: []
-  },
-  {
-    id: 'tier-2',
-    label: 'S',
-    color: '#ff9800',
-    characters: []
-  },
-  {
-    id: 'tier-3',
-    label: 'A',
-    color: '#ffeb3b',
-    characters: []
-  },
-  {
-    id: 'tier-4',
-    label: 'B',
-    color: '#4caf50',
-    characters: []
-  }
+  { id: 'tier-1', label: 'SS', color: '#ff4444', characters: [] },
+  { id: 'tier-2', label: 'S', color: '#ff9800', characters: [] },
+  { id: 'tier-3', label: 'A', color: '#ffeb3b', characters: [] },
+  { id: 'tier-4', label: 'B', color: '#4caf50', characters: [] },
+  { id: 'tier-5', label: 'C', color: '#2196f3', characters: [] }
 ])
 
 const uploadUrl = import.meta.env.VITE_API_URL + '/WutheringWavesDPS/api/upload'
@@ -296,23 +249,6 @@ function handleDrop(e: DragEvent, targetTierIndex: number) {
   }
 
   tiers.value[targetTierIndex].characters.push({ ...character })
-}
-
-function addTier() {
-  const nextIndex = tiers.value.length
-  const newTier: Tier = {
-    id: 'tier-' + Date.now(),
-    label: tierLabels[nextIndex % tierLabels.length] || '?',
-    color: tierColors[nextIndex % tierColors.length],
-    characters: []
-  }
-  tiers.value.push(newTier)
-}
-
-function removeTier(index: number) {
-  const removedTier = tiers.value[index]
-  characterPool.value.push(...removedTier.characters)
-  tiers.value.splice(index, 1)
 }
 
 async function exportImage() {
@@ -427,101 +363,56 @@ onMounted(() => {
 <style scoped>
 .tier-list-container {
   min-height: calc(100vh - 128px);
-  padding: 32px 24px;
-  color: #e2e8f0;
-  background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
-}
-
-.tier-list-content {
-  display: flex;
-  gap: 32px;
-  max-width: 1800px;
-  margin: 0 auto;
-}
-
-.tier-list-left {
-  flex: 1;
-  min-width: 0;
-}
-
-.tier-list-right {
-  width: 380px;
-  flex-shrink: 0;
-}
-
-.page-header {
-  text-align: center;
-  margin-bottom: 32px;
   padding: 24px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  color: #e2e8f0;
+  position: relative;
+  z-index: 1;
+}
+
+.tier-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 20px 24px;
+  background: rgba(26, 26, 46, 0.85);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  border: 1px solid rgba(167, 139, 250, 0.2);
 }
 
 .page-title {
-  font-size: 36px;
-  font-weight: 800;
-  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-.page-subtitle {
-  font-size: 16px;
-  color: #94a3b8;
-  margin: 0;
+.header-actions {
+  display: flex;
+  gap: 12px;
 }
 
-.guest-notice {
+.tier-list-content {
   display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 24px;
-  margin-bottom: 24px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
+  gap: 24px;
+  max-width: 1800px;
+  margin: 0 auto;
+}
+
+.tier-list-main {
+  flex: 1;
+  min-width: 0;
+  background: rgba(26, 26, 46, 0.85);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  border: 1px solid rgba(59, 130, 246, 0.3);
-}
-
-.notice-icon {
-  font-size: 48px;
-}
-
-.notice-content h3 {
-  margin: 0 0 8px 0;
-  font-size: 20px;
-  font-weight: 700;
-  color: #fff;
-}
-
-.notice-content p {
-  margin: 0 0 16px 0;
-  color: #94a3b8;
-  font-size: 14px;
-}
-
-.login-btn {
-  font-weight: 600;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.section-title {
-  font-size: 24px;
-  font-weight: 700;
-  margin: 0;
-  color: #fff;
-}
-
-.add-char-btn {
-  font-weight: 600;
+  padding: 24px;
 }
 
 .tier-rows {
@@ -536,18 +427,16 @@ onMounted(() => {
   background: rgba(20, 20, 35, 0.9);
   border-radius: 12px;
   overflow: hidden;
-  position: relative;
   border: 1px solid rgba(167, 139, 250, 0.15);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .tier-label {
-  width: 90px;
+  width: 70px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
-  font-weight: 900;
+  font-size: 24px;
+  font-weight: 800;
   color: #000;
   flex-shrink: 0;
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
@@ -557,9 +446,9 @@ onMounted(() => {
   flex: 1;
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  padding: 16px;
-  min-height: 100px;
+  gap: 10px;
+  padding: 12px;
+  min-height: 80px;
   align-content: flex-start;
 }
 
@@ -572,25 +461,25 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 12px 10px;
+  gap: 4px;
+  padding: 10px 8px;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
+  border-radius: 10px;
   cursor: grab;
   transition: all 0.3s ease;
-  min-width: 80px;
+  min-width: 70px;
   position: relative;
   border: 2px solid transparent;
 }
 
 .character-item.star-5 {
   border-color: #ffd700;
-  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%);
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
 }
 
 .character-item.star-4 {
   border-color: #a855f7;
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(168, 85, 247, 0.05) 100%);
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.3);
 }
 
 .character-item.disabled {
@@ -599,132 +488,105 @@ onMounted(() => {
 }
 
 .character-item:hover:not(.disabled) {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
 }
 
 .character-item:active {
   cursor: grabbing;
 }
 
-.character-rarity {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  font-size: 12px;
-  font-weight: 800;
-  padding: 2px 8px;
-  border-radius: 20px;
-  z-index: 10;
-}
-
-.character-rarity.rarity-5 {
-  background: linear-gradient(135deg, #ffd700, #ffb700);
-  color: #000;
-  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.5);
-}
-
-.character-rarity.rarity-4 {
-  background: linear-gradient(135deg, #a855f7, #7c3aed);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.5);
-}
-
 .character-image {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
   object-fit: cover;
-  border: 3px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 .character-placeholder {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
-  font-weight: 800;
+  font-size: 24px;
+  font-weight: 700;
   color: #fff;
-  border: 3px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 .character-name {
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
   color: #e2e8f0;
   text-align: center;
-  max-width: 80px;
+  max-width: 70px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.remove-tier-btn {
+.rarity-badge {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: rgba(239, 68, 68, 0.9);
-  border: none;
-  color: #fff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: all 0.3s ease;
+  top: -6px;
+  right: -6px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
   z-index: 10;
 }
 
-.tier-row:hover .remove-tier-btn {
-  opacity: 1;
+.rarity-badge.rarity-5 {
+  background: linear-gradient(135deg, #ffd700, #ffb700);
+  color: #000;
+  box-shadow: 0 2px 6px rgba(255, 215, 0, 0.5);
 }
 
-.remove-tier-btn:hover {
-  background: rgba(239, 68, 68, 1);
-  transform: scale(1.1);
+.rarity-badge.rarity-4 {
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(168, 85, 247, 0.5);
 }
 
-.tier-actions {
-  display: flex;
-  gap: 16px;
-  margin-top: 24px;
-  justify-content: center;
+.character-pool-section {
+  width: 320px;
+  flex-shrink: 0;
+  background: rgba(26, 26, 46, 0.85);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 24px;
 }
 
-.action-btn {
-  font-weight: 600;
-  padding: 12px 28px;
+.section-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+  color: #fff;
 }
 
 .character-pool {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
   max-height: calc(100vh - 280px);
   overflow-y: auto;
-  padding: 8px;
-  background: rgba(20, 20, 35, 0.5);
-  border-radius: 16px;
-  border: 1px solid rgba(167, 139, 250, 0.15);
+  padding: 4px;
 }
 
 .pool-character {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 16px 12px;
+  gap: 4px;
+  padding: 10px 6px;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
+  border-radius: 10px;
   cursor: grab;
   transition: all 0.3s ease;
   border: 2px solid transparent;
@@ -733,12 +595,12 @@ onMounted(() => {
 
 .pool-character.star-5 {
   border-color: #ffd700;
-  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%);
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
 }
 
 .pool-character.star-4 {
   border-color: #a855f7;
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(168, 85, 247, 0.05) 100%);
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.3);
 }
 
 .pool-character.disabled {
@@ -747,8 +609,8 @@ onMounted(() => {
 }
 
 .pool-character:hover:not(.disabled) {
-  transform: translateY(-6px) scale(1.03);
-  box-shadow: 0 16px 48px rgba(102, 126, 234, 0.5);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
 }
 
 .pool-character:active {
@@ -757,83 +619,56 @@ onMounted(() => {
 
 .pool-character .character-image,
 .pool-character .character-placeholder {
-  width: 64px;
-  height: 64px;
+  width: 44px;
+  height: 44px;
 }
 
 .pool-character .character-name {
-  font-size: 13px;
-  max-width: 90px;
+  font-size: 10px;
+  max-width: 60px;
 }
 
-.delete-character-btn {
+.delete-btn {
   position: absolute;
-  top: -10px;
-  right: -10px;
-  width: 28px;
-  height: 28px;
+  top: -8px;
+  left: -8px;
+  width: 24px;
+  height: 24px;
   z-index: 20;
 }
 
 .character-pool::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .character-pool::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .character-pool::-webkit-scrollbar-thumb {
   background: linear-gradient(135deg, #667eea, #764ba2);
-  border-radius: 4px;
-}
-
-.character-pool::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #7c3aed, #8b5cf6);
-}
-
-.add-char-dialog :deep(.el-dialog__header) {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-  margin: 0;
-  padding: 24px;
-}
-
-.add-char-dialog :deep(.el-dialog__title) {
-  font-size: 24px;
-  font-weight: 800;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.add-char-dialog :deep(.el-dialog__body) {
-  padding: 32px 24px;
-}
-
-.add-char-form {
-  margin: 0;
+  border-radius: 3px;
 }
 
 .avatar-uploader .avatar {
-  width: 120px;
-  height: 120px;
-  border-radius: 16px;
+  width: 100px;
+  height: 100px;
+  border-radius: 12px;
   object-fit: cover;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .upload-placeholder {
-  width: 120px;
-  height: 120px;
+  width: 100px;
+  height: 100px;
   border: 2px dashed rgba(167, 139, 250, 0.5);
-  border-radius: 16px;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
   transition: all 0.3s ease;
   background: rgba(167, 139, 250, 0.05);
@@ -845,12 +680,12 @@ onMounted(() => {
 }
 
 .upload-icon {
-  font-size: 32px;
+  font-size: 28px;
   color: #a78bfa;
 }
 
 .upload-placeholder span {
-  font-size: 14px;
+  font-size: 12px;
   color: #94a3b8;
 }
 </style>

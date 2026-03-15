@@ -153,7 +153,64 @@ function startCalculate() {
 
 onMounted(() => {
   loadAnnouncements()
+  // 预加载排行和社区页面资源
+  preloadResources()
 })
+
+// 预加载其他页面资源
+function preloadResources() {
+  // 使用 requestIdleCallback 在浏览器空闲时预加载
+  const preload = () => {
+    // 预加载排行页面所需的图片数据
+    const preloadTierList = () => {
+      // 动态导入 TierList 的字符图片模块
+      import(/* webpackPrefetch: true */ '../characterImages.js').then(() => {
+        console.log('[Preload] TierList resources loaded')
+      }).catch(() => {
+        // 静默失败，不影响用户体验
+      })
+    }
+
+    // 预加载社区页面的 API 数据
+    const preloadCommunity = () => {
+      // 使用 fetch 预加载社区数据（带缓存）
+      fetch('/WutheringWavesDPS/api/spreadsheets?page=1&page_size=12', {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      }).then(() => {
+        console.log('[Preload] Community data prefetched')
+      }).catch(() => {
+        // 静默失败
+      })
+    }
+
+    // 预加载 characters.json
+    const preloadCharacters = () => {
+      fetch('/WutheringWavesDPS/characters.json', {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      }).then(() => {
+        console.log('[Preload] Characters data prefetched')
+      }).catch(() => {
+        // 静默失败
+      })
+    }
+
+    // 延迟执行预加载，确保首页渲染完成
+    setTimeout(() => {
+      preloadCharacters()
+      preloadTierList()
+      preloadCommunity()
+    }, 2000) // 2秒后开始预加载
+  }
+
+  // 如果浏览器支持 requestIdleCallback，使用它；否则使用 setTimeout
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(preload, { timeout: 5000 })
+  } else {
+    setTimeout(preload, 3000)
+  }
+}
 </script>
 
 <style scoped>

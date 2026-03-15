@@ -1,5 +1,18 @@
 <template>
   <div class="home">
+    <div class="announcement-section" v-if="showAnnouncement">
+      <div class="announcement-content">
+        <div class="announcement-icon">📢</div>
+        <div class="announcement-text">
+          <span class="announcement-tag">公告</span>
+          <span class="announcement-message">自定义排行功能已上线！支持角色拖拽排序、导出图片、管理员可添加新角色！</span>
+        </div>
+        <el-button text class="close-btn" @click="showAnnouncement = false">
+          <el-icon><Close /></el-icon>
+        </el-button>
+      </div>
+    </div>
+
     <div class="hero-section">
       <div class="hero-content">
         <div class="hero-badge">Beta 1.0</div>
@@ -50,9 +63,12 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { Close } from '@element-plus/icons-vue'
 
 const router = useRouter()
+const showAnnouncement = ref(true)
 
 function startCalculate() {
   router.push('/calculator?loadTemplate=true')
@@ -64,6 +80,58 @@ function startCalculate() {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
+}
+
+.announcement-section {
+  margin-bottom: 24px;
+}
+
+.announcement-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(102, 126, 234, 0.4);
+  border-radius: 16px;
+}
+
+.announcement-icon {
+  font-size: 28px;
+}
+
+.announcement-text {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.announcement-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.announcement-message {
+  font-size: 15px;
+  color: #e2e8f0;
+  font-weight: 500;
+}
+
+.close-btn {
+  color: #94a3b8;
+  padding: 4px;
+}
+
+.close-btn:hover {
+  color: #e2e8f0;
 }
 
 .hero-section {

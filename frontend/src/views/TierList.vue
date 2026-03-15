@@ -29,11 +29,20 @@
       <aside class="material-panel">
         <div class="panel-header">
           <h2>角色素材库</h2>
-          <span class="badge">{{ allCharacters.length }}</span>
+          <span class="badge">{{ filteredCharacters.length }}</span>
+        </div>
+        <!-- 搜索框 -->
+        <div class="search-box">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="搜索角色..."
+            class="search-input"
+          />
         </div>
         <div class="material-grid">
           <div
-            v-for="character in allCharacters"
+            v-for="character in filteredCharacters"
             :key="character.id"
             class="material-card"
             :class="{ 'star-5': character.rarity === 5, 'star-4': character.rarity === 4 }"
@@ -119,7 +128,7 @@
           <div class="form-group">
             <label>排行榜背景不透明度 ({{ editBgOpacity }}%)</label>
             <input v-model.number="editBgOpacity" type="range" min="0" max="200" />
-            <small>超过100%会增加背景亮度</small>
+            <small>超过100%会增加背景暗度</small>
           </div>
           <div class="form-group">
             <label>层级设置</label>
@@ -145,7 +154,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useUserStore } from '../stores/user'
 
 interface Character {
@@ -193,6 +202,25 @@ const editTierLabelSize = ref(28)
 const editCardNameSize = ref(11)
 const editTierOpacity = ref(100)
 const editBgOpacity = ref(100)
+
+// 搜索功能
+const searchQuery = ref('')
+
+// 按首字母排序并过滤的角色列表
+const filteredCharacters = computed(() => {
+  let chars = [...allCharacters.value]
+  
+  // 搜索过滤
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase()
+    chars = chars.filter(char => char.name.toLowerCase().includes(query))
+  }
+  
+  // 按首字母排序
+  chars.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
+  
+  return chars
+})
 
 const defaultTiers: Tier[] = [
   { id: 'S', label: 'S', color: '#ff6b6b', characters: [] },
@@ -268,13 +296,13 @@ const saveUserData = () => {
 function getTierRowStyle() {
   const opacity = Math.min(bgOpacity.value / 100, 1)
   // 基础颜色 #161620 (rgb 22, 22, 32)
-  // 当bgOpacity > 100时，增加亮度
+  // 当bgOpacity > 100时，增加暗度（向纯黑靠近）
   let r = 22, g = 22, b = 32
   if (bgOpacity.value > 100) {
-    const brightness = (bgOpacity.value - 100) / 100 // 0-1
-    r = Math.min(255, 22 + Math.round((255 - 22) * brightness))
-    g = Math.min(255, 22 + Math.round((255 - 22) * brightness))
-    b = Math.min(255, 32 + Math.round((255 - 32) * brightness))
+    const darkness = (bgOpacity.value - 100) / 100 // 0-1
+    r = Math.max(0, Math.round(22 * (1 - darkness)))
+    g = Math.max(0, Math.round(22 * (1 - darkness)))
+    b = Math.max(0, Math.round(32 * (1 - darkness)))
   }
   return { backgroundColor: `rgba(${r}, ${g}, ${b}, ${opacity})` }
 }
@@ -542,6 +570,32 @@ onMounted(() => {
   border-radius: 12px;
   font-size: 12px;
   color: #808090;
+}
+
+/* 搜索框 */
+.search-box {
+  padding: 12px 16px;
+  border-bottom: 1px solid #2a2a3a;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #2a2a3a;
+  border-radius: 6px;
+  background: #1a1a28;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  border-color: #4dabf7;
+}
+
+.search-input::placeholder {
+  color: #606070;
 }
 
 .material-grid {

@@ -24,31 +24,6 @@
 - 🛠️ **管理员功能** - 置顶、删除、日志监控
 - 💾 **状态保持** - 工作区状态自动保存
 
-## 🚀 快速开始
-
-### 后端
-
-```bash
-cd backend
-pip install -r requirements.txt
-python -m uvicorn app.main:app --host 0.0.0.0 --port 14876 --reload
-```
-
-### 前端
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-## 🔑 默认账号
-
-- **管理员**：admin / admin123
-- **测试用户**：person / person
-
-⚠️ **注意**：首次登录后请立即修改密码！
-
 ## 🛠️ 技术栈
 
 - **后端**：FastAPI + SQLite + SQLModel
@@ -64,3 +39,6 @@ MIT
 - [GitHub 主页](https://github.com/NumInvis)
 - [鸣潮动作数据汇总](https://www.kdocs.cn/l/chWXEqFmFGvu)
 - [安可网](https://encore.moe/)
+- [鬼神莫能窥的B站空间](https://space.bilibili.com/274736623?spm_id_from=333.788.0.0)
+- [鸣潮数据库 - nanoka.cc](https://ww.nanoka.cc/)
+- [爱发电赞助](https://afdian.com/a/r0xy0)

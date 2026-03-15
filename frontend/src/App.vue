@@ -38,6 +38,18 @@
                         <span>安可网</span>
                       </a>
                     </el-dropdown-item>
+                    <el-dropdown-item>
+                      <a href="https://ww.nanoka.cc/" target="_blank" rel="noopener noreferrer" class="dropdown-item-link">
+                        <el-icon><Platform /></el-icon>
+                        <span>鸣潮数据库</span>
+                      </a>
+                    </el-dropdown-item>
+                    <el-dropdown-item>
+                      <a href="https://space.bilibili.com/274736623?spm_id_from=333.788.0.0" target="_blank" rel="noopener noreferrer" class="dropdown-item-link">
+                        <el-icon><VideoPlay /></el-icon>
+                        <span>鬼神莫能窥的B站</span>
+                      </a>
+                    </el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -130,7 +142,7 @@ import { useRouter } from 'vue-router'
 import { onMounted, ref, reactive, computed } from 'vue'
 import { ElConfigProvider, ElMessage } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
-import { SwitchButton, ArrowDown, Edit, Lock, User, Document, Link } from '@element-plus/icons-vue'
+import { SwitchButton, ArrowDown, Edit, Lock, User, Document, Link, Platform, VideoPlay } from '@element-plus/icons-vue'
 import { useUserStore } from './stores/user'
 import api from './api'
 

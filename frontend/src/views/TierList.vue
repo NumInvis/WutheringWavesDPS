@@ -59,7 +59,7 @@
             :key="tier.id"
             class="tier-row"
             :class="{ 'drop-active': dragOverTier === index }"
-            :style="{ backgroundColor: `rgba(22, 22, 32, ${bgOpacity / 100})` }"
+            :style="getTierRowStyle()"
             @dragover.prevent="handleDragOver($event, index)"
             @dragleave="handleDragLeave"
             @drop="handleDrop($event, index)"
@@ -118,7 +118,8 @@
           </div>
           <div class="form-group">
             <label>排行榜背景不透明度 ({{ editBgOpacity }}%)</label>
-            <input v-model.number="editBgOpacity" type="range" min="0" max="100" />
+            <input v-model.number="editBgOpacity" type="range" min="0" max="200" />
+            <small>超过100%会增加背景亮度</small>
           </div>
           <div class="form-group">
             <label>层级设置</label>
@@ -261,6 +262,21 @@ const saveUserData = () => {
     showNames: showNames.value
   }
   localStorage.setItem(`wwdps_user_${userStore.user.id}`, JSON.stringify(data))
+}
+
+// 计算tier-row背景样式
+function getTierRowStyle() {
+  const opacity = Math.min(bgOpacity.value / 100, 1)
+  // 基础颜色 #161620 (rgb 22, 22, 32)
+  // 当bgOpacity > 100时，增加亮度
+  let r = 22, g = 22, b = 32
+  if (bgOpacity.value > 100) {
+    const brightness = (bgOpacity.value - 100) / 100 // 0-1
+    r = Math.min(255, 22 + Math.round((255 - 22) * brightness))
+    g = Math.min(255, 22 + Math.round((255 - 22) * brightness))
+    b = Math.min(255, 32 + Math.round((255 - 32) * brightness))
+  }
+  return { backgroundColor: `rgba(${r}, ${g}, ${b}, ${opacity})` }
 }
 
 // 拖拽从素材库

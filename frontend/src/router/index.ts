@@ -37,6 +37,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/TierList.vue')
   },
   {
+    path: '/admin/dashboard',
+    name: 'AdminDashboard',
+    component: () => import('@/views/AdminDashboard.vue'),
+    meta: { requiresAdmin: true }
+  },
+  {
     path: '/admin/logs',
     name: 'AdminLogs',
     component: () => import('@/views/AdminLogs.vue'),

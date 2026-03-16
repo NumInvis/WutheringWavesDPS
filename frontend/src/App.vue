@@ -53,7 +53,7 @@
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
-              <router-link v-if="isAdmin" to="/admin/logs" class="nav-link">日志</router-link>
+              <router-link v-if="isAdmin" to="/admin/dashboard" class="nav-link">监控中心</router-link>
             </nav>
             <div class="user-area">
               <template v-if="userStore.isAuthenticated">

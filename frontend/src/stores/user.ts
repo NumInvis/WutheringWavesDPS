@@ -52,7 +52,9 @@ export const useUserStore = defineStore('user', () => {
       return true
     } catch (error) {
       console.error('[User Store] Login failed:', error)
-      return false
+      user.value = null
+      localStorage.removeItem('token')
+      throw error
     } finally {
       loading.value = false
     }

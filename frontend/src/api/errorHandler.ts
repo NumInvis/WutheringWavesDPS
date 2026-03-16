@@ -134,11 +134,11 @@ export function handleError(error: AxiosError, options?: {
       ElNotification.error({
         title: '系统错误',
         message: errorInfo.message,
-        duration: 5000
+        duration: 500
       })
     } else {
       // 一般错误使用消息
-      ElMessage.error({ message: errorInfo.message, duration: 2000 })
+      ElMessage.error({ message: errorInfo.message, duration: 500 })
     }
   }
 
@@ -146,13 +146,6 @@ export function handleError(error: AxiosError, options?: {
   if (type === ErrorType.AUTH) {
     // 清除本地认证状态
     localStorage.removeItem('token')
-    
-    // 延迟跳转，让用户看到提示
-    if (redirect !== false) {
-      setTimeout(() => {
-        window.location.href = '/WutheringWavesDPS/login'
-      }, 1500)
-    }
   }
 
   return errorInfo

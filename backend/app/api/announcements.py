@@ -13,6 +13,7 @@ from app.schemas.announcement import (
     AnnouncementResponse
 )
 from app.api.auth import get_current_active_user
+from app.core.logger import add_log
 
 router = APIRouter(prefix="/api/announcements", tags=["公告"])
 
@@ -66,6 +67,8 @@ def create_announcement(
     db.commit()
     db.refresh(announcement)
     
+    add_log("info", f"发布公告: {announcement.title}", user=current_user.username)
+    
     return announcement
 
 
@@ -97,6 +100,8 @@ def update_announcement(
     db.commit()
     db.refresh(announcement)
     
+    add_log("info", f"更新公告: {announcement.title}", user=current_user.username)
+    
     return announcement
 
 
@@ -119,6 +124,8 @@ def delete_announcement(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="公告不存在"
         )
+    
+    add_log("info", f"删除公告: {announcement.title}", user=current_user.username)
     
     db.delete(announcement)
     db.commit()

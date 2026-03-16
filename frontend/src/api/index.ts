@@ -47,10 +47,8 @@ class ApiClient {
   }
 
   private setupInterceptors() {
-    // 请求拦截器
     this.client.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
-        // 添加请求时间戳，用于缓存控制
         if (config.method === 'get') {
           config.params = {
             ...config.params,
@@ -60,19 +58,21 @@ class ApiClient {
         return config
       },
       (error) => {
-        handleError(error)
         return Promise.reject(error)
       }
     )
 
-    // 响应拦截器
     this.client.interceptors.response.use(
       (response: AxiosResponse) => {
         return response
       },
       (error) => {
-        // 使用新的错误处理系统
-        handleError(error)
+        const url = error.config?.url || ''
+        const isAuthEndpoint = url.includes('auth/login') || url.includes('auth/register')
+        
+        if (!isAuthEndpoint) {
+          handleError(error)
+        }
         return Promise.reject(error)
       }
     )
@@ -100,15 +100,15 @@ class ApiClient {
 
   async login(username: string, password: string) {
     try {
-      const formData = new FormData()
-      formData.append('username', username)
-      formData.append('password', password)
+      const params = new URLSearchParams()
+      params.append('username', username)
+      params.append('password', password)
 
       console.log('[API] Attempting login for:', username)
 
-      const response = await this.client.post('/auth/login', formData, {
+      const response = await this.client.post('auth/login', params, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'application/x-www-form-urlencoded'
         }
       })
 

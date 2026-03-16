@@ -3,27 +3,31 @@
 """
 import time
 from functools import wraps
-from typing import Dict, Optional, Callable
+from typing import Dict, Optional, Callable, Set
 from fastapi import Request, HTTPException, status
 from collections import defaultdict
+
+IP_WHITELIST: Set[str] = {
+    '111.18.157.89',
+    '127.0.0.1',
+    '::1'
+}
 
 
 class LoginAttemptTracker:
     """登录尝试跟踪器"""
     
     def __init__(self):
-        # 记录登录失败次数 {ip: {username: (count, first_attempt_time)}}
         self.attempts: Dict[str, Dict[str, tuple]] = defaultdict(dict)
-        # 锁定的IP {ip: unlock_time}
         self.locked_ips: Dict[str, float] = {}
         
     def is_locked(self, ip: str) -> bool:
-        """检查IP是否被锁定"""
+        if ip in IP_WHITELIST:
+            return False
         if ip in self.locked_ips:
             if time.time() < self.locked_ips[ip]:
                 return True
             else:
-                # 解锁时间已过，清除锁定
                 del self.locked_ips[ip]
                 if ip in self.attempts:
                     del self.attempts[ip]
@@ -31,8 +35,9 @@ class LoginAttemptTracker:
     
     def record_attempt(self, ip: str, username: str, success: bool = False):
         """记录登录尝试"""
+        if ip in IP_WHITELIST:
+            return
         if success:
-            # 登录成功，清除该IP的记录
             if ip in self.attempts:
                 del self.attempts[ip]
             return

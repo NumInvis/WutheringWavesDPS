@@ -24,6 +24,7 @@ from app.api.auth import (
     get_current_admin_user,
     get_current_user_optional
 )
+from app.core.logger import add_log
 
 router = APIRouter(prefix="/api/spreadsheets", tags=["表格"])
 
@@ -355,6 +356,8 @@ def upload_and_create_spreadsheet(
     db.commit()
     db.refresh(spreadsheet)
 
+    add_log("info", f"上传表格成功: {title} (#{next_number:08d})", user=current_user.username)
+
     return _hydrate_spreadsheet(spreadsheet)
 
 
@@ -454,6 +457,9 @@ def update_spreadsheet(
 
     db.commit()
     db.refresh(spreadsheet)
+    
+    add_log("info", f"更新表格: {spreadsheet.title}", user=current_user.username)
+    
     return _hydrate_spreadsheet(spreadsheet)
 
 
@@ -474,6 +480,9 @@ def toggle_feature_spreadsheet(
     spreadsheet.is_featured = not spreadsheet.is_featured
     db.commit()
     db.refresh(spreadsheet)
+    
+    add_log("info", f"{'置顶' if spreadsheet.is_featured else '取消置顶'}表格: {spreadsheet.title}", user=current_user.username)
+    
     _hydrate_spreadsheet(spreadsheet)
     return {"is_featured": spreadsheet.is_featured}
 
@@ -526,6 +535,8 @@ def delete_spreadsheet(
 
     # 先删除关联的stars
     db.query(Star).filter(Star.spreadsheet_id == spreadsheet_id).delete(synchronize_session=False)
+    
+    add_log("info", f"删除表格: {spreadsheet.title} (#{spreadsheet.sheet_number:08d})", user=current_user.username)
     
     db.delete(spreadsheet)
     db.commit()

@@ -351,9 +351,9 @@ function handleActionSelect(actionName: string) {
 function copyParam(value: any) {
   if (value === undefined || value === null || value === '') return
   navigator.clipboard.writeText(String(value)).then(() => {
-    ElMessage.success({ message: '已复制: ' + value, duration: 1500 })
+    ElMessage.success({ message: '已复制: ' + value, duration: 500 })
   }).catch(() => {
-    ElMessage.error({ message: '复制失败', duration: 1500 })
+    ElMessage.error({ message: '复制失败', duration: 500 })
   })
 }
 
@@ -754,7 +754,7 @@ async function loadTemplateSheet() {
     }
   } catch (error) {
     console.error('[Calculator] 加载模板失败:', error)
-    ElMessage.error({ message: '加载模板失败', duration: 2000 })
+    ElMessage.error({ message: '加载模板失败', duration: 500 })
   }
 }
 
@@ -798,7 +798,7 @@ async function loadPreviewSheet() {
     }
   } catch (error) {
     console.error('[Calculator] 加载预览失败:', error)
-    ElMessage.error({ message: '加载预览失败: ' + (error as Error).message, duration: 2000 })
+    ElMessage.error({ message: '加载预览失败: ' + (error as Error).message, duration: 500 })
   }
 }
 
@@ -861,10 +861,10 @@ async function handleFile(event: Event) {
     })
     currentFileIndex.value = uploadedFiles.value.length - 1
     
-    ElMessage.success({ message: '导入成功', duration: 2000 })
+    ElMessage.success({ message: '导入成功', duration: 500 })
   } catch (error) {
     console.error('[Calculator] 导入失败:', error)
-    ElMessage.error({ message: '导入失败: ' + (error as Error).message, duration: 2000 })
+    ElMessage.error({ message: '导入失败: ' + (error as Error).message, duration: 500 })
   } finally {
     importing.value = false
     if (fileInput.value) {
@@ -922,7 +922,7 @@ function exitCurrentSheet() {
 
 function openPublishDialog() {
   if (currentFileIndex.value < 0) {
-    ElMessage.warning({ message: '请先导入表格', duration: 2000 })
+    ElMessage.warning({ message: '请先导入表格', duration: 500 })
     return
   }
   publishForm.title = uploadedFiles.value[currentFileIndex.value].name.replace(/\.xlsx?$/i, '')
@@ -937,7 +937,7 @@ async function publishCurrentSheet() {
     
     const currentFile = uploadedFiles.value[currentFileIndex.value]
     if (!currentFile) {
-      ElMessage.error({ message: '没有找到要发布的文件', duration: 2000 })
+      ElMessage.error({ message: '没有找到要发布的文件', duration: 500 })
       return
     }
 
@@ -955,12 +955,12 @@ async function publishCurrentSheet() {
         }
       })
       
-      ElMessage.success({ message: '发布成功', duration: 2000 })
+      ElMessage.success({ message: '发布成功', duration: 500 })
       publishDialogVisible.value = false
       router.push('/community')
     } catch (error: any) {
       console.error('[Calculator] 发布失败:', error)
-      ElMessage.error({ message: error.response?.data?.detail || '发布失败', duration: 2000 })
+      ElMessage.error({ message: error.response?.data?.detail || '发布失败', duration: 500 })
     } finally {
       publishing.value = false
     }

@@ -10,6 +10,7 @@ from typing import Dict, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from app.core.database import get_db, engine
 from app.core.config import get_settings
@@ -58,7 +59,7 @@ async def readiness_check(db: Session = Depends(get_db)):
     """就绪检查 - 用于 Kubernetes 等"""
     try:
         # 测试数据库连接
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         return {"status": "ready"}
     except Exception as e:
         raise HTTPException(
@@ -77,17 +78,26 @@ async def _check_database(db: Session) -> Dict[str, Any]:
     """检查数据库状态"""
     try:
         start = time.time()
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         latency = (time.time() - start) * 1000
         
-        # 获取数据库文件大小
-        db_path = engine.url.database
-        db_size = os.path.getsize(db_path) if db_path and os.path.exists(db_path) else 0
+        db_size = 0
+        db_path = None
+        
+        if settings.database_url.startswith("sqlite"):
+            if settings.database_url.startswith("sqlite:///"):
+                db_path = settings.database_url.replace("sqlite:///", "", 1)
+            elif settings.database_url.startswith("sqlite://"):
+                db_path = settings.database_url.replace("sqlite://", "", 1)
+            
+            if db_path and os.path.exists(db_path):
+                db_size = os.path.getsize(db_path)
         
         return {
             "status": "healthy",
             "latency_ms": round(latency, 2),
-            "size_bytes": db_size
+            "size_bytes": db_size,
+            "type": "sqlite" if settings.database_url.startswith("sqlite") else "other"
         }
     except Exception as e:
         return {

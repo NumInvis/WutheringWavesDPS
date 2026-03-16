@@ -15,6 +15,10 @@
           <el-icon><DataLine /></el-icon>
           <span>监控中心</span>
         </el-menu-item>
+        <el-menu-item index="backup">
+          <el-icon><FolderOpened /></el-icon>
+          <span>数据备份</span>
+        </el-menu-item>
         <el-menu-item index="logs">
           <el-icon><Document /></el-icon>
           <span>系统日志</span>
@@ -22,6 +26,10 @@
         <el-menu-item index="announcements">
           <el-icon><ChatDotRound /></el-icon>
           <span>公告管理</span>
+        </el-menu-item>
+        <el-menu-item index="security">
+          <el-icon><Lock /></el-icon>
+          <span>安全配置</span>
         </el-menu-item>
       </el-menu>
     </div>
@@ -50,11 +58,21 @@
         <div class="stats-overview">
           <div class="stat-card stat-card-primary">
             <div class="stat-icon-bg">
+              <el-icon><View /></el-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">总浏览量 (PV)</div>
+              <div class="stat-value">{{ visitStats.total_visits || 0 }}</div>
+            </div>
+          </div>
+
+          <div class="stat-card stat-card-info">
+            <div class="stat-icon-bg">
               <el-icon><User /></el-icon>
             </div>
             <div class="stat-content">
-              <div class="stat-label">总访问量</div>
-              <div class="stat-value">{{ visitStats.total_visits || 0 }}</div>
+              <div class="stat-label">总访客数 (UV)</div>
+              <div class="stat-value">{{ visitStats.total_visitors || 0 }}</div>
             </div>
           </div>
 
@@ -63,8 +81,9 @@
               <el-icon><Sunny /></el-icon>
             </div>
             <div class="stat-content">
-              <div class="stat-label">今日访问</div>
+              <div class="stat-label">今日 PV</div>
               <div class="stat-value">{{ visitStats.today_visits || 0 }}</div>
+              <div class="stat-sub">UV: {{ visitStats.today_visitors || 0 }}</div>
             </div>
           </div>
 
@@ -73,8 +92,9 @@
               <el-icon><Calendar /></el-icon>
             </div>
             <div class="stat-content">
-              <div class="stat-label">7天访问</div>
+              <div class="stat-label">7天 PV</div>
               <div class="stat-value">{{ visitStats.seven_days_visits || 0 }}</div>
+              <div class="stat-sub">UV: {{ visitStats.seven_days_visitors || 0 }}</div>
             </div>
           </div>
 
@@ -97,8 +117,9 @@
                 访问趋势
               </h3>
               <el-radio-group v-model="timeRange" size="small" @change="loadVisitTrend">
-                <el-radio-button label="7">7天</el-radio-button>
-                <el-radio-button label="30">30天</el-radio-button>
+                <el-radio-button label="24h">24小时</el-radio-button>
+                <el-radio-button label="7d">7天</el-radio-button>
+                <el-radio-button label="30d">30天</el-radio-button>
               </el-radio-group>
             </div>
             <div ref="visitTrendChartRef" class="chart-container"></div>
@@ -262,6 +283,44 @@
           </div>
         </div>
       </div>
+
+      <div v-else-if="activeMenu === 'backup'" class="backup-section">
+        <div class="content-header">
+          <h2 class="section-title">
+            <el-icon><FolderOpened /></el-icon>
+            数据备份管理
+          </h2>
+        </div>
+        
+        <div class="backup-management">
+          <div class="backup-settings">
+            <div class="setting-item">
+              <span class="setting-label">最大备份大小 (MB)</span>
+              <el-input-number v-model="maxBackupSize" :min="10" :max="500" :step="10" size="small" @change="saveBackupSettings" />
+            </div>
+            <div class="setting-info">当前已使用: {{ currentBackupSize }} MB / {{ maxBackupSize }} MB</div>
+          </div>
+          <el-divider />
+          <div class="backup-actions">
+            <el-button type="primary" @click="exportSpreadsheetBackup" :loading="backupLoading.spreadsheet">
+              <el-icon><Document /></el-icon>
+              导出表格备份
+            </el-button>
+            <el-button type="success" @click="exportTiebaBackup" :loading="backupLoading.tieba">
+              <el-icon><ChatDotRound /></el-icon>
+              导出贴吧备份
+            </el-button>
+            <el-button type="warning" @click="exportRankingBackup" :loading="backupLoading.ranking">
+              <el-icon><TrendCharts /></el-icon>
+              导出iOS排行榜备份
+            </el-button>
+          </div>
+        </div>
+      </div>
+      
+      <div v-else-if="activeMenu === 'security'" class="security-section">
+        <SecurityConfig />
+      </div>
     </div>
 
     <el-dialog v-model="showAddAnnouncement" title="发布公告" width="500px">
@@ -299,16 +358,17 @@ import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Setting, DataLine, Document, ChatDotRound, Monitor, Refresh,
-  User, Sunny, Calendar, Timer, Cpu, TrendCharts,
-  Delete, Plus, Select, ArrowUp, ArrowDown
+  User, Sunny, Calendar, Timer, Cpu, TrendCharts, View,
+  Delete, Plus, Select, ArrowUp, ArrowDown, Lock, FolderOpened
 } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import api from '../api'
+import SecurityConfig from './SecurityConfig.vue'
 
 const activeMenu = ref('dashboard')
 const loading = ref(false)
 const refreshInterval = ref(5000)
-const timeRange = ref('7')
+const timeRange = ref<'24h' | '7d' | '30d'>('7d')
 const logLevel = ref('')
 
 const visitStats = ref({
@@ -336,6 +396,14 @@ const newAnnouncementForm = ref({
   is_pinned: false
 })
 
+const maxBackupSize = ref(50)
+const currentBackupSize = ref(0)
+const backupLoading = ref({
+  spreadsheet: false,
+  tieba: false,
+  ranking: false
+})
+
 const visitTrendChartRef = ref<HTMLElement>()
 const logsContainerRef = ref<HTMLElement>()
 let visitTrendChart: echarts.ECharts | null = null
@@ -349,6 +417,8 @@ function handleMenuSelect(index: string) {
     fetchLogs()
   } else if (index === 'announcements') {
     loadAnnouncements()
+  } else if (index === 'backup') {
+    loadBackupSettings()
   }
 }
 
@@ -394,7 +464,7 @@ function updateRefreshInterval() {
 
 async function loadVisitStats() {
   try {
-    const data = await api.get('/api/visit-stats/summary')
+    const data = await api.get('/visit-stats/summary')
     visitStats.value = data
   } catch (error) {
     console.error('加载访问统计失败:', error)
@@ -403,7 +473,7 @@ async function loadVisitStats() {
 
 async function loadHealthCheck() {
   try {
-    const data = await api.get('/api/health/detailed')
+    const data = await api.get('/health/detailed')
     healthChecks.value = data.checks || {}
   } catch (error) {
     console.error('加载健康检查失败:', error)
@@ -411,63 +481,29 @@ async function loadHealthCheck() {
 }
 
 async function loadVisitTrend() {
-  if (!visitTrendChart) return
-  
   try {
-    const data = await api.get('/api/visit-stats/hourly?days=' + timeRange.value)
+    const data = await api.get(`/visit-stats/trend?range_type=${timeRange.value}`)
     
     const chartData = data || []
-    const hours = chartData.map((item: any) => item.time)
-    const counts = chartData.map((item: any) => item.count)
-    
-    const option = {
-      tooltip: {
-        trigger: 'axis',
-        backgroundColor: 'rgba(26, 26, 46, 0.95)',
-        borderColor: 'rgba(102, 126, 234, 0.5)',
-        textStyle: { color: '#fff' }
-      },
-      grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '3%',
-        containLabel: true
-      },
-      xAxis: {
-        type: 'category',
-        boundaryGap: false,
-        data: hours,
-        axisLine: { lineStyle: { color: '#2a2a3a' } },
-        axisLabel: { color: '#808090', rotate: 45, fontSize: 10 }
-      },
-      yAxis: {
-        type: 'value',
-        axisLine: { lineStyle: { color: '#2a2a3a' } },
-        axisLabel: { color: '#808090' },
-        splitLine: { lineStyle: { color: '#2a2a3a' } }
-      },
-      series: [{
-        name: '访问量',
-        type: 'line',
-        smooth: true,
-        data: counts,
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(102, 126, 234, 0.3)' },
-            { offset: 1, color: 'rgba(102, 126, 234, 0)' }
-          ])
-        },
-        lineStyle: {
-          color: '#667eea',
-          width: 3
-        },
-        itemStyle: {
-          color: '#667eea'
-        }
-      }]
+    if (chartData.length === 0) {
+      if (visitTrendChart) {
+        visitTrendChart.setOption({
+          xAxis: { data: [] },
+          series: [{ data: [] }]
+        })
+      }
+      return
     }
     
-    visitTrendChart.setOption(option)
+    const labels = chartData.map((item: any) => item.label || item.time)
+    const counts = chartData.map((item: any) => item.count || 0)
+    
+    if (visitTrendChart) {
+      visitTrendChart.setOption({
+        xAxis: { data: labels },
+        series: [{ data: counts }]
+      })
+    }
   } catch (error) {
     console.error('加载访问趋势失败:', error)
   }
@@ -475,7 +511,7 @@ async function loadVisitTrend() {
 
 async function fetchLogs() {
   try {
-    let url = '/api/admin/logs?limit=200'
+    let url = '/admin/logs?limit=200'
     if (logLevel.value) {
       url += '&level=' + logLevel.value
     }
@@ -498,9 +534,9 @@ async function clearLogs() {
       type: 'warning'
     })
     
-    await api.delete('/api/admin/logs')
+    await api.delete('/admin/logs')
     logs.value = []
-    ElMessage.success({ message: '日志已清空', duration: 2000 })
+    ElMessage.success({ message: '日志已清空', duration: 500 })
   } catch (error: any) {
     if (error !== 'cancel') {
       console.error('清空日志失败:', error)
@@ -510,7 +546,7 @@ async function clearLogs() {
 
 async function loadAnnouncements() {
   try {
-    const data = await api.get('/api/announcements')
+    const data = await api.get('/announcements')
     if (Array.isArray(data)) {
       announcements.value = data
     } else {
@@ -524,21 +560,21 @@ async function loadAnnouncements() {
 
 async function addAnnouncement() {
   if (!newAnnouncementForm.value.title || !newAnnouncementForm.value.content) {
-    ElMessage.error({ message: '请填写完整的公告信息', duration: 2000 })
+    ElMessage.error({ message: '请填写完整的公告信息', duration: 500 })
     return
   }
   
   addAnnouncementLoading.value = true
   try {
-    await api.post('/api/announcements', newAnnouncementForm.value)
+    await api.post('/announcements', newAnnouncementForm.value)
     
-    ElMessage.success({ message: '公告发布成功！', duration: 2000 })
+    ElMessage.success({ message: '公告发布成功！', duration: 500 })
     showAddAnnouncement.value = false
     newAnnouncementForm.value = { title: '', content: '', is_active: true, is_pinned: false }
     loadAnnouncements()
   } catch (error: any) {
     console.error('发布公告失败:', error)
-    ElMessage.error({ message: error.response?.data?.detail || '发布公告失败', duration: 2000 })
+    ElMessage.error({ message: error.response?.data?.detail || '发布公告失败', duration: 500 })
   } finally {
     addAnnouncementLoading.value = false
   }
@@ -546,25 +582,25 @@ async function addAnnouncement() {
 
 async function activateAnnouncement(announcement: any) {
   try {
-    await api.put('/api/announcements/' + announcement.id, { is_active: true })
+    await api.put('/announcements/' + announcement.id, { is_active: true })
     
-    ElMessage.success({ message: '公告已激活！', duration: 2000 })
+    ElMessage.success({ message: '公告已激活！', duration: 500 })
     loadAnnouncements()
   } catch (error: any) {
     console.error('激活公告失败:', error)
-    ElMessage.error({ message: error.response?.data?.detail || '激活公告失败', duration: 2000 })
+    ElMessage.error({ message: error.response?.data?.detail || '激活公告失败', duration: 500 })
   }
 }
 
 async function togglePinAnnouncement(announcement: any) {
   try {
-    await api.put('/api/announcements/' + announcement.id, { is_pinned: !announcement.is_pinned })
+    await api.put('/announcements/' + announcement.id, { is_pinned: !announcement.is_pinned })
     
-    ElMessage.success({ message: announcement.is_pinned ? '已取消置顶' : '已置顶', duration: 2000 })
+    ElMessage.success({ message: announcement.is_pinned ? '已取消置顶' : '已置顶', duration: 500 })
     loadAnnouncements()
   } catch (error: any) {
     console.error('操作失败:', error)
-    ElMessage.error({ message: error.response?.data?.detail || '操作失败', duration: 2000 })
+    ElMessage.error({ message: error.response?.data?.detail || '操作失败', duration: 500 })
   }
 }
 
@@ -576,14 +612,14 @@ async function deleteAnnouncement(id: string) {
       type: 'warning'
     })
     
-    await api.delete('/api/announcements/' + id)
+    await api.delete('/announcements/' + id)
     
-    ElMessage.success({ message: '公告已删除！', duration: 2000 })
+    ElMessage.success({ message: '公告已删除！', duration: 500 })
     loadAnnouncements()
   } catch (error: any) {
     if (error !== 'cancel') {
       console.error('删除公告失败:', error)
-      ElMessage.error({ message: error.response?.data?.detail || '删除公告失败', duration: 2000 })
+      ElMessage.error({ message: error.response?.data?.detail || '删除公告失败', duration: 500 })
     }
   }
 }
@@ -593,10 +629,138 @@ function formatDate(dateStr: string) {
   return date.toLocaleString('zh-CN')
 }
 
+async function saveBackupSettings() {
+  try {
+    await api.post('/admin/backup/settings', { max_size: maxBackupSize.value })
+    ElMessage.success('备份设置已保存')
+  } catch (error) {
+    ElMessage.error('保存失败')
+  }
+}
+
+async function loadBackupSettings() {
+  try {
+    const data = await api.get('/admin/backup/settings')
+    maxBackupSize.value = data.max_size || 50
+    currentBackupSize.value = data.current_size || 0
+  } catch (error) {
+    console.error('加载备份设置失败')
+  }
+}
+
+async function exportSpreadsheetBackup() {
+  backupLoading.value.spreadsheet = true
+  try {
+    const response = await api.get('/admin/backup/spreadsheet', { responseType: 'blob' })
+    const url = window.URL.createObjectURL(new Blob([response]))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `spreadsheet_backup_${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+    ElMessage.success('表格备份下载成功')
+  } catch (error) {
+    ElMessage.error('下载失败')
+  } finally {
+    backupLoading.value.spreadsheet = false
+  }
+}
+
+async function exportTiebaBackup() {
+  backupLoading.value.tieba = true
+  try {
+    const response = await api.get('/admin/backup/tieba', { responseType: 'blob' })
+    const url = window.URL.createObjectURL(new Blob([response]))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `tieba_backup_${new Date().toISOString().split('T')[0]}.csv`
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+    ElMessage.success('贴吧备份下载成功')
+  } catch (error) {
+    ElMessage.error('下载失败')
+  } finally {
+    backupLoading.value.tieba = false
+  }
+}
+
+async function exportRankingBackup() {
+  backupLoading.value.ranking = true
+  try {
+    const response = await api.get('/admin/backup/ranking', { responseType: 'blob' })
+    const url = window.URL.createObjectURL(new Blob([response]))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `ranking_backup_${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+    ElMessage.success('iOS排行榜备份下载成功')
+  } catch (error) {
+    ElMessage.error('下载失败')
+  } finally {
+    backupLoading.value.ranking = false
+  }
+}
+
 function initCharts() {
   nextTick(() => {
     if (visitTrendChartRef.value) {
+      if (visitTrendChart) {
+        visitTrendChart.dispose()
+      }
       visitTrendChart = echarts.init(visitTrendChartRef.value)
+      visitTrendChart.setOption({
+        tooltip: {
+          trigger: 'axis',
+          backgroundColor: 'rgba(26, 26, 46, 0.95)',
+          borderColor: 'rgba(102, 126, 234, 0.5)',
+          textStyle: { color: '#fff' }
+        },
+        grid: {
+          left: '3%',
+          right: '4%',
+          bottom: '15%',
+          containLabel: true
+        },
+        xAxis: {
+          type: 'category',
+          boundaryGap: false,
+          data: [],
+          axisLine: { lineStyle: { color: '#2a2a3a' } },
+          axisLabel: { color: '#808090', rotate: 45, fontSize: 10 }
+        },
+        yAxis: {
+          type: 'value',
+          axisLine: { lineStyle: { color: '#2a2a3a' } },
+          axisLabel: { color: '#808090' },
+          splitLine: { lineStyle: { color: '#2a2a3a' } }
+        },
+        series: [{
+          name: '访问量',
+          type: 'line',
+          smooth: true,
+          data: [],
+          areaStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: 'rgba(102, 126, 234, 0.3)' },
+              { offset: 1, color: 'rgba(102, 126, 234, 0)' }
+            ])
+          },
+          lineStyle: {
+            color: '#667eea',
+            width: 3
+          },
+          itemStyle: {
+            color: '#667eea'
+          }
+        }]
+      })
     }
   })
 }
@@ -608,6 +772,7 @@ function handleResize() {
 onMounted(() => {
   initCharts()
   refreshAllData()
+  loadBackupSettings()
   updateRefreshInterval()
   window.addEventListener('resize', handleResize)
   
@@ -719,7 +884,7 @@ onUnmounted(() => {
 
 .stats-overview {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 20px;
   margin-bottom: 24px;
 }
@@ -741,6 +906,7 @@ onUnmounted(() => {
 }
 
 .stat-card-primary { border-left: 4px solid #667eea; }
+.stat-card-info { border-left: 4px solid #3b82f6; }
 .stat-card-success { border-left: 4px solid #22c55e; }
 .stat-card-warning { border-left: 4px solid #f59e0b; }
 .stat-card-danger { border-left: 4px solid #ef4444; }
@@ -763,6 +929,7 @@ onUnmounted(() => {
 }
 
 .stat-card-primary .stat-icon-bg { color: #667eea; }
+.stat-card-info .stat-icon-bg { color: #3b82f6; }
 .stat-card-success .stat-icon-bg { color: #22c55e; }
 .stat-card-warning .stat-icon-bg { color: #f59e0b; }
 .stat-card-danger .stat-icon-bg { color: #ef4444; }
@@ -782,6 +949,12 @@ onUnmounted(() => {
   font-weight: 700;
   color: #fff;
   line-height: 1;
+}
+
+.stat-sub {
+  font-size: 14px;
+  color: #808090;
+  margin-top: 4px;
 }
 
 .dashboard-grid {
@@ -1000,7 +1173,7 @@ onUnmounted(() => {
 
 @media (max-width: 1400px) {
   .stats-overview {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
   
   .dashboard-grid {
@@ -1039,5 +1212,42 @@ onUnmounted(() => {
     gap: 16px;
     align-items: flex-start;
   }
+}
+
+.backup-management {
+  background: rgba(26, 26, 40, 0.5);
+  border-radius: 12px;
+  border: 1px solid #2a2a3a;
+  padding: 24px;
+}
+
+.backup-settings {
+  margin-bottom: 16px;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.setting-label {
+  font-size: 14px;
+  color: #e2e8f0;
+  font-weight: 500;
+}
+
+.setting-info {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-top: 8px;
+  font-family: 'SF Mono', 'Monaco', monospace;
+}
+
+.backup-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 </style>

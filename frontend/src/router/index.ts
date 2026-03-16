@@ -37,9 +37,37 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/TierList.vue')
   },
   {
+    path: '/data-observer',
+    name: 'DataObserver',
+    component: () => import('@/views/DataObserver.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/admin',
+    redirect: '/admin/center'
+  },
+  {
+    path: '/admin/logs',
+    name: 'AdminLogs',
+    component: () => import('@/views/AdminLogs.vue'),
+    meta: { requiresAdmin: true }
+  },
+  {
+    path: '/admin/center',
     name: 'AdminCenter',
     component: () => import('@/views/AdminCenter.vue'),
+    meta: { requiresAdmin: true }
+  },
+  {
+    path: '/admin/dashboard',
+    name: 'AdminDashboard',
+    component: () => import('@/views/AdminDashboard.vue'),
+    meta: { requiresAdmin: true }
+  },
+  {
+    path: '/admin/security',
+    name: 'SecurityConfig',
+    component: () => import('@/views/SecurityConfig.vue'),
     meta: { requiresAdmin: true }
   },
   {
@@ -66,7 +94,7 @@ const router = createRouter({
 })
 
 // 白名单路由（不需要登录）
-const whiteList = ['/', '/login', '/register', '/community', '/test']
+const whiteList = ['/', '/login', '/register', '/community', '/tier-list', '/test']
 
 router.beforeEach(async (to, _from, next) => {
   const userStore = useUserStore()
@@ -84,12 +112,12 @@ router.beforeEach(async (to, _from, next) => {
   // 1. 管理员权限检查（最高优先级）
   if (to.meta.requiresAdmin) {
     if (!userStore.isAuthenticated) {
-      ElMessage.warning({ message: '请先登录', duration: 2000 })
+      ElMessage.warning({ message: '请先登录', duration: 500 })
       next({ path: '/login', query: { redirect: to.fullPath } })
       return
     }
     if (!userStore.user?.is_admin) {
-      ElMessage.error({ message: '需要管理员权限', duration: 2000 })
+      ElMessage.error({ message: '需要管理员权限', duration: 500 })
       next('/')
       return
     }
@@ -98,7 +126,7 @@ router.beforeEach(async (to, _from, next) => {
   // 2. 需要登录的路由
   if (to.meta.requiresAuth) {
     if (!userStore.isAuthenticated) {
-      ElMessage.warning({ message: '请先登录后访问', duration: 2000 })
+      ElMessage.warning({ message: '请先登录后访问', duration: 500 })
       next({ path: '/login', query: { redirect: to.fullPath } })
       return
     }
@@ -106,7 +134,7 @@ router.beforeEach(async (to, _from, next) => {
   
   // 3. 游客专属路由（登录后不能访问）
   if (to.meta.guest && userStore.isAuthenticated) {
-    ElMessage.info({ message: '您已登录，无需再次访问', duration: 2000 })
+    ElMessage.info({ message: '您已登录，无需再次访问', duration: 500 })
     next('/')
     return
   }
@@ -118,7 +146,7 @@ router.beforeEach(async (to, _from, next) => {
 // 路由错误处理
 router.onError((error) => {
   console.error('Router error:', error)
-  ElMessage.error({ message: '页面加载失败，请刷新重试', duration: 2000 })
+  ElMessage.error({ message: '页面加载失败，请刷新重试', duration: 500 })
 })
 
 export default router

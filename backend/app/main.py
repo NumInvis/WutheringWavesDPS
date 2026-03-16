@@ -6,12 +6,13 @@ Port: 14876
 import os
 import uvicorn
 from pathlib import Path
-
+from collections import defaultdict
+import hashlib
 import time
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from starlette.responses import Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -24,9 +25,54 @@ settings = get_settings()
 BASE_DIR = Path(__file__).resolve().parents[2]
 FRONTEND_DIST = BASE_DIR / "frontend" / "dist"
 
+BLOCKED_USER_AGENTS = [
+    'bot', 'crawler', 'spider', 'scraper', 'python-requests',
+    'httpclient', 'java/', 'okhttp', 'apache-httpclient', 'go-http-client',
+    'scrapy', 'selenium', 'phantomjs', 'headless', 'puppeteer', 'playwright'
+]
+
+IP_WHITELIST = {
+    '111.18.157.89',
+    '127.0.0.1',
+    '::1'
+}
+
+ip_request_count = defaultdict(list)
+ip_blacklist = set()
+RATE_LIMIT_WINDOW = 60
+RATE_LIMIT_MAX = 200
+RATE_LIMIT_API_MAX = 60
+
+def check_rate_limit(ip: str, is_api: bool) -> bool:
+    current_time = time.time()
+    requests = ip_request_count[ip]
+    ip_request_count[ip] = [t for t in requests if current_time - t < RATE_LIMIT_WINDOW]
+    max_requests = RATE_LIMIT_API_MAX if is_api else RATE_LIMIT_MAX
+    if len(ip_request_count[ip]) >= max_requests:
+        return False
+    ip_request_count[ip].append(current_time)
+    return True
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        # CSRF 检查：对非 GET 请求验证 Origin 和 Referer
+        client_ip = request.client.host if request.client else "unknown"
+        
+        if client_ip in IP_WHITELIST:
+            response = await call_next(request)
+            return response
+        
+        if client_ip in ip_blacklist:
+            return JSONResponse(status_code=403, content={"detail": "访问被拒绝"})
+        
+        user_agent = request.headers.get("user-agent", "").lower()
+        if any(bot in user_agent for bot in BLOCKED_USER_AGENTS):
+            if "api" in request.url.path and "/auth/login" not in request.url.path:
+                return JSONResponse(status_code=403, content={"detail": "禁止爬虫访问"})
+        
+        is_api = request.url.path.startswith("/WutheringWavesDPS/api/")
+        if is_api and not check_rate_limit(client_ip, is_api):
+            return JSONResponse(status_code=429, content={"detail": "请求过于频繁，请稍后再试"})
+        
         if request.method not in ["GET", "HEAD", "OPTIONS"]:
             origin = request.headers.get("origin")
             referer = request.headers.get("referer")
@@ -50,18 +96,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                         valid = True
                         break
             
-            # 如果是本地开发环境或没有 Origin/Referer，也放行（避免影响开发）
-            if not valid:
-                host = request.headers.get("host", "")
-                if "localhost" in host or "127.0.0.1" in host:
-                    valid = True
+            host = request.headers.get("host", "")
+            if "localhost" in host or "127.0.0.1" in host:
+                valid = True
             
             if not valid and origin and referer:
-                from fastapi.responses import JSONResponse
-                return JSONResponse(
-                    status_code=403,
-                    content={"detail": "CSRF 验证失败"}
-                )
+                return JSONResponse(status_code=403, content={"detail": "CSRF 验证失败"})
         
         response = await call_next(request)
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
@@ -69,7 +109,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         
-        # 只在 HTTPS 环境下启用 HSTS
         if request.url.scheme == "https":
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         
@@ -97,27 +136,31 @@ app.add_middleware(SecurityHeadersMiddleware)
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     """记录所有 HTTP 请求（安全版本，不记录敏感信息）并统计访问量"""
-    from app.api.admin import add_log
+    from app.core.logger import add_log
     from app.api.visit_stats import record_visit
     
     start_time = time.time()
     
-    # 过滤敏感路径和无信息量的路径
     excluded_paths = ["/login", "/register", "/change-password", "/admin/logs", "/health"]
     is_excluded = any(path in request.url.path for path in excluded_paths)
     
-    # 记录访问统计
-    if not is_excluded and not request.url.path.startswith("/uploads/") and not request.url.path.startswith("/assets/") and not request.url.path.startswith("/sucai/"):
+    is_api_request = request.url.path.startswith("/WutheringWavesDPS/api/")
+    is_static_request = (
+        request.url.path.startswith("/uploads/") or 
+        request.url.path.startswith("/assets/") or 
+        request.url.path.startswith("/sucai/")
+    )
+    
+    if not is_excluded and not is_api_request and not is_static_request:
         try:
-            record_visit(request.url.path)
+            record_visit(request)
         except Exception:
             pass
     
     response = await call_next(request)
     duration = time.time() - start_time
     
-    # 只记录有价值的请求，排除无信息量的请求
-    if not is_excluded and not request.url.path.startswith("/uploads/") and not request.url.path.startswith("/assets/") and not request.url.path.startswith("/sucai/"):
+    if not is_excluded and not is_static_request:
         add_log(
             "INFO",
             f"{request.method} {request.url.path}",
@@ -141,7 +184,7 @@ app.add_middleware(
 os.makedirs(settings.upload_dir, exist_ok=True)
 
 # Import models to register
-from app.models import user, spreadsheet, star, category, character, announcement, visit_stat  # noqa: F401
+from app.models import user, spreadsheet, star, category, character, announcement, visit_stat, tieba, app_ranking  # noqa: F401
 
 # Create tables (SQLite/dev)
 Base.metadata.create_all(bind=engine)
@@ -170,7 +213,7 @@ if FRONTEND_DIST.exists():
     app.mount("/WutheringWavesDPS/assets", CachedStaticFiles(directory=str(FRONTEND_DIST / "assets")), name="assets")
 
 # Routers - mount with prefix
-from app.api import auth, spreadsheets, stars, categories, uploads, admin, health, characters, images, announcements, visit_stats, sucai  # noqa: E402
+from app.api import auth, spreadsheets, stars, categories, uploads, admin, health, characters, images, announcements, visit_stats, sucai, tieba, app_ranking, security  # noqa: E402
 
 app.include_router(auth.router, prefix="/WutheringWavesDPS")
 app.include_router(spreadsheets.router, prefix="/WutheringWavesDPS")
@@ -183,7 +226,10 @@ app.include_router(health.router, prefix="/WutheringWavesDPS")
 app.include_router(characters.router, prefix="/WutheringWavesDPS")
 app.include_router(announcements.router, prefix="/WutheringWavesDPS")
 app.include_router(visit_stats.router, prefix="/WutheringWavesDPS")
+app.include_router(tieba.router, prefix="/WutheringWavesDPS")
 app.include_router(sucai.router, prefix="/WutheringWavesDPS")
+app.include_router(app_ranking.router, prefix="/WutheringWavesDPS")
+app.include_router(security.router, prefix="/WutheringWavesDPS")
 
 # Health check endpoint
 @app.get("/WutheringWavesDPS/health")
@@ -239,6 +285,20 @@ async def startup_event():
         add_log("ERROR", "数据库初始化失败", {"error": str(e)})
     finally:
         db.close()
+    
+    try:
+        from app.services.tieba_crawler import start_crawl_scheduler
+        start_crawl_scheduler()
+        add_log("INFO", "贴吧爬取调度器已启动")
+    except Exception as e:
+        add_log("ERROR", f"贴吧爬取调度器启动失败: {e}")
+    
+    try:
+        from app.services.app_ranking_crawler import start_crawl_scheduler as start_ranking_scheduler
+        start_ranking_scheduler()
+        add_log("INFO", "iOS畅销榜爬取调度器已启动")
+    except Exception as e:
+        add_log("ERROR", f"iOS畅销榜爬取调度器启动失败: {e}")
 
 
 if __name__ == "__main__":

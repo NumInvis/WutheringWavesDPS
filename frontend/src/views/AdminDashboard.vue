@@ -229,6 +229,39 @@
           </div>
         </div>
       </div>
+
+      <div class="grid-item large">
+        <div class="card-header">
+          <h3 class="card-title">
+            <el-icon><FolderOpened /></el-icon>
+            数据备份管理
+          </h3>
+        </div>
+        <div class="backup-management">
+          <div class="backup-settings">
+            <div class="setting-item">
+              <span class="setting-label">最大备份大小 (MB)</span>
+              <el-input-number v-model="maxBackupSize" :min="10" :max="500" :step="10" size="small" @change="saveBackupSettings" />
+            </div>
+            <div class="setting-info">当前已使用: {{ currentBackupSize }} MB / {{ maxBackupSize }} MB</div>
+          </div>
+          <el-divider />
+          <div class="backup-actions">
+            <el-button type="primary" @click="exportSpreadsheetBackup" :loading="backupLoading.spreadsheet">
+              <el-icon><Document /></el-icon>
+              导出表格备份
+            </el-button>
+            <el-button type="success" @click="exportTiebaBackup" :loading="backupLoading.tieba">
+              <el-icon><ChatDotRound /></el-icon>
+              导出贴吧备份
+            </el-button>
+            <el-button type="warning" @click="exportRankingBackup" :loading="backupLoading.ranking">
+              <el-icon><TrendCharts /></el-icon>
+              导出iOS排行榜备份
+            </el-button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -239,7 +272,8 @@ import { ElMessage } from 'element-plus'
 import {
   Monitor, Refresh, User, Document, View, DataLine,
   TrendCharts, Cpu, Rank, PieChart, DocumentChecked,
-  Warning, CircleClose, WarningFilled, InfoFilled, CircleCheck
+  Warning, CircleClose, WarningFilled, InfoFilled, CircleCheck,
+  FolderOpened, ChatDotRound
 } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import api from '../api'
@@ -287,6 +321,93 @@ const spreadsheetData = ref([
   { name: '长离配队分析', author: 'User2', views: 654, downloads: 234, createdAt: '2026-03-13 09:15:00' }
 ])
 
+const maxBackupSize = ref(50)
+const currentBackupSize = ref(0)
+const backupLoading = ref({
+  spreadsheet: false,
+  tieba: false,
+  ranking: false
+})
+
+async function saveBackupSettings() {
+  try {
+    await api.post('/admin/backup/settings', { max_size: maxBackupSize.value })
+    ElMessage.success('备份设置已保存')
+  } catch (error) {
+    ElMessage.error('保存失败')
+  }
+}
+
+async function loadBackupSettings() {
+  try {
+    const data = await api.get('/admin/backup/settings')
+    maxBackupSize.value = data.max_size || 50
+    currentBackupSize.value = data.current_size || 0
+  } catch (error) {
+    console.error('加载备份设置失败')
+  }
+}
+
+async function exportSpreadsheetBackup() {
+  backupLoading.value.spreadsheet = true
+  try {
+    const response = await api.get('/admin/backup/spreadsheet', { responseType: 'blob' })
+    const url = window.URL.createObjectURL(new Blob([response]))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `spreadsheet_backup_${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+    ElMessage.success('表格备份下载成功')
+  } catch (error) {
+    ElMessage.error('下载失败')
+  } finally {
+    backupLoading.value.spreadsheet = false
+  }
+}
+
+async function exportTiebaBackup() {
+  backupLoading.value.tieba = true
+  try {
+    const response = await api.get('/admin/backup/tieba', { responseType: 'blob' })
+    const url = window.URL.createObjectURL(new Blob([response]))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `tieba_backup_${new Date().toISOString().split('T')[0]}.csv`
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+    ElMessage.success('贴吧备份下载成功')
+  } catch (error) {
+    ElMessage.error('下载失败')
+  } finally {
+    backupLoading.value.tieba = false
+  }
+}
+
+async function exportRankingBackup() {
+  backupLoading.value.ranking = true
+  try {
+    const response = await api.get('/admin/backup/ranking', { responseType: 'blob' })
+    const url = window.URL.createObjectURL(new Blob([response]))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `ranking_backup_${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+    ElMessage.success('iOS排行榜备份下载成功')
+  } catch (error) {
+    ElMessage.error('下载失败')
+  } finally {
+    backupLoading.value.ranking = false
+  }
+}
+
 const visitTrendChartRef = ref<HTMLElement>()
 const userDistributionChartRef = ref<HTMLElement>()
 let visitTrendChart: echarts.ECharts | null = null
@@ -319,10 +440,10 @@ async function refreshAllData() {
       loadSystemStats(),
       loadSpreadsheetStats()
     ])
-    ElMessage.success({ message: '数据已刷新', duration: 2000 })
+    ElMessage.success({ message: '数据已刷新', duration: 500 })
   } catch (error) {
     console.error('刷新数据失败:', error)
-    ElMessage.error({ message: '刷新数据失败', duration: 2000 })
+    ElMessage.error({ message: '刷新数据失败', duration: 500 })
   } finally {
     loading.value = false
   }
@@ -418,7 +539,7 @@ async function loadSystemStats() {
 }
 
 async function loadSpreadsheetStats() {
-  ElMessage.info({ message: '表格统计已更新', duration: 1500 })
+  ElMessage.info({ message: '表格统计已更新', duration: 500 })
 }
 
 function initCharts() {
@@ -490,6 +611,7 @@ onMounted(() => {
   updateTime()
   setInterval(updateTime, 1000)
   updateRefreshInterval()
+  loadBackupSettings()
   window.addEventListener('resize', handleResize)
 })
 
@@ -930,6 +1052,40 @@ onUnmounted(() => {
 
 :deep(.el-table__inner-wrapper::before) {
   display: none;
+}
+
+.backup-management {
+  padding: 10px 0;
+}
+
+.backup-settings {
+  margin-bottom: 16px;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.setting-label {
+  font-size: 14px;
+  color: #e2e8f0;
+  font-weight: 500;
+}
+
+.setting-info {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-top: 8px;
+  font-family: 'SF Mono', 'Monaco', monospace;
+}
+
+.backup-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 1400px) {

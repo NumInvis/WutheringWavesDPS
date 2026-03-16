@@ -12,6 +12,7 @@
               <router-link to="/calculator" class="nav-link">工作区</router-link>
               <router-link to="/community" class="nav-link">社区</router-link>
               <router-link to="/tier-list" class="nav-link">排行</router-link>
+              <router-link to="/data-observer" class="nav-link">数据观察</router-link>
               <el-dropdown trigger="hover" class="nav-link more-dropdown">
                 <span class="more-label">
                   更多
@@ -53,7 +54,7 @@
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
-              <router-link v-if="isAdmin" to="/admin" class="nav-link">管理</router-link>
+              <router-link v-if="isAdmin" to="/admin/center" class="nav-link">管理</router-link>
             </nav>
             <div class="user-area">
               <template v-if="userStore.isAuthenticated">
@@ -244,11 +245,11 @@ async function handleUpdateProfile() {
     await userStore.fetchCurrentUser()
     ElMessage.success({
       message: '昵称已更新',
-      duration: 2000
+      duration: 500
     })
     editDialogVisible.value = false
   } catch (error) {
-    ElMessage.error({ message: '更新失败', duration: 2000 })
+    ElMessage.error({ message: '更新失败', duration: 500 })
   } finally {
     editLoading.value = false
   }
@@ -278,7 +279,7 @@ async function handleChangePassword() {
         }
       })
       console.log('密码修改成功:', response)
-      ElMessage.success({ message: '密码已修改，请重新登录', duration: 2000 })
+      ElMessage.success({ message: '密码已修改，请重新登录', duration: 500 })
       passwordDialogVisible.value = false
       userStore.logout()
       setTimeout(() => {
@@ -286,7 +287,7 @@ async function handleChangePassword() {
       }, 1000)
     } catch (error: any) {
       console.error('修改密码失败:', error)
-      ElMessage.error({ message: error.response?.data?.detail || '修改密码失败', duration: 2000 })
+      ElMessage.error({ message: error.response?.data?.detail || '修改密码失败', duration: 500 })
     } finally {
       passwordLoading.value = false
     }
@@ -303,7 +304,7 @@ const handleCommand = (command: string) => {
       break
     case 'logout':
       userStore.logout()
-      ElMessage.success({ message: '已退出登录', duration: 2000 })
+      ElMessage.success({ message: '已退出登录', duration: 500 })
       window.location.href = '/'
       break
   }

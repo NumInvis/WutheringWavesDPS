@@ -19,7 +19,7 @@ app.use(pinia)
 app.use(router)
 app.use(ElementPlus, {
   message: {
-    duration: 2000
+    duration: 500
   }
 })
 

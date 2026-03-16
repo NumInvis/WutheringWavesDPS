@@ -29,6 +29,7 @@ from app.schemas.user import (
     TokenData,
     PasswordChange
 )
+from app.core.logger import add_log
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
 settings = get_settings()
@@ -48,54 +49,40 @@ def _make_placeholder_email(username: str) -> str:
 
 
 def init_admin_user(db: Session):
-    """初始化管理员账号（唯一管理员）。"""
+    """初始化管理员账号（仅首次创建，之后不会自动修改密码）。"""
     admin_username = settings.admin_username
     if not admin_username:
         return
 
-    admin_email = settings.admin_email or _make_placeholder_email(admin_username)
-
-    password_hash = settings.admin_password_hash
-    if settings.admin_password:
-        password_hash = get_password_hash(settings.admin_password)
-
-    if not password_hash:
+    existing_admin = db.query(User).filter(User.username == admin_username).first()
+    if existing_admin:
         return
 
-    admin_user = db.query(User).filter(User.username == admin_username).first()
-    if admin_user:
-        admin_user.email = admin_email
-        admin_user.is_admin = True
-        admin_user.is_verified = True
-        admin_user.is_active = True
-        admin_user.role = "admin"
-        if settings.admin_force_password:
-            admin_user.password_hash = password_hash
-    else:
-        admin_user = User(
-            username=admin_username,
-            email=admin_email,
-            password_hash=password_hash,
-            display_name=admin_username,
-            is_admin=True,
-            is_verified=True,
-            is_active=True,
-            role="admin"
-        )
-        db.add(admin_user)
-
-    if settings.admin_singleton:
-        db.query(User).filter(
-            User.username != admin_username,
-            User.is_admin == True
-        ).update(
-            {"is_admin": False, "role": "user"},
-            synchronize_session=False
-        )
-
+    admin_email = settings.admin_email or _make_placeholder_email(admin_username)
+    
+    random_password = uuid.uuid4().hex[:12]
+    password_hash = get_password_hash(random_password)
+    
+    admin_user = User(
+        username=admin_username,
+        email=admin_email,
+        password_hash=password_hash,
+        display_name=admin_username,
+        is_admin=True,
+        is_verified=True,
+        is_active=True,
+        role="admin"
+    )
+    db.add(admin_user)
     db.commit()
-    if admin_user:
-        db.refresh(admin_user)
+    
+    print(f"\n{'='*50}")
+    print(f"[管理员账号创建] 用户名: {admin_username}")
+    print(f"[管理员账号创建] 密码: {random_password}")
+    print(f"[管理员账号创建] 请立即登录并修改密码！")
+    print(f"{'='*50}\n")
+    
+    add_log("info", f"管理员账号已创建: {admin_username}", user=admin_username)
 
 
 async def get_current_user(
@@ -225,6 +212,8 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         )
     db.refresh(db_user)
 
+    add_log("info", f"用户注册成功: {username}", user=username)
+    
     return db_user
 
 
@@ -297,6 +286,8 @@ def login(
     user.last_login_at = datetime.utcnow()
     db.commit()
 
+    add_log("info", f"用户登录成功: {username}", user=username, ip=client_ip)
+
     access_token_expires = timedelta(minutes=settings.jwt_access_token_expire_minutes)
     access_token = create_access_token(
         data={"sub": str(user.id)},
@@ -327,5 +318,7 @@ def change_password(
     
     current_user.password_hash = get_password_hash(password_data.new_password)
     db.commit()
+    
+    add_log("info", f"用户修改密码: {current_user.username}", user=current_user.username)
     
     return {"message": "密码已修改"}

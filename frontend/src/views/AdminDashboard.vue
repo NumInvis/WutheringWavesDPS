@@ -195,7 +195,7 @@
             </el-table-column>
             <el-table-column prop="createdAt" label="创建时间" width="180" />
             <el-table-column label="操作" width="100">
-              <template #default="{ row }">
+              <template #default>
                 <el-button size="small" type="primary" link>查看</el-button>
               </template>
             </el-table-column>
@@ -267,7 +267,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   Monitor, Refresh, User, Document, View, DataLine,

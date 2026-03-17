@@ -37,6 +37,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/TierList.vue')
   },
   {
+    path: '/app-ranking',
+    name: 'AppRanking',
+    component: () => import('@/views/AppRanking.vue')
+  },
+  {
     path: '/data-observer',
     name: 'DataObserver',
     component: () => import('@/views/DataObserver.vue'),

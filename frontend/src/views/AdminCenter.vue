@@ -371,18 +371,21 @@ const refreshInterval = ref(5000)
 const timeRange = ref<'24h' | '7d' | '30d'>('7d')
 const logLevel = ref('')
 
-const visitStats = ref({
+const visitStats = ref<any>({
   total_visits: 0,
+  total_visitors: 0,
   today_visits: 0,
-  seven_days_visits: 0
+  today_visitors: 0,
+  seven_days_visits: 0,
+  seven_days_visitors: 0
 })
 
-const healthChecks = ref({
-  database: {},
-  disk: {},
-  memory: {},
-  uptime: {},
-  uploads: {}
+const healthChecks = ref<any>({
+  database: {} as any,
+  disk: {} as any,
+  memory: {} as any,
+  uptime: {} as any,
+  uploads: {} as any
 })
 
 const logs = ref<any[]>([])

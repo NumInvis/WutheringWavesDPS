@@ -4,7 +4,6 @@
 import traceback
 import importlib
 import sys
-import os
 import json
 import csv
 from datetime import datetime
@@ -12,7 +11,6 @@ from pathlib import Path
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.logger import add_log, get_logs, clear_logs
@@ -25,7 +23,14 @@ BACKUP_DIR = Path("/root/ai/WutheringWavesDPS/backups")
 BACKUP_DIR.mkdir(exist_ok=True)
 
 # 备份设置存储
-backup_settings = {"max_size": 50}
+backup_settings = {
+    "max_size": 50,  # MB
+    "backup_interval": 60  # 分钟
+}
+
+# 定时备份任务
+_backup_task = None
+_backup_running = False
 
 
 def get_backup_size():
@@ -51,11 +56,132 @@ def cleanup_old_backups(max_size_mb):
             add_log("error", f"清理备份失败: {e}")
 
 
+async def auto_backup():
+    """自动执行备份"""
+    global _backup_running
+    if _backup_running:
+        return
+    
+    _backup_running = True
+    try:
+        from app.models.spreadsheet import Spreadsheet
+        from app.models.app_ranking import AppInfo, RankingRecord
+        
+        db = next(get_db())
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # 备份表格
+        spreadsheets = db.query(Spreadsheet).all()
+        spreadsheet_backup = BACKUP_DIR / f"spreadsheet_auto_backup_{timestamp}.json"
+        spreadsheet_data = []
+        for sheet in spreadsheets:
+            spreadsheet_data.append({
+                "id": sheet.id,
+                "sheet_number": sheet.sheet_number,
+                "user_id": sheet.user_id,
+                "title": sheet.title,
+                "description": sheet.description,
+                "category": sheet.category,
+                "area": sheet.area,
+                "is_draft": sheet.is_draft,
+                "is_banned": sheet.is_banned,
+                "is_featured": sheet.is_featured,
+                "is_public": sheet.is_public,
+                "star_count": sheet.star_count,
+                "view_count": sheet.view_count,
+                "download_count": sheet.download_count,
+                "file_url": sheet.file_url,
+                "file_size": sheet.file_size,
+                "thumbnail_url": sheet.thumbnail_url,
+                "extra_metadata": sheet.extra_metadata,
+                "is_deleted": sheet.is_deleted,
+                "deleted_at": sheet.deleted_at.isoformat() if sheet.deleted_at else None,
+                "created_at": sheet.created_at.isoformat() if sheet.created_at else None,
+                "updated_at": sheet.updated_at.isoformat() if sheet.updated_at else None
+            })
+        with open(spreadsheet_backup, "w", encoding="utf-8") as f:
+            json.dump(spreadsheet_data, f, ensure_ascii=False, indent=2)
+        
+        # 备份排行榜
+        apps = db.query(AppInfo).all()
+        records = db.query(RankingRecord).all()
+        ranking_backup = BACKUP_DIR / f"ranking_auto_backup_{timestamp}.json"
+        ranking_data = {"apps": [], "records": []}
+        for app in apps:
+            ranking_data["apps"].append({
+                "id": app.id,
+                "itunes_id": app.itunes_id,
+                "name_cn": app.name_cn,
+                "name_en": app.name_en,
+                "icon_url": app.icon_url,
+                "developer": app.developer,
+                "is_active": app.is_active
+            })
+        for record in records:
+            ranking_data["records"].append({
+                "id": record.id,
+                "app_id": record.app_id,
+                "country": record.country,
+                "rank": record.rank,
+                "recorded_at": record.recorded_at.isoformat() if record.recorded_at else None,
+                "date": record.date
+            })
+        with open(ranking_backup, "w", encoding="utf-8") as f:
+            json.dump(ranking_data, f, ensure_ascii=False, indent=2)
+        
+        cleanup_old_backups(backup_settings["max_size"])
+        add_log("info", f"自动备份完成: spreadsheet_auto_backup_{timestamp}.json, ranking_auto_backup_{timestamp}.json")
+    except Exception as e:
+        add_log("error", f"自动备份失败: {e}")
+    finally:
+        _backup_running = False
+
+
+async def backup_scheduler():
+    """备份调度器"""
+    import asyncio
+    global _backup_running
+    
+    add_log("info", "自动备份调度器已启动")
+    
+    while _backup_task and not _backup_task.done():
+        try:
+            interval = backup_settings["backup_interval"] * 60  # 转换为秒
+            await asyncio.sleep(interval)
+            await auto_backup()
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            add_log("error", f"备份调度器错误: {e}")
+            await asyncio.sleep(60)
+
+
+def start_backup_scheduler():
+    """启动备份调度器"""
+    import asyncio
+    global _backup_task
+    
+    if _backup_task and not _backup_task.done():
+        return
+    
+    loop = asyncio.get_event_loop()
+    _backup_task = loop.create_task(backup_scheduler())
+
+
+def stop_backup_scheduler():
+    """停止备份调度器"""
+    global _backup_task
+    if _backup_task and not _backup_task.done():
+        _backup_task.cancel()
+        _backup_task = None
+
+
 @router.get("/backup/settings")
 def get_backup_settings_api(current_user: User = Depends(get_current_admin_user)):
     """获取备份设置"""
     return {
         "max_size": backup_settings["max_size"],
+        "backup_interval": backup_settings["backup_interval"],
         "current_size": get_backup_size()
     }
 
@@ -67,10 +193,18 @@ def save_backup_settings_api(
 ):
     """保存备份设置"""
     max_size = data.get("max_size", 50)
+    backup_interval = data.get("backup_interval", 60)
+    
     backup_settings["max_size"] = max_size
+    backup_settings["backup_interval"] = backup_interval
+    
     cleanup_old_backups(max_size)
-    add_log("info", f"管理员 {current_user.username} 更新备份设置: 最大{max_size}MB")
-    return {"message": "设置已保存", "max_size": max_size}
+    add_log("info", f"管理员 {current_user.username} 更新备份设置: 最大{max_size}MB, 间隔{backup_interval}分钟")
+    return {
+        "message": "设置已保存", 
+        "max_size": max_size,
+        "backup_interval": backup_interval
+    }
 
 
 @router.get("/backup/spreadsheet")
@@ -89,10 +223,25 @@ def export_spreadsheet_backup(current_user: User = Depends(get_current_admin_use
         for sheet in spreadsheets:
             data.append({
                 "id": sheet.id,
-                "name": sheet.name,
-                "filename": sheet.filename,
                 "sheet_number": sheet.sheet_number,
-                "uploaded_by": sheet.uploaded_by,
+                "user_id": sheet.user_id,
+                "title": sheet.title,
+                "description": sheet.description,
+                "category": sheet.category,
+                "area": sheet.area,
+                "is_draft": sheet.is_draft,
+                "is_banned": sheet.is_banned,
+                "is_featured": sheet.is_featured,
+                "is_public": sheet.is_public,
+                "star_count": sheet.star_count,
+                "view_count": sheet.view_count,
+                "download_count": sheet.download_count,
+                "file_url": sheet.file_url,
+                "file_size": sheet.file_size,
+                "thumbnail_url": sheet.thumbnail_url,
+                "extra_metadata": sheet.extra_metadata,
+                "is_deleted": sheet.is_deleted,
+                "deleted_at": sheet.deleted_at.isoformat() if sheet.deleted_at else None,
                 "created_at": sheet.created_at.isoformat() if sheet.created_at else None,
                 "updated_at": sheet.updated_at.isoformat() if sheet.updated_at else None
             })
@@ -282,3 +431,83 @@ def hot_reload_modules(
         "errors": errors,
         "message": f"成功更新 {len(reloaded)} 个模块" + (f"，{len(errors)} 个失败" if errors else "")
     }
+
+
+@router.get("/settings/data-observer")
+def get_data_observer_settings(current_user: User = Depends(get_current_admin_user)):
+    """获取数据观察页面设置"""
+    try:
+        import json
+        import os
+        from pathlib import Path
+        
+        settings_file = Path(__file__).parent / "../data" / "data_observer_settings.json"
+        
+        if settings_file.exists():
+            with open(settings_file, 'r', encoding='utf-8') as f:
+                settings = json.load(f)
+        else:
+            settings = {
+                "leftColumnWidth": 1,
+                "rightColumnWidth": 1.5,
+                "barChartHeight": 280,
+                "hotListHeight": 400,
+                "statsDays": 3,
+                "hotPostsLimit": 10,
+                "fontSizeScale": 1,
+                "chartHeightScale": 1,
+                "panelOpacity": 0.92,
+                "borderRadius": 8
+            }
+            
+            # 确保目录存在
+            settings_file.parent.mkdir(exist_ok=True)
+            with open(settings_file, 'w', encoding='utf-8') as f:
+                json.dump(settings, f, ensure_ascii=False, indent=2)
+        
+        return {"settings": settings}
+    except Exception as e:
+        log_error(e, "获取数据观察页面设置")
+        raise HTTPException(status_code=500, detail="获取设置失败")
+
+
+from pydantic import BaseModel
+
+class DataObserverSettings(BaseModel):
+    leftColumnWidth: float = 1
+    rightColumnWidth: float = 1.5
+    barChartHeight: int = 280
+    hotListHeight: int = 400
+    statsDays: int = 3
+    hotPostsLimit: int = 10
+    fontSizeScale: float = 1
+    chartHeightScale: float = 1
+    panelOpacity: float = 0.92
+    borderRadius: int = 8
+
+@router.post("/settings/data-observer")
+def save_data_observer_settings(
+    settings: DataObserverSettings,
+    current_user: User = Depends(get_current_admin_user)
+):
+    """保存数据观察页面设置"""
+    try:
+        import json
+        from pathlib import Path
+        
+        settings_file = Path(__file__).parent / "../data" / "data_observer_settings.json"
+        
+        # 确保目录存在
+        settings_file.parent.mkdir(exist_ok=True)
+        
+        # 转换为字典
+        settings_dict = settings.model_dump()
+        
+        with open(settings_file, 'w', encoding='utf-8') as f:
+            json.dump(settings_dict, f, ensure_ascii=False, indent=2)
+        
+        add_log("info", f"数据观察页面设置已更新 by {current_user.username}")
+        return {"message": "设置已保存"}
+    except Exception as e:
+        log_error(e, "保存数据观察页面设置")
+        raise HTTPException(status_code=500, detail="保存设置失败")

@@ -1,0 +1,12 @@
+{
+  "leftColumnWidth": 1.1,
+  "rightColumnWidth": 1.0,
+  "barChartHeight": 220,
+  "hotListHeight": 600,
+  "statsDays": 3,
+  "hotPostsLimit": 10,
+  "fontSizeScale": 1.35,
+  "chartHeightScale": 1.5,
+  "panelOpacity": 1.0,
+  "borderRadius": 9
+}

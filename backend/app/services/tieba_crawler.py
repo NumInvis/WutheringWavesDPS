@@ -52,6 +52,20 @@ def get_beijing_date() -> str:
     return get_beijing_time().strftime("%Y-%m-%d")
 
 
+def is_today_beijing(timestamp: int) -> bool:
+    if not timestamp:
+        return False
+    try:
+        post_time = datetime.fromtimestamp(timestamp)
+        beijing_post_time = post_time + timedelta(hours=8)
+        today_beijing = get_beijing_date()
+        result = beijing_post_time.strftime("%Y-%m-%d") == today_beijing
+        return result
+    except Exception as e:
+        add_log("error", f"时间过滤失败: {e}")
+        return False
+
+
 def calc_hot_index(reply_count: int, like_count: int) -> int:
     return 3 * reply_count + like_count
 
@@ -61,11 +75,13 @@ async def crawl_tieba(tieba_name: str, client, db: Session) -> Dict:
         "tieba_name": tieba_name,
         "post_count": 0,
         "posts": [],
+        "new_post_ids": set(),
+        "today_post_ids": set(),
         "error": None
     }
     
     try:
-        threads_resp = await client.get_threads(tieba_name, pn=1, rn=50, sort=tb.ThreadSortType.CREATE)
+        threads_resp = await client.get_threads(tieba_name, pn=1, rn=200, sort=tb.ThreadSortType.CREATE)
         
         threads = []
         if threads_resp:
@@ -76,6 +92,8 @@ async def crawl_tieba(tieba_name: str, client, db: Session) -> Dict:
             elif hasattr(threads_resp, '__iter__'):
                 threads = list(threads_resp)
         
+        today = get_beijing_date()
+        
         if threads:
             for thread in threads:
                 reply_count = getattr(thread, 'reply_num', 0) or 0
@@ -84,24 +102,41 @@ async def crawl_tieba(tieba_name: str, client, db: Session) -> Dict:
                 tid = getattr(thread, 'tid', 0)
                 create_time = getattr(thread, 'create_time', 0)
                 
+                if not is_today_beijing(create_time):
+                    continue
+                
                 if any(kw in title for kw in FILTER_KEYWORDS):
                     continue
                 
-                result["post_count"] += 1
+                post_id_str = str(tid)
+                result["today_post_ids"].add(post_id_str)
                 
-                post_data = {
-                    "tieba_name": tieba_name,
-                    "post_id": str(tid),
-                    "title": title,
-                    "reply_count": reply_count,
-                    "like_count": like_count,
-                    "hot_index": calc_hot_index(reply_count, like_count),
-                    "post_url": f"https://tieba.baidu.com/p/{tid}",
-                    "post_time": datetime.fromtimestamp(create_time) if create_time else get_beijing_time()
-                }
-                result["posts"].append(post_data)
+                existing_post = db.query(TiebaHotPost).filter(
+                    TiebaHotPost.post_id == post_id_str
+                ).first()
+                
+                if existing_post:
+                    existing_post.reply_count = reply_count
+                    existing_post.like_count = like_count
+                else:
+                    result["new_post_ids"].add(post_id_str)
+                    result["post_count"] += 1
+                    
+                    post_time = datetime.fromtimestamp(create_time) if create_time else get_beijing_time()
+                    
+                    post_data = {
+                        "tieba_name": tieba_name,
+                        "post_id": post_id_str,
+                        "title": title,
+                        "reply_count": reply_count,
+                        "like_count": like_count,
+                        "hot_index": calc_hot_index(reply_count, like_count),
+                        "post_url": f"https://tieba.baidu.com/p/{tid}",
+                        "post_time": post_time
+                    }
+                    result["posts"].append(post_data)
         
-        add_log("info", f"爬取贴吧 {tieba_name}: {result['post_count']}帖")
+        add_log("info", f"爬取贴吧 {tieba_name}: 今日新帖 {result['post_count']} 帖，今天发布的帖子共 {len(result['today_post_ids'])} 帖")
         
     except Exception as e:
         result["error"] = str(e)
@@ -118,7 +153,8 @@ async def save_crawl_results(results: List[Dict], db: Session):
             continue
             
         tieba_name = result["tieba_name"]
-        post_count = result["post_count"]
+        new_post_count = result["post_count"]
+        today_post_count = len(result.get("today_post_ids", set()))
         posts = result["posts"]
         
         existing = db.query(TiebaDailyStats).filter(
@@ -126,32 +162,24 @@ async def save_crawl_results(results: List[Dict], db: Session):
         ).first()
         
         if existing:
-            existing.post_count = post_count
+            existing.post_count = today_post_count
         else:
-            stat = TiebaDailyStats(tieba_name=tieba_name, date=today, post_count=post_count)
+            stat = TiebaDailyStats(tieba_name=tieba_name, date=today, post_count=today_post_count)
             db.add(stat)
         
         for post in posts:
-            existing_post = db.query(TiebaHotPost).filter(
-                TiebaHotPost.post_id == post["post_id"]
-            ).first()
-            
-            if existing_post:
-                existing_post.reply_count = post["reply_count"]
-                existing_post.like_count = post["like_count"]
-            else:
-                hot_post = TiebaHotPost(
-                    tieba_name=post["tieba_name"],
-                    post_id=post["post_id"],
-                    title=post["title"],
-                    reply_count=post["reply_count"],
-                    like_count=post["like_count"],
-                    post_url=post["post_url"],
-                    post_time=post["post_time"],
-                    hot_date=today,
-                    hot_type='daily'
-                )
-                db.add(hot_post)
+            hot_post = TiebaHotPost(
+                tieba_name=post["tieba_name"],
+                post_id=post["post_id"],
+                title=post["title"],
+                reply_count=post["reply_count"],
+                like_count=post["like_count"],
+                post_url=post["post_url"],
+                post_time=post["post_time"],
+                hot_date=today,
+                hot_type='daily'
+            )
+            db.add(hot_post)
     
     db.commit()
 

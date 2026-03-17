@@ -36,8 +36,7 @@ MONITORED_APPS = [
 
 
 def get_monitored_apps_from_db(db: Session) -> List[Dict]:
-    """从数据库获取监控的应用列表"""
-    apps = db.query(AppInfo).filter(AppInfo.is_active == True).all()
+    apps = db.query(AppInfo).filter(AppInfo.is_active.is_(True)).all()
     result = []
     for app in apps:
         result.append({

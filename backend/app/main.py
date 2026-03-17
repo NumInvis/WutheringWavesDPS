@@ -7,9 +7,8 @@ import os
 import uvicorn
 from pathlib import Path
 from collections import defaultdict
-import hashlib
 import time
-from fastapi import FastAPI, Request, HTTPException, status
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -209,7 +208,7 @@ class CachedStaticFiles(StaticFiles):
 app.mount("/WutheringWavesDPS/uploads", CachedStaticFiles(directory=settings.upload_dir), name="uploads")
 
 # Static files for frontend assets with cache
-if FRONTEND_DIST.exists():
+if FRONTEND_DIST.exists() and (FRONTEND_DIST / "assets").exists():
     app.mount("/WutheringWavesDPS/assets", CachedStaticFiles(directory=str(FRONTEND_DIST / "assets")), name="assets")
 
 # Routers - mount with prefix
@@ -299,6 +298,13 @@ async def startup_event():
         add_log("INFO", "iOS畅销榜爬取调度器已启动")
     except Exception as e:
         add_log("ERROR", f"iOS畅销榜爬取调度器启动失败: {e}")
+    
+    try:
+        from app.api.admin import start_backup_scheduler
+        start_backup_scheduler()
+        add_log("INFO", "自动备份调度器已启动")
+    except Exception as e:
+        add_log("ERROR", f"自动备份调度器启动失败: {e}")
 
 
 if __name__ == "__main__":

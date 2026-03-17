@@ -163,7 +163,6 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Document, ArrowUp, ArrowDown, ChatDotRound, Monitor, Clock, Cpu, Select, Plus } from '@element-plus/icons-vue'
-import { useUserStore } from '../stores/user'
 import * as echarts from 'echarts'
 import api from '../api'
 
@@ -195,7 +194,6 @@ interface VisitStats {
   seven_days_visits: number
 }
 
-const userStore = useUserStore()
 const activeTab = ref('logs')
 const logs = ref<LogEntry[]>([])
 const loading = ref(false)

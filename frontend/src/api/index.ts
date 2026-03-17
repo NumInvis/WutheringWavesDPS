@@ -49,11 +49,13 @@ class ApiClient {
   private setupInterceptors() {
     this.client.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
-        if (config.method === 'get') {
+        // 只有在明确需要禁用缓存时才添加时间戳
+        if (config.method === 'get' && config.params?.noCache) {
           config.params = {
             ...config.params,
             _t: Date.now()
           }
+          delete config.params.noCache
         }
         return config
       },

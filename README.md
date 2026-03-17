@@ -1,25 +1,49 @@
 # WutheringWavesDPS
 
+<div align="center">
+
 鸣潮拉表分享社区 - v1.02
 
-## 🌐 在线访问
+<a href="https://www.arcanamorning.tech/WutheringWavesDPS/">在线访问</a> ｜
+<a href="https://github.com/NumInvis/WutheringWavesDPS/issues">问题反馈</a> ｜
+<a href="https://afdian.com/a/r0xy0">爱发电赞助</a>
+
+</div>
+
+WutheringWavesDPS 是一个专为《鸣潮》玩家打造的拉表分享社区平台。它提供了完整的在线 Excel 编辑体验，同时集成了数据观察、社区分享、用户管理等功能。无论你是想制作 DPS 计算表、角色数据表，还是分享游戏攻略，都可以在这里快速完成并分享给其他玩家。
+
+## ✨ 核心特性
+
+1. 💯 **完全免费开源** - 永久免费使用，代码完全开源
+2. 📊 **在线 Excel 编辑** - 基于 Luckysheet，完美兼容 Excel 格式、公式、样式
+3. 📈 **数据观察中心** - 贴吧数据统计、iOS 畅销榜、排名趋势等多维度数据监控
+4. 🤖 **自动化爬虫** - 定时自动获取贴吧、App Store 等数据
+5. 🌐 **社区分享** - 上传、分享、点赞，构建游戏数据社区
+6. 💻 **WebUI 管理** - 完整的后台管理系统，支持日志、任务调度监控
+7. 📱 **移动端适配** - 全面优化手机端浏览体验
+8. 🛡️ **权限管理** - 管理员、普通用户分级权限控制
+
+## 🚀 快速开始
 
 访问官方网站：[https://www.arcanamorning.tech/WutheringWavesDPS/](https://www.arcanamorning.tech/WutheringWavesDPS/)
 
-## 💖 支持我们
+### 使用流程
 
-如果这个项目对你有帮助，欢迎通过爱发电支持我们：
+1. **注册/登录** - 创建账号或使用已有账号登录
+2. **创建拉表** - 点击新建，在线编辑 Excel 表格
+3. **保存分享** - 编辑完成后保存，生成分享链接
+4. **社区浏览** - 查看其他玩家分享的拉表，点赞收藏
+5. **数据观察** - 查看贴吧热度、游戏排名等数据（管理员功能）
 
-[![爱发电](https://img.shields.io/badge/爱发电-赞助-ff69b4?style=flat-square)](https://afdian.com/a/r0xy0)
+## 📋 功能详解
 
-## ✨ 功能特性
-
-### 📊 在线表格编辑
-- 基于 Luckysheet，完美兼容 Excel
+### 在线表格编辑
+- 基于 Luckysheet 实现，完美兼容 Excel
 - 保留数据、公式、格式不变
 - 支持在线编辑和实时保存
+- 支持导入/导出 Excel 文件
 
-### 📈 数据观察（v1.02 新增）
+### 数据观察（v1.02 新增）
 - **贴吧发帖量统计** - 多日数据对比，表格展示
 - **每周热帖排行** - 按热度排序，快速了解热门话题
 - **每日热帖** - 当日热门帖子一览
@@ -28,22 +52,19 @@
 - **排名趋势** - 折线图展示游戏排名变化，支持时间筛选
 - **全局设置** - 管理员可调整页面布局和显示参数
 - **个人设置** - 自定义字体大小、图表高度等
-- **移动端适配** - 全面优化手机端浏览体验
 
-### 🔧 后端监控（v1.02 新增）
+### 后端监控（v1.02 新增）
 - **贴吧爬虫调度器** - 定时自动爬取贴吧数据
 - **iOS 畅销榜爬虫** - 自动获取 App Store 排名
 - **系统日志管理** - 查看和管理系统运行日志
 - **任务调度监控** - 监控爬虫任务执行状态
-- **数据累计逻辑优化** - 确保统计数据准确
 
-### 👥 社区功能
+### 社区功能
 - **社区分享** - 上传并分享你的拉表
 - **点星功能** - 为喜欢的拉表点赞
 - **搜索功能** - 按作者/编号搜索表格
 - **用户系统** - 注册、登录、修改密码
 - **管理员功能** - 置顶、删除、日志监控
-- **状态保持** - 工作区状态自动保存
 
 ## 🛠️ 技术栈
 
@@ -52,6 +73,28 @@
 - **表格组件**：Luckysheet
 - **图表库**：ECharts
 - **爬虫**：aiohttp + asyncio
+
+## 📦 部署指南
+
+### 环境要求
+- Python 3.9+
+- Node.js 16+
+- SQLite 3
+
+### 后端部署
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+### 前端部署
+```bash
+cd frontend
+npm install
+npm run build
+# 将 dist 目录部署到 Web 服务器
+```
 
 ## 📝 更新日志
 
@@ -71,15 +114,37 @@
 - ✨ 社区分享功能
 - ✨ 用户系统
 
-## 📝 License
+## 🤝 贡献指南
 
-MIT
+欢迎提交 Issue 和 Pull Request！
 
-## 🤝 友情链接
+1. Fork 本仓库
+2. 创建你的特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交你的更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 打开一个 Pull Request
 
-- [GitHub 主页](https://github.com/NumInvis)
+## 💖 支持我们
+
+如果这个项目对你有帮助，欢迎通过爱发电支持我们：
+
+[![爱发电](https://img.shields.io/badge/爱发电-赞助-ff69b4?style=flat-square)](https://afdian.com/a/r0xy0)
+
+## 📄 开源协议
+
+本项目采用 [MIT](LICENSE) 协议开源。
+
+## 🔗 友情链接
+
 - [鸣潮动作数据汇总](https://www.kdocs.cn/l/chWXEqFmFGvu)
 - [安可网](https://encore.moe/)
-- [鬼神莫能窥的B站空间](https://space.bilibili.com/274736623?spm_id_from=333.788.0.0)
+- [鬼神莫能窥的B站空间](https://space.bilibili.com/274736623)
 - [鸣潮数据库 - nanoka.cc](https://ww.nanoka.cc/)
-- [爱发电赞助](https://afdian.com/a/r0xy0)
+
+---
+
+<div align="center">
+
+Made with ❤️ by WutheringWavesDPS Team
+
+</div>

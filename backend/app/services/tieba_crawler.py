@@ -1,12 +1,6 @@
 """
 贴吧数据爬取服务
 使用aiotieba库实现真实的贴吧数据获取
-
-运行逻辑：
-1. 启动时创建后台定时任务，每15分钟执行一次爬取
-2. 爬取流程：遍历所有监控的贴吧 -> 获取帖子列表 -> 统计发帖量 -> 存储到数据库
-3. 热帖指数 = 3*回复量 + 点赞量
-4. 使用aiotieba库的异步接口，高效并发获取数据
 """
 
 import asyncio
@@ -168,18 +162,27 @@ async def save_crawl_results(results: List[Dict], db: Session):
             db.add(stat)
         
         for post in posts:
-            hot_post = TiebaHotPost(
-                tieba_name=post["tieba_name"],
-                post_id=post["post_id"],
-                title=post["title"],
-                reply_count=post["reply_count"],
-                like_count=post["like_count"],
-                post_url=post["post_url"],
-                post_time=post["post_time"],
-                hot_date=today,
-                hot_type='daily'
-            )
-            db.add(hot_post)
+            # 再次检查帖子是否已存在，避免重复插入
+            existing_hot_post = db.query(TiebaHotPost).filter(
+                and_(
+                    TiebaHotPost.post_id == post["post_id"],
+                    TiebaHotPost.hot_date == today
+                )
+            ).first()
+            
+            if not existing_hot_post:
+                hot_post = TiebaHotPost(
+                    tieba_name=post["tieba_name"],
+                    post_id=post["post_id"],
+                    title=post["title"],
+                    reply_count=post["reply_count"],
+                    like_count=post["like_count"],
+                    post_url=post["post_url"],
+                    post_time=post["post_time"],
+                    hot_date=today,
+                    hot_type='daily'
+                )
+                db.add(hot_post)
     
     db.commit()
 

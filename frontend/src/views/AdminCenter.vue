@@ -15,6 +15,10 @@
           <el-icon><DataLine /></el-icon>
           <span>监控中心</span>
         </el-menu-item>
+        <el-menu-item index="surveys" @click="goToSurveyManage">
+          <el-icon><Document /></el-icon>
+          <span>问卷管理</span>
+        </el-menu-item>
         <el-menu-item index="backup">
           <el-icon><FolderOpened /></el-icon>
           <span>数据备份</span>
@@ -105,6 +109,20 @@
             <div class="stat-content">
               <div class="stat-label">运行时间</div>
               <div class="stat-value">{{ healthChecks.uptime?.uptime_human || '0秒' }}</div>
+            </div>
+          </div>
+
+          <div class="stat-card stat-card-purple clickable" @click="showUserListDialog">
+            <div class="stat-icon-bg">
+              <el-icon><UserFilled /></el-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">注册用户</div>
+              <div class="stat-value">{{ userStats.total_users || 0 }}</div>
+              <div class="stat-sub">今日: {{ userStats.today_users || 0 }} | 本周: {{ userStats.week_users || 0 }}</div>
+            </div>
+            <div class="click-hint">
+              <el-icon><ArrowRight /></el-icon>
             </div>
           </div>
         </div>
@@ -284,6 +302,8 @@
         </div>
       </div>
 
+
+
       <div v-else-if="activeMenu === 'backup'" class="backup-section">
         <div class="content-header">
           <h2 class="section-title">
@@ -350,21 +370,109 @@
         </el-button>
       </template>
     </el-dialog>
+
+
+
+    <!-- 用户列表弹窗 -->
+    <el-dialog 
+      v-model="showUserDialog" 
+      title="注册用户列表" 
+      width="900px"
+      :close-on-click-modal="false"
+    >
+      <div class="user-list-header">
+        <el-input
+          v-model="userSearchKeyword"
+          placeholder="搜索用户名/邮箱/昵称"
+          clearable
+          style="width: 300px"
+          @keyup.enter="handleUserSearch"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+          <template #append>
+            <el-button @click="handleUserSearch">搜索</el-button>
+          </template>
+        </el-input>
+        <span class="user-total">共 {{ userListTotal }} 位用户</span>
+      </div>
+      
+      <el-table 
+        :data="userList" 
+        v-loading="userListLoading"
+        style="width: 100%; margin-top: 16px"
+        border
+        stripe
+      >
+        <el-table-column label="头像" width="70" align="center">
+          <template #default="{ row }">
+            <el-avatar 
+              :size="40" 
+              :src="row.avatar_url" 
+              :icon="UserFilled"
+            />
+          </template>
+        </el-table-column>
+        <el-table-column label="用户名" min-width="120">
+          <template #default="{ row }">
+            <div class="user-name">
+              <span>{{ row.username }}</span>
+              <el-tag v-if="row.is_admin" type="danger" size="small" effect="dark">管理员</el-tag>
+              <el-tag v-else type="info" size="small">用户</el-tag>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="邮箱" prop="email" min-width="180" show-overflow-tooltip />
+        <el-table-column label="昵称" prop="display_name" min-width="100" show-overflow-tooltip />
+        <el-table-column label="状态" width="80" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.is_active ? 'success' : 'danger'" size="small">
+              {{ row.is_active ? '正常' : '禁用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="注册时间" min-width="150">
+          <template #default="{ row }">
+            {{ formatDateTime(row.created_at) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="最后登录" min-width="150">
+          <template #default="{ row }">
+            {{ formatDateTime(row.last_login_at) }}
+          </template>
+        </el-table-column>
+      </el-table>
+      
+      <div class="user-list-pagination">
+        <el-pagination
+          v-model:current-page="userListPage"
+          v-model:page-size="userListPageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="userListTotal"
+          layout="total, sizes, prev, pager, next"
+          @size-change="handleUserSearch"
+          @current-change="handleUserPageChange"
+        />
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Setting, DataLine, Document, ChatDotRound, Monitor, Refresh,
-  User, Sunny, Calendar, Timer, Cpu, TrendCharts, View,
-  Delete, Plus, Select, ArrowUp, ArrowDown, Lock, FolderOpened
+  User, UserFilled, Sunny, Calendar, Timer, Cpu, TrendCharts, View,
+  Delete, Plus, Select, ArrowUp, ArrowDown, Lock, FolderOpened, ArrowRight, Search
 } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import api from '../api'
 import SecurityConfig from './SecurityConfig.vue'
 
+const router = useRouter()
 const activeMenu = ref('dashboard')
 const loading = ref(false)
 const refreshInterval = ref(5000)
@@ -378,6 +486,15 @@ const visitStats = ref<any>({
   today_visitors: 0,
   seven_days_visits: 0,
   seven_days_visitors: 0
+})
+
+const userStats = ref<any>({
+  total_users: 0,
+  today_users: 0,
+  week_users: 0,
+  month_users: 0,
+  admin_count: 0,
+  active_users: 0
 })
 
 const healthChecks = ref<any>({
@@ -407,6 +524,20 @@ const backupLoading = ref({
   ranking: false
 })
 
+// 跳转到问卷管理页面
+function goToSurveyManage() {
+  router.push('/admin/surveys')
+}
+
+// 用户列表相关
+const showUserDialog = ref(false)
+const userList = ref<any[]>([])
+const userListTotal = ref(0)
+const userListPage = ref(1)
+const userListPageSize = ref(20)
+const userSearchKeyword = ref('')
+const userListLoading = ref(false)
+
 const visitTrendChartRef = ref<HTMLElement>()
 const logsContainerRef = ref<HTMLElement>()
 let visitTrendChart: echarts.ECharts | null = null
@@ -424,6 +555,8 @@ function handleMenuSelect(index: string) {
     loadBackupSettings()
   }
 }
+
+
 
 function formatBytes(bytes: number) {
   if (bytes === 0) return '0 B'
@@ -445,7 +578,8 @@ async function refreshAllData() {
     await Promise.all([
       loadVisitStats(),
       loadHealthCheck(),
-      loadVisitTrend()
+      loadVisitTrend(),
+      loadUserStats()
     ])
   } catch (error) {
     console.error('刷新数据失败:', error)
@@ -510,6 +644,56 @@ async function loadVisitTrend() {
   } catch (error) {
     console.error('加载访问趋势失败:', error)
   }
+}
+
+async function loadUserStats() {
+  try {
+    const data = await api.get('/admin/stats/users')
+    userStats.value = data
+  } catch (error) {
+    console.error('加载用户统计失败:', error)
+  }
+}
+
+function showUserListDialog() {
+  showUserDialog.value = true
+  userListPage.value = 1
+  userSearchKeyword.value = ''
+  loadUserList()
+}
+
+async function loadUserList() {
+  userListLoading.value = true
+  try {
+    let url = `/admin/users?page=${userListPage.value}&page_size=${userListPageSize.value}`
+    if (userSearchKeyword.value) {
+      url += `&search=${encodeURIComponent(userSearchKeyword.value)}`
+    }
+    const data = await api.get(url)
+    userList.value = data.users || []
+    userListTotal.value = data.total || 0
+  } catch (error) {
+    console.error('加载用户列表失败:', error)
+    ElMessage.error('加载用户列表失败')
+  } finally {
+    userListLoading.value = false
+  }
+}
+
+function handleUserPageChange(page: number) {
+  userListPage.value = page
+  loadUserList()
+}
+
+function handleUserSearch() {
+  userListPage.value = 1
+  loadUserList()
+}
+
+function formatDateTime(dateStr: string) {
+  if (!dateStr) return '-'
+  const date = new Date(dateStr)
+  return date.toLocaleString('zh-CN')
 }
 
 async function fetchLogs() {
@@ -913,6 +1097,7 @@ onUnmounted(() => {
 .stat-card-success { border-left: 4px solid #22c55e; }
 .stat-card-warning { border-left: 4px solid #f59e0b; }
 .stat-card-danger { border-left: 4px solid #ef4444; }
+.stat-card-purple { border-left: 4px solid #a855f7; }
 
 .stat-icon-bg {
   width: 64px;
@@ -936,6 +1121,7 @@ onUnmounted(() => {
 .stat-card-success .stat-icon-bg { color: #22c55e; }
 .stat-card-warning .stat-icon-bg { color: #f59e0b; }
 .stat-card-danger .stat-icon-bg { color: #ef4444; }
+.stat-card-purple .stat-icon-bg { color: #a855f7; }
 
 .stat-content {
   flex: 1;
@@ -1174,6 +1360,12 @@ onUnmounted(() => {
   gap: 8px;
 }
 
+@media (max-width: 1600px) {
+  .stats-overview {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 @media (max-width: 1400px) {
   .stats-overview {
     grid-template-columns: repeat(3, 1fr);
@@ -1252,5 +1444,91 @@ onUnmounted(() => {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+/* 用户列表样式 */
+.stat-card.clickable {
+  cursor: pointer;
+  position: relative;
+}
+
+.stat-card.clickable:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(168, 85, 247, 0.2);
+}
+
+.click-hint {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #a855f7;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.stat-card.clickable:hover .click-hint {
+  opacity: 1;
+}
+
+.user-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.user-total {
+  font-size: 14px;
+  color: #808090;
+}
+
+.user-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-list-pagination {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.surveys-table {
+  background: rgba(26, 26, 40, 0.5);
+  border-radius: 12px;
+  border: 1px solid #2a2a3a;
+  padding: 20px;
+}
+
+.no-surveys {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+:deep(.el-dialog__body) {
+  padding-top: 10px;
+}
+
+:deep(.surveys-section .el-table) {
+  background: transparent;
+  border: none;
+}
+
+:deep(.surveys-section .el-table th) {
+  background: rgba(26, 26, 40, 0.8);
+  color: #e0e0e0;
+  border-bottom: 1px solid #2a2a3a;
+}
+
+:deep(.surveys-section .el-table td) {
+  background: rgba(26, 26, 40, 0.5);
+  color: #e0e0e0;
+  border-bottom: 1px solid #2a2a3a;
+}
+
+:deep(.surveys-section .el-table tr:hover > td) {
+  background: rgba(26, 26, 40, 0.8);
 }
 </style>

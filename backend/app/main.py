@@ -183,7 +183,7 @@ app.add_middleware(
 os.makedirs(settings.upload_dir, exist_ok=True)
 
 # Import models to register
-from app.models import user, spreadsheet, star, category, character, announcement, visit_stat, tieba, app_ranking  # noqa: F401
+from app.models import user, spreadsheet, star, category, character, announcement, visit_stat, tieba, app_ranking, survey  # noqa: F401
 
 # Create tables (SQLite/dev)
 Base.metadata.create_all(bind=engine)
@@ -212,7 +212,7 @@ if FRONTEND_DIST.exists() and (FRONTEND_DIST / "assets").exists():
     app.mount("/WutheringWavesDPS/assets", CachedStaticFiles(directory=str(FRONTEND_DIST / "assets")), name="assets")
 
 # Routers - mount with prefix
-from app.api import auth, spreadsheets, stars, categories, uploads, admin, health, characters, images, announcements, visit_stats, sucai, tieba, app_ranking, security  # noqa: E402
+from app.api import auth, spreadsheets, stars, categories, uploads, admin, health, characters, images, announcements, visit_stats, sucai, tieba, app_ranking, security, survey  # noqa: E402
 
 app.include_router(auth.router, prefix="/WutheringWavesDPS")
 app.include_router(spreadsheets.router, prefix="/WutheringWavesDPS")
@@ -229,6 +229,7 @@ app.include_router(tieba.router, prefix="/WutheringWavesDPS")
 app.include_router(sucai.router, prefix="/WutheringWavesDPS")
 app.include_router(app_ranking.router, prefix="/WutheringWavesDPS")
 app.include_router(security.router, prefix="/WutheringWavesDPS")
+app.include_router(survey.router, prefix="/WutheringWavesDPS")
 
 # Health check endpoint
 @app.get("/WutheringWavesDPS/health")

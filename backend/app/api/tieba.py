@@ -313,3 +313,46 @@ def stop_scheduler():
         return {"message": "爬取调度器已停止"}
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"停止失败: {e}")
+
+
+@router.get("/archive/stats")
+def get_archive_statistics(current_user: User = Depends(get_current_active_user)):
+    """获取归档存储统计"""
+    try:
+        from app.services.tieba_archiver import get_archive_stats
+        return get_archive_stats()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"获取统计失败: {e}")
+
+
+@router.post("/archive/run")
+async def run_archive_manually(current_user: User = Depends(get_current_active_user)):
+    """手动执行归档（管理员 only）"""
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="只有管理员可以执行此操作"
+        )
+    
+    try:
+        from app.services.tieba_archiver import run_archive_task
+        await run_archive_task()
+        return {"message": "归档任务已完成"}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"归档失败: {e}")
+
+
+@router.get("/archive/search")
+def search_archived_posts_api(
+    keyword: str = Query(..., min_length=1),
+    limit: int = Query(50, ge=1, le=200),
+    current_user: User = Depends(get_current_active_user)
+):
+    """搜索归档的帖子"""
+    try:
+        from app.services.tieba_archiver import get_archiver
+        archiver = get_archiver()
+        results = archiver.search_archived_posts(keyword, limit)
+        return {"keyword": keyword, "results": results, "total": len(results)}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"搜索失败: {e}")

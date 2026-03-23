@@ -49,7 +49,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/admin',
-    redirect: '/admin/center'
+    redirect: '/admin/surveys'
   },
   {
     path: '/admin/logs',
@@ -85,6 +85,30 @@ const routes: RouteRecordRaw[] = [
     path: '/test',
     name: 'Test',
     component: () => import('@/views/Test.vue')
+  },
+  {
+    path: '/surveys',
+    name: 'SurveyList',
+    component: () => import('@/views/SurveyList.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/survey/:id',
+    name: 'SurveyDetail',
+    component: () => import('@/views/SurveyDetail.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/admin/surveys',
+    name: 'SurveyManage',
+    component: () => import('@/views/admin/SurveyManage.vue'),
+    meta: { requiresAdmin: true }
+  },
+  {
+    path: '/admin/survey-response/:id',
+    name: 'SurveyResponseDetail',
+    component: () => import('@/views/admin/SurveyResponseDetail.vue'),
+    meta: { requiresAdmin: true }
   },
   {
     path: '/:pathMatch(.*)*',

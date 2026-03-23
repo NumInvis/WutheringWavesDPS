@@ -511,3 +511,127 @@ def save_data_observer_settings(
     except Exception as e:
         log_error(e, "保存数据观察页面设置")
         raise HTTPException(status_code=500, detail="保存设置失败")
+
+
+@router.get("/stats/users")
+def get_user_stats(current_user: User = Depends(get_current_admin_user)):
+    """获取用户统计数据（管理员 only）"""
+    try:
+        from sqlalchemy import func
+        from datetime import datetime, timedelta
+        
+        db = next(get_db())
+        
+        # 总注册用户数
+        total_users = db.query(func.count(User.id)).scalar()
+        
+        # 今日注册用户数
+        today = datetime.now().strftime("%Y-%m-%d")
+        today_start = datetime.strptime(today, "%Y-%m-%d")
+        today_end = today_start + timedelta(days=1)
+        today_users = db.query(func.count(User.id)).filter(
+            User.created_at >= today_start,
+            User.created_at < today_end
+        ).scalar()
+        
+        # 本周注册用户数
+        week_start = datetime.now() - timedelta(days=7)
+        week_users = db.query(func.count(User.id)).filter(
+            User.created_at >= week_start
+        ).scalar()
+        
+        # 本月注册用户数
+        month_start = datetime.now().replace(day=1)
+        month_users = db.query(func.count(User.id)).filter(
+            User.created_at >= month_start
+        ).scalar()
+        
+        # 管理员数量
+        admin_count = db.query(func.count(User.id)).filter(
+            User.is_admin == True
+        ).scalar()
+        
+        # 活跃用户（最近7天登录）
+        active_threshold = datetime.now() - timedelta(days=7)
+        active_users = db.query(func.count(User.id)).filter(
+            User.last_login_at >= active_threshold
+        ).scalar()
+        
+        add_log("info", f"管理员 {current_user.username} 查询用户统计")
+        
+        return {
+            "total_users": total_users,
+            "today_users": today_users,
+            "week_users": week_users,
+            "month_users": month_users,
+            "admin_count": admin_count,
+            "active_users": active_users
+        }
+    except Exception as e:
+        log_error(e, "获取用户统计")
+        raise HTTPException(status_code=500, detail="获取用户统计失败")
+
+
+@router.get("/users")
+def get_all_users(
+    page: int = 1,
+    page_size: int = 50,
+    search: Optional[str] = None,
+    current_user: User = Depends(get_current_admin_user)
+):
+    """获取所有注册用户列表（管理员 only）"""
+    try:
+        from sqlalchemy import or_
+        
+        db = next(get_db())
+        
+        # 构建查询
+        query = db.query(User)
+        
+        # 搜索过滤
+        if search:
+            search_filter = or_(
+                User.username.ilike(f"%{search}%"),
+                User.email.ilike(f"%{search}%"),
+                User.display_name.ilike(f"%{search}%")
+            )
+            query = query.filter(search_filter)
+        
+        # 统计总数
+        total = query.count()
+        
+        # 分页
+        offset = (page - 1) * page_size
+        users = query.order_by(User.created_at.desc()).offset(offset).limit(page_size).all()
+        
+        # 格式化用户数据
+        user_list = []
+        for user in users:
+            user_list.append({
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "display_name": user.display_name,
+                "avatar_url": user.avatar_url,
+                "bio": user.bio,
+                "is_active": user.is_active,
+                "is_verified": user.is_verified,
+                "is_admin": user.is_admin,
+                "role": user.role,
+                "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
+                "created_at": user.created_at.isoformat() if user.created_at else None,
+                "updated_at": user.updated_at.isoformat() if user.updated_at else None
+            })
+        
+        add_log("info", f"管理员 {current_user.username} 查询用户列表，第{page}页")
+        
+        return {
+            "users": user_list,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": (total + page_size - 1) // page_size
+        }
+    except Exception as e:
+        log_error(e, "获取用户列表")
+        raise HTTPException(status_code=500, detail="获取用户列表失败")

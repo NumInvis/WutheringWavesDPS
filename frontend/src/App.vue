@@ -13,6 +13,7 @@
               <router-link to="/community" class="nav-link">社区</router-link>
               <router-link to="/tier-list" class="nav-link">排行</router-link>
               <router-link to="/data-observer" class="nav-link">数据观察</router-link>
+              <router-link to="/surveys" class="nav-link">问卷</router-link>
               <el-dropdown trigger="hover" class="nav-link more-dropdown">
                 <span class="more-label">
                   更多

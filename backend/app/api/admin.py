@@ -619,7 +619,6 @@ def get_all_users(
                 "is_admin": user.is_admin,
                 "role": user.role,
                 "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
-                "last_login_ip": user.last_login_ip,
                 "created_at": user.created_at.isoformat() if user.created_at else None,
                 "updated_at": user.updated_at.isoformat() if user.updated_at else None
             })

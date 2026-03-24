@@ -284,7 +284,6 @@ def login(
     login_tracker.record_attempt(client_ip, username, success=True)
     
     user.last_login_at = datetime.utcnow()
-    user.last_login_ip = client_ip
     db.commit()
 
     add_log("info", f"用户登录成功: {username}", user=username, ip=client_ip)

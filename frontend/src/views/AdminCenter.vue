@@ -442,6 +442,11 @@
             {{ formatDateTime(row.last_login_at) }}
           </template>
         </el-table-column>
+        <el-table-column label="登录IP" min-width="120">
+          <template #default="{ row }">
+            {{ row.last_login_ip || '-' }}
+          </template>
+        </el-table-column>
       </el-table>
       
       <div class="user-list-pagination">

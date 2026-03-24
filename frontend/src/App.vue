@@ -64,7 +64,10 @@
                     <el-avatar :size="32" @click.stop="openEditDialog">
                       {{ userStore.user?.display_name?.[0] || userStore.user?.username?.[0] || 'U' }}
                     </el-avatar>
-                    <span class="username">{{ userStore.user?.display_name || userStore.user?.username }}</span>
+                    <span class="username">
+                      {{ userStore.user?.display_name || userStore.user?.username }}
+                      <span class="user-username" v-if="userStore.user?.username">({{ userStore.user.username }})</span>
+                    </span>
                     <el-icon><ArrowDown /></el-icon>
                   </span>
                   <template #dropdown>
@@ -495,11 +498,20 @@ html, body, #app {
 }
 
 .username {
-  max-width: 120px;
+  max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.user-username {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 400;
 }
 
 .app-main {

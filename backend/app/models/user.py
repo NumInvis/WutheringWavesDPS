@@ -23,3 +23,4 @@ class User(Base, TimestampMixin):
     is_admin = Column(Boolean, default=False)
     role = Column(String(20), default="user")
     last_login_at = Column(DateTime)
+    last_login_ip = Column(String(50))

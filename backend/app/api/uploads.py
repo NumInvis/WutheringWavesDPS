@@ -23,15 +23,14 @@ from app.api.auth import get_current_active_user, get_current_user_optional
 router = APIRouter(prefix="/api/uploads", tags=["Excel文件"])
 settings = get_settings()
 
-# 允许的文件扩展名
-ALLOWED_EXTENSIONS = {".xlsx", ".xlsm", ".xls"}
+# 允许的文件扩展名（仅允许无宏的 Excel 格式，防止恶意宏风险）
+ALLOWED_EXTENSIONS = {".xlsx", ".xls"}
 
 # MIME 类型白名单
 ALLOWED_MIME_TYPES = {
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",  # .xlsx
-    "application/vnd.ms-excel.sheet.macroenabled.12",  # .xlsm
     "application/vnd.ms-excel",  # .xls
-    "application/octet-stream"  # 某些系统可能使用此类型
+    "application/octet-stream",  # 某些系统可能使用此类型
 }
 
 # 禁止的文件签名（可执行文件等）

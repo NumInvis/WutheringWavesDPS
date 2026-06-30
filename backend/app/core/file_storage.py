@@ -89,10 +89,10 @@ class FileStorageService:
             )
 
         ext = os.path.splitext(file.filename or "unknown.xlsx")[1].lower()
-        if ext not in [".xlsx", ".xlsm", ".xls"]:
+        if ext not in [".xlsx", ".xls"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"不支持的Excel格式: {ext}，仅支持 .xlsx, .xlsm, .xls"
+                detail=f"不支持的Excel格式: {ext}，仅支持 .xlsx, .xls"
             )
 
         file_id = self._generate_file_id()
@@ -208,7 +208,7 @@ class FileStorageService:
         with open(metadata_path, "r", encoding="utf-8") as f:
             metadata = json.load(f)
         
-        for ext in [".xlsx", ".xlsm", ".xls"]:
+        for ext in [".xlsx", ".xls"]:
             file_path = os.path.join(self.excel_storage_dir, f"{file_id}_original{ext}")
             if os.path.exists(file_path):
                 with open(file_path, "rb") as f:
@@ -232,13 +232,13 @@ class FileStorageService:
         """Delete Excel file and its metadata."""
         deleted = False
         
-        for ext in ["_original.xlsx", "_original.xlsm", "_original.xls", ".meta.json"]:
+        for ext in ["_original.xlsx", "_original.xls", ".meta.json"]:
             file_path = os.path.join(self.excel_storage_dir, f"{file_id}{ext}")
             if os.path.exists(file_path):
                 os.remove(file_path)
                 deleted = True
         
-        for ext in [".xlsx", ".xlsm", ".xls"]:
+        for ext in [".xlsx", ".xls"]:
             access_path = os.path.join(self.upload_dir, f"{file_id}{ext}")
             if os.path.exists(access_path):
                 os.remove(access_path)

@@ -2,6 +2,7 @@
 Spreadsheet-related APIs.
 """
 import json
+import re
 import shutil
 from typing import Optional
 
@@ -27,6 +28,46 @@ from app.api.auth import (
 from app.core.logger import add_log
 
 router = APIRouter(prefix="/api/spreadsheets", tags=["表格"])
+
+
+def validate_search_input(search: str) -> str:
+    """
+    校验搜索关键词，防止注入和特殊字符滥用。
+    - 最大长度 50 字符
+    - 仅允许中文、英文、数字、常见标点（空格、-、_、.、()、【】、）
+    - 拒绝 SQL 注入常见模式
+    """
+    if not search:
+        return ""
+
+    if len(search) > 50:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="搜索关键词不能超过50个字符"
+        )
+
+    # 拒绝 SQL 注入常见模式
+    sql_patterns = [
+        r"(\b(union|select|insert|update|delete|drop|alter|create|exec|execute)\b)",
+        r"(--|;|/\*|\*/|\'|\"|\\x|\\0)",
+        r"(\bor\b\s+\d+\s*=\s*\d+)",
+        r"(\bwaitfor\b|\bbenchmark\b|\bsleep\b)",
+    ]
+    for pattern in sql_patterns:
+        if re.search(pattern, search, re.IGNORECASE):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="搜索关键词包含非法字符"
+            )
+
+    # 仅允许安全字符
+    if not re.match(r"^[\u4e00-\u9fa5a-zA-Z0-9\s\-_\.()（）【】\[\]、，。！,!.!?？\+]+$", search):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="搜索关键词包含非法字符"
+        )
+
+    return search.strip()
 
 
 def init_template_spreadsheet(db: Session):
@@ -204,6 +245,9 @@ def list_spreadsheets(
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """Get spreadsheet list."""
+    if search is not None:
+        search = validate_search_input(search)
+
     base_query = db.query(Spreadsheet).options(joinedload(Spreadsheet.user))
 
     # Default: only public, non-draft, non-banned

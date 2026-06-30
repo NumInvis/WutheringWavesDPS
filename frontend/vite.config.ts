@@ -42,7 +42,8 @@ export default defineConfig({
     }
   },
   preview: {
-    port: 14876,
-    host: '0.0.0.0'
+    port: 14877,
+    host: '0.0.0.0',
+    allowedHosts: ['www.arcanamorning.tech', 'arcanamorning.tech', 'localhost', '127.0.0.1']
   }
 })

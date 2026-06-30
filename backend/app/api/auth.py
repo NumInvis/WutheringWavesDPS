@@ -30,6 +30,7 @@ from app.schemas.user import (
     PasswordChange
 )
 from app.core.logger import add_log
+from app.core.ip_utils import mask_ip
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
 settings = get_settings()
@@ -286,7 +287,7 @@ def login(
     user.last_login_at = datetime.utcnow()
     db.commit()
 
-    add_log("info", f"用户登录成功: {username}", user=username, ip=client_ip)
+    add_log("info", f"用户登录成功: {username}", user=username, ip=mask_ip(client_ip))
 
     access_token_expires = timedelta(minutes=settings.jwt_access_token_expire_minutes)
     access_token = create_access_token(

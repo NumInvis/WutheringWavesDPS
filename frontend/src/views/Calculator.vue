@@ -68,7 +68,7 @@
       </div>
     </el-card>
 
-    <input type="file" ref="fileInput" accept=".xlsx,.xls,.xlsm" @change="handleFile" style="display: none" />
+    <input type="file" ref="fileInput" accept=".xlsx,.xls" @change="handleFile" style="display: none" />
 
     <el-dialog v-model="publishDialogVisible" title="发布表格" width="500px">
       <el-form :model="publishForm" :rules="publishRules" ref="publishFormRef" label-width="100px">
@@ -628,7 +628,7 @@ async function parseAndShowExcel(file: File, readOnly: boolean = false): Promise
   luckysheet.create({
     container: 'luckysheet',
     data: sheetsData,
-    title: exportJson.info?.name || file.name.replace(/\.(xlsx|xls|xlsm)$/i, ''),
+    title: exportJson.info?.name || file.name.replace(/\.(xlsx|xls)$/i, ''),
     lang: 'zh',
     showinfobar: false,
     showsheetbar: true,

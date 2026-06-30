@@ -1,32 +1,32 @@
 :root {
-  --primary-color: #00d4ff;
-  --secondary-color: #7928ca;
-  --accent-color: #ff0080;
-  --success-color: #00ff88;
-  --warning-color: #ffaa00;
-  --danger-color: #ff4444;
-  --info-color: #00aaff;
-  
-  --bg-primary: #0a0a0f;
-  --bg-secondary: #12121a;
-  --bg-tertiary: #1a1a25;
-  --bg-card: #16161e;
-  
-  --text-primary: #ffffff;
-  --text-secondary: #a0a0b0;
-  --text-muted: #6b6b7a;
-  
-  --border-color: #2a2a3a;
-  --border-glow: rgba(0, 212, 255, 0.3);
-  
-  --shadow-glow: 0 0 20px rgba(0, 212, 255, 0.2);
-  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.4);
-  
-  --neon-blue: #00d4ff;
-  --neon-purple: #7928ca;
-  --neon-pink: #ff0080;
-  --neon-green: #00ff88;
-  --neon-yellow: #ffaa00;
+  --primary-color: #d4d4d8;
+  --secondary-color: #7c7c8a;
+  --accent-color: #a1a1aa;
+  --success-color: #a7f3d0;
+  --warning-color: #fdba74;
+  --danger-color: #fca5a5;
+  --info-color: #93c5fd;
+
+  --bg-primary: #0f0f10;
+  --bg-secondary: #18181b;
+  --bg-tertiary: #27272a;
+  --bg-card: #18181b;
+
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+
+  --border-color: #3f3f46;
+  --border-glow: rgba(212, 212, 216, 0.15);
+
+  --shadow-glow: 0 0 16px rgba(212, 212, 216, 0.12);
+  --shadow-card: 0 8px 0 rgba(0, 0, 0, 0.55);
+
+  --neon-blue: #d4d4d8;
+  --neon-purple: #a1a1aa;
+  --neon-pink: #71717a;
+  --neon-green: #a7f3d0;
+  --neon-yellow: #d4d4d8;
 }
 
 * {
@@ -113,16 +113,15 @@ html, body {
 }
 
 .glow-text {
-  text-shadow: 0 0 10px var(--primary-color),
-               0 0 20px var(--primary-color),
-               0 0 30px var(--primary-color);
+  text-shadow: 0 0 8px rgba(212, 212, 216, 0.35);
 }
 
 .neon-border {
   position: relative;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border: 2px solid var(--border-color);
+  border-radius: 0;
   overflow: hidden;
+  box-shadow: var(--shadow-card);
 }
 
 .neon-border::before {
@@ -131,15 +130,15 @@ html, body {
   inset: -2px;
   background: linear-gradient(
     45deg,
-    var(--primary-color),
-    var(--neon-purple),
-    var(--neon-pink),
-    var(--primary-color)
+    var(--border-color),
+    var(--text-muted),
+    var(--border-color)
   );
   background-size: 400% 400%;
-  animation: gradient-rotate 3s ease infinite;
+  animation: gradient-rotate 6s ease infinite;
   z-index: -1;
-  border-radius: 10px;
+  border-radius: 0;
+  opacity: 0.4;
 }
 
 @keyframes gradient-rotate {
@@ -187,15 +186,15 @@ html, body {
 }
 
 .cyber-bg {
-  background: 
-    radial-gradient(circle at 10% 20%, rgba(0, 212, 255, 0.1) 0%, transparent 20%),
-    radial-gradient(circle at 90% 80%, rgba(121, 40, 202, 0.1) 0%, transparent 20%),
+  background:
+    radial-gradient(circle at 10% 20%, rgba(212, 212, 216, 0.06) 0%, transparent 20%),
+    radial-gradient(circle at 90% 80%, rgba(113, 113, 122, 0.05) 0%, transparent 20%),
     var(--bg-primary);
 }
 
 .grid-bg {
-  background-image: 
-    linear-gradient(rgba(0, 212, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 212, 255, 0.05) 1px, transparent 1px);
-  background-size: 50px 50px;
+  background-image:
+    linear-gradient(rgba(212, 212, 216, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212, 212, 216, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
 }

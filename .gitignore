@@ -41,11 +41,16 @@ Thumbs.db
 *.log
 logs/
 
-# Uploads (keep template)
+# Uploads and generated data (runtime only)
 uploads/*
 !uploads/.gitkeep
 excel_storage/*
 !excel_storage/.gitkeep
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/data/tieba/archives/
+backups/*.json
+backups/*.gz
 
 # Cache
 .cache/
@@ -71,3 +76,10 @@ frontend/dist/
 
 # Luckysheet (can be installed via npm)
 frontend/public/luckysheet/
+
+# Private docs
+.trae/
+
+# Runtime tieba crawled data (seed data kept)
+backend/data/tieba/*.json
+!backend/data/tieba/.gitkeep

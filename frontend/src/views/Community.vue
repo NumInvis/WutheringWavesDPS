@@ -139,7 +139,7 @@
             :show-file-list="false"
             :on-change="handleEditFileChange"
             :before-upload="beforeUpload"
-            accept=".xlsx,.xls,.xlsm"
+            accept=".xlsx,.xls"
           >
             <el-icon class="el-icon--upload"><upload-filled /></el-icon>
             <div class="el-upload__text">
@@ -147,7 +147,7 @@
             </div>
             <template #tip>
               <div class="el-upload__tip">
-                支持 .xlsx, .xls, .xlsm 格式，文件不超过 5MB
+                支持 .xlsx, .xls 格式，文件不超过 5MB
               </div>
             </template>
           </el-upload>

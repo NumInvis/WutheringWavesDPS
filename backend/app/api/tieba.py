@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, desc
 
 from app.core.database import get_db
+from app.core.ip_utils import mask_ip
 from app.models.tieba import TiebaDailyStats, TiebaHotPost, DownloadRecord
 from app.models.user import User
 from app.api.auth import get_current_active_user, get_current_user_optional
@@ -182,37 +183,38 @@ def get_daily_hot_posts(date: Optional[str] = None, limit: int = Query(3, ge=1, 
 def download_data(request: Request, date: Optional[str] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     if not date:
         date = get_beijing_date()
-    
+
     client_ip = request.client.host if request.client else "unknown"
+    masked_ip = mask_ip(client_ip)
     hour_start = get_beijing_time().replace(minute=0, second=0, microsecond=0)
     hour_str = hour_start.strftime("%Y-%m-%d-%H")
-    
+
     existing_record = db.query(DownloadRecord).filter(
         and_(
-            DownloadRecord.user_id == client_ip,
+            DownloadRecord.user_id == masked_ip,
             DownloadRecord.download_type == 'tieba_data_ip',
             DownloadRecord.download_date == hour_str
         )
     ).count()
-    
+
     if existing_record >= 2:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="每小时最多下载两次，请稍后再试"
         )
-    
+
     beijing_now = get_beijing_time()
     start_date = (beijing_now - timedelta(days=7)).strftime("%Y-%m-%d")
     today = get_beijing_date()
-    
+
     daily_stats = db.query(TiebaDailyStats).filter(
         TiebaDailyStats.date >= start_date
     ).all()
-    
+
     hot_posts = db.query(TiebaHotPost).filter(
         TiebaHotPost.hot_date >= start_date
     ).all()
-    
+
     export_data = {
         "export_time": get_beijing_time().strftime("%Y-%m-%d %H:%M:%S"),
         "export_timezone": "UTC+8 (北京时间)",
@@ -224,7 +226,7 @@ def download_data(request: Request, date: Optional[str] = None, db: Session = De
         ],
         "hot_posts": [
             {
-                "tieba_name": p.tieba_name, "title": p.title, 
+                "tieba_name": p.tieba_name, "title": p.title,
                 "reply_count": p.reply_count, "like_count": p.like_count,
                 "hot_index": calc_hot_index(p.reply_count, p.like_count),
                 "post_url": p.post_url, "hot_date": p.hot_date
@@ -232,24 +234,24 @@ def download_data(request: Request, date: Optional[str] = None, db: Session = De
             for p in hot_posts
         ]
     }
-    
+
     json_str = json.dumps(export_data, ensure_ascii=False, indent=2)
-    
+
     if len(json_str.encode('utf-8')) > 10 * 1024 * 1024:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail="数据文件超过10MB限制"
         )
-    
+
     download_record = DownloadRecord(
-        user_id=client_ip,
+        user_id=masked_ip,
         download_type='tieba_data_ip',
         download_date=hour_str
     )
     db.add(download_record)
     db.commit()
-    
-    add_log("info", f"用户下载贴吧数据: {current_user.username} (IP: {client_ip})", user=current_user.username)
+
+    add_log("info", f"用户下载贴吧数据: {current_user.username}", user=current_user.username)
     
     buffer = io.BytesIO(json_str.encode('utf-8'))
     

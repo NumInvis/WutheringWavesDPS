@@ -331,7 +331,7 @@ html, body, #app {
 .app-container {
   height: 100%;
   width: 100%;
-  background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+  background: #0f0f10;
   background-attachment: fixed;
   position: relative;
 }
@@ -347,9 +347,10 @@ html, body, #app {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  opacity: 0.15;
+  opacity: 0.08;
   z-index: 0;
   pointer-events: none;
+  filter: grayscale(85%) contrast(1.1);
 }
 
 .main-layout {
@@ -357,10 +358,8 @@ html, body, #app {
 }
 
 .app-header {
-  background: rgba(26, 26, 46, 0.85);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: #18181b;
+  border-bottom: 2px solid #3f3f46;
   padding: 0 20px;
   height: 64px !important;
 }
@@ -386,11 +385,10 @@ html, body, #app {
 .logo-text {
   font-size: 22px;
   font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #fafafa;
   letter-spacing: -0.3px;
+  background: none;
+  -webkit-text-fill-color: initial;
 }
 
 .nav-menu {
@@ -399,25 +397,27 @@ html, body, #app {
 }
 
 .nav-link {
-  color: #cbd5e1;
+  color: #a1a1aa;
   text-decoration: none;
   padding: 10px 18px;
-  border-radius: 8px;
-  transition: all 0.25s ease;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
   font-weight: 500;
   font-size: 14px;
   position: relative;
 }
 
 .nav-link:hover {
-  color: #fff;
-  background: rgba(102, 126, 234, 0.2);
+  color: #fafafa;
+  background: #27272a;
+  border-color: #3f3f46;
 }
 
 .nav-link.router-link-active {
-  color: #fff;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  color: #0f0f10;
+  background: #e4e4e7;
+  border-color: #000000;
+  box-shadow: 4px 4px 0 #000000;
 }
 
 .more-dropdown {
@@ -467,13 +467,13 @@ html, body, #app {
 }
 
 .dropdown-link:hover {
-  background: rgba(102, 126, 234, 0.2);
+  background: #27272a;
   color: #fff;
 }
 
 .dropdown-link .el-icon {
   font-size: 16px;
-  color: #a5b4fc;
+  color: #a1a1aa;
 }
 
 .user-area {
@@ -520,10 +520,8 @@ html, body, #app {
 }
 
 .app-footer {
-  background: rgba(26, 26, 46, 0.85);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: #18181b;
+  border-top: 2px solid #3f3f46;
   height: auto !important;
   padding: 20px;
   text-align: center;
@@ -531,7 +529,7 @@ html, body, #app {
 
 .app-footer p {
   margin: 0;
-  color: #94a3b8;
+  color: #71717a;
   font-size: 13px;
   font-weight: 500;
 }
@@ -539,10 +537,10 @@ html, body, #app {
 
 <style>
 .more-dropdown-menu {
-  background: #1a1a2e !important;
-  border: 1px solid rgba(167, 139, 250, 0.3) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.7) !important;
+  background: #18181b !important;
+  border: 2px solid #3f3f46 !important;
+  border-radius: 0 !important;
+  box-shadow: 6px 6px 0 #000000 !important;
   padding: 8px !important;
 }
 
@@ -550,7 +548,7 @@ html, body, #app {
   padding: 8px 12px 4px 12px;
   font-size: 12px;
   font-weight: 700;
-  color: #a78bfa;
+  color: #a1a1aa;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -558,12 +556,12 @@ html, body, #app {
 .more-dropdown-menu .el-dropdown-menu__item {
   padding: 0 !important;
   margin: 4px !important;
-  border-radius: 8px !important;
+  border-radius: 0 !important;
   background: transparent !important;
 }
 
 .more-dropdown-menu .el-dropdown-menu__item:hover {
-  background: rgba(167, 139, 250, 0.2) !important;
+  background: #27272a !important;
 }
 
 .dropdown-item-link {
@@ -571,19 +569,19 @@ html, body, #app {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  color: #ffffff;
+  color: #e4e4e7;
   text-decoration: none;
-  font-weight: 700;
-  font-size: 15px;
+  font-weight: 600;
+  font-size: 14px;
   width: 100%;
 }
 
 .dropdown-item-link:hover {
-  color: #ffffff;
+  color: #fafafa;
 }
 
 .dropdown-item-link .el-icon {
   font-size: 18px;
-  color: #a78bfa;
+  color: #a1a1aa;
 }
 </style>

@@ -17,6 +17,7 @@ from app.models.survey import (
 from app.models.user import User
 from app.api.auth import get_current_active_user, get_current_user_optional
 from app.core.logger import add_log
+from app.core.ip_utils import mask_ip
 
 router = APIRouter(prefix="/api/surveys", tags=["问卷系统"])
 
@@ -529,12 +530,12 @@ async def submit_survey(
         if existing and not survey.allow_multiple:
             raise HTTPException(status_code=403, detail="您已填写过此问卷")
     
-    # 创建填写记录
+    # 创建填写记录（IP 脱敏存储，保护用户隐私）
     response = SurveyResponse(
         id=str(uuid.uuid4()),
         survey_id=survey_id,
         user_id=current_user.id if current_user else None,
-        user_ip=client_ip,
+        user_ip=mask_ip(client_ip),
         is_anonymous=data.is_anonymous,
         is_submitted=True,
         submitted_at=now

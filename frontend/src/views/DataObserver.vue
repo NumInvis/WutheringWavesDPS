@@ -615,10 +615,10 @@ async function loadWeeklyHotPosts() {
   try {
     const data = await api.get(`/tieba/hot/weekly?limit=${globalSettings.value.hotPostsLimit}`)
     const posts = data.posts || []
-    // 计算热度并排序：热度 = 3 * 评论数 + 点赞数
+    // 计算热度并排序：热度 = 3 * 回复数 + 点赞数
     const withHotness = posts.map(post => {
-      const comments = post.comments || post.comment_count || 0
-      const likes = post.likes || post.like_count || 0
+      const comments = post.reply_count || 0
+      const likes = post.like_count || 0
       const hotness = 3 * comments + likes
       return { ...post, hotness }
     })
@@ -631,10 +631,10 @@ async function loadDailyHotPosts() {
   try {
     const data = await api.get(`/tieba/hot/daily?limit=${globalSettings.value.dailyHotPostsLimit}`)
     const posts = data.posts || []
-    // 计算热度并排序：热度 = 3 * 评论数 + 点赞数
+    // 计算热度并排序：热度 = 3 * 回复数 + 点赞数
     const withHotness = posts.map(post => {
-      const comments = post.comments || post.comment_count || 0
-      const likes = post.likes || post.like_count || 0
+      const comments = post.reply_count || 0
+      const likes = post.like_count || 0
       const hotness = 3 * comments + likes
       return { ...post, hotness }
     })

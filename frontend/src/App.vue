@@ -543,6 +543,9 @@ html, body, #app {
 .app-footer .icp-footer a {
   color: #71717a;
   text-decoration: none;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
 .app-footer .icp-footer a:hover {

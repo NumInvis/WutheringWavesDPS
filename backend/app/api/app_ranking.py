@@ -437,7 +437,7 @@ def add_app(
 
 @router.delete("/apps/{app_id}")
 def delete_app(
-    app_id: int,
+    app_id: str,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):

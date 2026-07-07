@@ -454,10 +454,16 @@ def get_data_observer_settings(current_user: User = Depends(get_current_admin_us
                 "hotListHeight": 400,
                 "statsDays": 3,
                 "hotPostsLimit": 10,
+                "dailyHotPostsLimit": 3,
                 "fontSizeScale": 1,
                 "chartHeightScale": 1,
                 "panelOpacity": 0.92,
-                "borderRadius": 8
+                "borderRadius": 8,
+                "tableWidth": 100,
+                "tableHeight": 400,
+                "tableFontSize": 14,
+                "dailyPanelHeight": 200,
+                "weeklyHotListHeight": 400
             }
             
             # 确保目录存在
@@ -480,10 +486,16 @@ class DataObserverSettings(BaseModel):
     hotListHeight: int = 400
     statsDays: int = 3
     hotPostsLimit: int = 10
+    dailyHotPostsLimit: int = 3
     fontSizeScale: float = 1
     chartHeightScale: float = 1
     panelOpacity: float = 0.92
     borderRadius: int = 8
+    tableWidth: int = 100
+    tableHeight: int = 400
+    tableFontSize: int = 14
+    dailyPanelHeight: int = 200
+    weeklyHotListHeight: int = 400
 
 @router.post("/settings/data-observer")
 def save_data_observer_settings(

@@ -106,6 +106,9 @@
         </el-main>
         <el-footer class="app-footer">
           <p>WutheringWavesDPS Beta1.0</p>
+          <p class="icp-footer">
+            <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">陕ICP备2026004429号-1</a>
+          </p>
         </el-footer>
       </el-container>
     </el-config-provider>
@@ -350,7 +353,6 @@ html, body, #app {
   opacity: 0.08;
   z-index: 0;
   pointer-events: none;
-  filter: grayscale(85%) contrast(1.1);
 }
 
 .main-layout {
@@ -532,6 +534,20 @@ html, body, #app {
   color: #71717a;
   font-size: 13px;
   font-weight: 500;
+}
+
+.app-footer .icp-footer {
+  margin-top: 8px;
+}
+
+.app-footer .icp-footer a {
+  color: #71717a;
+  text-decoration: none;
+}
+
+.app-footer .icp-footer a:hover {
+  color: #a1a1aa;
+  text-decoration: underline;
 }
 </style>
 
